@@ -70,15 +70,21 @@
 ### D5: TypeScript 全栈 + Node.js + Fastify 后端
 - **决策**: 平台全栈 TypeScript；后端运行时 Node.js + Fastify
 - **替代方案**: Python/Django（Odoo 栈）、Java Spring Boot（企业传统选型）、Go（高性能）
-- **理由**: TS 全栈统一降低团队技能门槛；Fastify 原生插件系统与 AUDEBase 插件框架契合；JSON Schema 验证内置；国内 Node.js 生态成熟
+- **理由**: TS 全栈统一降低团队技能门槛；Fastify 原生插件系统与 AUDEBase 插件框架深度契合；JSON Schema 验证内置；Node.js v22 worker_threads 解决 CPU 密集型；Odoo 替代方案 Python 单体架构增加了全栈复杂度
 - **参考**: Fastify 官方文档、NocoBase 技术栈
 - **状态**: 已决策
 
 ### D6: React + Tailwind CSS v4 + shadcn/ui + Ant Design 5
 - **决策**: React 19 + Tailwind v4 作为基础框架；shadcn/ui 处理通用组件；Ant Design 5 处理数据密集型页面
 - **替代方案**: Vue 3 + Element Plus（国内流行但生态略小）、纯 shadcn/ui（Table/Form 不够强）、纯 antd（定制主题不便）
-- **理由**: React 生态最大；shadcn/ui 可复制不捆绑；antd 企业级组件成熟；两者共存互补
+- **理由**: React 生态最大；shadcn/ui 可复制不捆绑；antd 企业级组件成熟；两者共存互补。shadcn/ui 依赖 Tailwind v4（硬依赖），两者绑定选择
 - **参考**: React 官方、shadcn/ui、Ant Design
+- **状态**: 已决策
+
+### D6.1: shadcn/ui 版本锁定与供应链安全
+- **决策**: 锁定shadcn/ui组件版本（不自动更新），registry URL指向项目私有fork
+- **理由**: shadcn/ui的copy-model将组件源码直接加入项目（非npm依赖），registry注入攻击可被Git diff直接审计
+- **审计**: 组件更新通过PR review + diff审查（与npm audit互补）
 - **状态**: 已决策
 
 ### D7: Schema 驱动 UI
@@ -93,10 +99,24 @@
 - **理由**: TypeScript 类型推导、运行时验证、声明式 schema 定义、与 Fastify JSON Schema 互补
 - **状态**: 已决策
 
-### D9: Drizzle ORM 数据库操作
-- **决策**: Drizzle ORM 作为数据库访问层
-- **理由**: Type-safe、轻量、SQL-like API、自动参数化防注入、与 PostgreSQL 深度整合
+### D8.1: JWT密钥管理
+- **决策**: JWT密钥通过环境变量注入（AUDE_JWT_SECRET），启动时校验非空且≥32字符
+- **理由**: NocoBase CVE-2025-13877(CVSS 9.8)默认JWT密钥导致任意用户冒充
+- **实现**: Fastify启动时 assert(process.env.AUDE_JWT_SECRET.length >= 32)，拒绝默认值
+- **参考**: OWASP JWT Cheat Sheet
 - **状态**: 已决策
+
+### D9: Drizzle ORM 数据库操作
+- **决策**: Drizzle ORM 作为数据库访问层（锁定 0.45.x LTS），通过 DatabaseProvider 抽象层封装
+- **理由**: Type-safe、SQL-like API适合schema-engine、自动参数化防注入、PlanetScale收购背书；pre-1.0风险通过DatabaseProvider接口抽象（未来可零成本切换ORM）
+- **风险**: pre-1.0（v1.0 预计2026 Q3-Q4），CVE-2026-39356(7.5)已修复于v0.42+
+- **缓解**: DatabaseProvider接口隔离所有业务代码，CI集成测试验证迁移兼容性
+- **状态**: 已决策
+
+### D9.1: Drizzle连接池与监控
+- **决策**: 使用pg-pool连接池（默认10连接），pino记录慢查询（>100ms）
+- **监控**: Phase 1通过Core日志聚合查看连接池状态；Phase 2引入PgBouncer统一连接管理
+- **索引**: 所有包含tenant_id的查询必须以tenant_id为首列索引（避免全表扫描）
 - **状态**: 已决策
 
 ### D10: Record Rules（记录级权限）

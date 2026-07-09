@@ -162,7 +162,13 @@ runtime:
 | **前端框架** | React 19 + Tailwind CSS v4 | React 生态最大；Tailwind v4 @theme 语法定义设计令牌（详见 decisions.md D6） |
 | **UI 组件** | shadcn/ui + Ant Design 5 | shadcn/ui 负责通用 UI（可复制组件、可定制主题）；antd 负责数据密集型场景（Table/Form/Tree/ProTable） |
 | **数据库** | PostgreSQL 16+ | 成熟可靠、Schema 支持、行级安全可用于多租户 |
-| **缓存/队列** | Redis / Valkey | 会话存储、消息队列、缓存 |
+| **缓存/队列** | Redis / Valkey | 会话、队列、缓存。Phase 1 Redis OSS（当前），Phase 2 Valkey（保留BSD许可）作为drop-in replacement |
+| **任务队列** | BullMQ + Redis | Phase 1用于后台任务（邮件、通知）；Phase 2用于Saga补偿重试、长时间任务 | BullMQ docs |
+| **测试** | Vitest + Playwright | Vitest用于单元/集成测试（与Vite配置共享），Playwright用于E2E | Vitest docs, Playwright docs |
+| **Monorepo构建** | Turborepo | 并行任务执行、缓存、依赖图 | Turborepo docs |
+| **库构建** | tsup | 基于esbuild，TypeScript库打包（零配置） | tsup docs |
+| **前端构建** | Vite | 开发HMR + 生产Rollup | Vite docs |
+| **API文档** | @fastify/swagger | OpenAPI 3.0自动生成 | Fastify docs |
 | **文件存储** | MinIO / S3 兼容 | 插件输出文件、附件存储 |
 | **包管理** | pnpm workspace monorepo | 严格依赖隔离、磁盘高效（详见 decisions.md D4） |
 | **验证** | Zod | 边界验证 + TypeScript 类型推导（详见 decisions.md D8） |
@@ -186,6 +192,32 @@ runtime:
 - **Ant Design 5**：企业级组件库，Table/ProTable、Form/ProForm、Tree、Transfer 等数据密集型组件比 shadcn/ui 成熟得多
 - **共存原则**：shadcn/ui 负责通用 UI（按钮、对话框、卡片、布局），antd 负责管理页面（数据表格、复杂表单、树形选择）
 
+### 3.3 shadcn/ui 版本锁定与供应链安全（D6.1）
+
+- 锁定shadcn/ui组件版本（不自动更新），registry URL指向项目私有fork
+- copy-model将组件源码直接加入项目（非npm依赖），registry注入攻击可被Git diff直接审计
+- 组件更新通过PR review + diff审查（与npm audit互补）
+
+### 3.4 shadcn+antd 生产策略
+
+Phase 1仅使用shadcn/ui（~577KB gzip）。Ant Design 5仅用于开发环境测试dual-framework兼容性。Phase 2按需引入antd组件，通过Bundle Analyzer监控总体积（目标小于2MB gzip）。
+
+### 3.5 Fastify运行时约束
+
+- Core进程≤256MB，PluginHost进程≤128MB（通过max-old-space-size强制）
+- 启用@fastify/under-pressure（maxEventLoopDelay=1000ms，maxHeapUsedBytes=200MB）
+- 暴露/health端点返回内存、事件循环延迟、连接池状态
+
+### 3.6 JWT密钥管理（D8.1）
+
+- JWT密钥通过环境变量注入（AUDE_JWT_SECRET），启动时校验非空且≥32字符
+- 原因：NocoBase CVE-2025-13877(CVSS 9.8)默认JWT密钥导致任意用户冒充
+- Fastify启动时 assert(process.env.AUDE_JWT_SECRET.length >= 32)，拒绝默认值
+- 参考：OWASP JWT Cheat Sheet
+
+### 3.7 Zod安全实践
+
+D8补充：生产环境使用safeParse()（不抛异常，返回result对象），仅在开发环境使用parse()（快速失败+清晰堆栈）。
 ---
 
 ## 四、核心模块设计
@@ -280,6 +312,11 @@ const approvalSchema = defineCollection({
 - 请求追踪：每个请求生成唯一 Request ID，贯穿所有日志和下游调用
 - 调试面板：Web UI 实时查看日志流、插件状态、系统健康度
 
+### 4.4a Drizzle连接池与监控（D9.1）
+
+- 使用pg-pool连接池（默认10连接），pino记录慢查询（>100ms）
+- Phase 1通过Core日志聚合查看连接池状态；Phase 2引入PgBouncer统一连接管理
+- 所有包含tenant_id的查询必须以tenant_id为首列索引（避免全表扫描）
 ### 4.5 Core 数据 API 代理（D12）
 
 插件默认不直连数据库。所有 DB 操作通过 Core 数据 API 代理（JSON-RPC）。Core 自动注入：
@@ -355,6 +392,10 @@ CREATE TABLE users (
 ```
 
 **租户上下文传递**：通过 Fastify `request.tenantId` 传递，Drizzle 查询自动附加 `where: eq(table.tenantId, ctx.tenantId)`。
+
+**强制索引规则**: 所有业务表必须创建 (tenant_id, id) 联合索引作为主键或首个索引。Drizzle迁移自动检测并拒绝缺少此索引的表。
+
+**PostgreSQL RLS**: Phase 2的Database-per-tenant方案中，PostgreSQL RLS在20-30%性能退化上限，需基准测试验证。替代方案：Drizzle中间件注入WHERE条件（应用层过滤），性能可控。
 
 ---
 
