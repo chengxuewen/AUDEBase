@@ -57,3 +57,19 @@
 ### 层级分组命名
 - **问题**: 使用 `isolation` 和 `group` 可能产生命名歧义
 - **正确做法**: 使用 `mode`（inline|process|container）和 `partition`（SYSTEM|oa|erp|...）
+
+## 技术栈相关
+
+### Drizzle pre-1.0 风险
+- **问题**: Drizzle ORM 尚未发布 v1.0，API 不保证稳定
+- **正确做法**: 锁定 0.45.x LTS，通过 DatabaseProvider 接口抽象隔离。更换 ORM 零成本
+- **详见**: decisions.md D9
+
+### shadcn/ui copy-model 安全
+- **问题**: registry 注入攻击可将恶意代码直接写入项目源码（非 npm 依赖）
+- **正确做法**: 锁定组件版本 + 私有 registry fork + PR diff 审查
+- **详见**: decisions.md D6.1
+
+### Fastify 国内招聘池
+- **问题**: 国内 Fastify 开发者极少（Boss直聘约 3 vs NestJS 约 500）
+- **正确做法**: 保持技术适配优先；Express/Koa 开发者 1-2 天可学 Fastify

@@ -5,7 +5,7 @@
 **Branch:** `main`
 
 ## OVERVIEW
-AUDEBase — 企业应用开发平台。微内核 + 插件热插拔架构，对标 Odoo、NocoBase、云表。当前早期阶段，零源代码，仅有配置/文档/代理基础设施。
+AUDEBase — 企业应用开发平台。微内核 + 插件热插拔架构，对标 Odoo、NocoBase、云表。当前 Phase 0 — 架构定义完成，文档基础设施就绪。
 
 ## STRUCTURE
 ```
@@ -19,7 +19,7 @@ AUDEBase/
 │   ├── skills/         # 6 个技能（design-system + 5 openspec-*）
 │   └── memorys/        # 4 个项目记忆文件（status/conventions/decisions/pitfalls）
 ├── docs/
-│   └── architecture.md # 431 行 — 架构文档（企业应用平台）
+│   └── architecture.md # 538 行 — 架构文档（企业应用平台）
 ├── SKILL.md            # 82 行 — 技能注册表（superpowers + 项目专属 + agents）
 ├── README.md           # 18 行 — 项目简介
 ├── package.json        # 极简：仅 `name: "AUDEBase"` + `@colbymchenry/codegraph` 开发依赖
@@ -32,16 +32,15 @@ AUDEBase/
 | Task | Location | Notes |
 |------|----------|-------|
 | 项目状态和阶段 | `.agents/memorys/status.md` | 模块状态表、已知缺失 |
-| 架构决策 | `.agents/memorys/decisions.md` | D1-D9 + G1-G4 |
+| 架构决策 | `.agents/memorys/decisions.md` | D1-D14 + G1-G4，183行 |
 | 编码约定 | `.agents/memorys/conventions.md` | 命名、不可变性、TS 规范 |
 | 已知坑点 | `.agents/memorys/pitfalls.md` | MODACS 适配相关坑 |
 | 语言规则 | `.agents/rules/{lang}/` | 各语言专属规则 |
 | Agent 配置 | `.opencode/opencode.json` | instructions、MCP、LSP |
 | Agent 使用指南 | `.opencode/agent-guide.md` | OMO 编排体系、5 层模型路由 |
 | 技能注册表 | `SKILL.md` | superpowers + 项目专属技能清单 |
-| 架构文档 | `docs/architecture.md` | 架构文档（企业应用平台，431行）|
+| 架构文档 | `docs/architecture.md` | 架构文档（企业应用平台，538行）|
 | 插件架构分析 | `docs/plugin-architecture-analysis.md` | 848 行 — 四层信任分组 + 通信 + 安全 + 生命周期 |
-| 通用规则 | `.agents/rules/common/` | 安全、编码风格、测试、Git 工作流 |
 | 通用规则 | `.agents/rules/common/` | 安全、编码风格、测试、Git 工作流 |
 | 安全规则 | `.agents/rules/common/security.md` | Secret management、XSS、CSRF |
 
@@ -96,7 +95,7 @@ npm install    # 安装依赖（如需要）
 ```
 
 ## NOTES
-- **零源代码** — 项目处于早期初始化阶段，仅有配置和文档基础设施
+- **文档基础设施就绪** — 架构定义完成。文档完善，等待 Phase 1 编码启动
 - **从 MODACS 分离** — 2026-07-08 首次提交。无 MODACS 代码共享
 - **.sisyphus/** 被 gitignore 排除 — 计划文件和证据不提交到仓库
 - **双 package.json** — 根目录用 npm，`.opencode/` 用独立包（插件系统）
