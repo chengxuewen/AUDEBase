@@ -239,6 +239,8 @@ runtime:
 - **RPC**：JSON-RPC over stdin/stdout → Core 路由转发
 - **白名单**：需在 manifest 中显式声明 `calls: ["target.plugin"]`，Core 启动时校验
 - **❌**：禁止通信，Core 路由层直接拒绝并记录安全审计日志
+
+> **租户维度安全**：组内直接函数调用（Domain 内，如 OA 组）必须通过 PluginHost context 传递 `tenant_id`。Drizzle 查询自动附加 `WHERE tenant_id = context.tenantId`。信任边界表聚焦跨组通信控制；组内通信通过 context 注入保证租户隔离。详见 architecture.md §五。
 ### 4.3 三种隔离模式
 
 | 模式 | 隔离级别 | IPC 延迟 | 故障影响 | 适用场景 |
@@ -375,7 +377,7 @@ permissions:
     record_rule: "[('company_id', '=', user.company_id.id)]"
 ```
 
-Core 在 RPC 转发时 ORM 层自动注入 WHERE 条件。Phase 2 实现 Drizzle 中间件自动附加 `tenant_id` 过滤。
+Core 在 RPC 转发时 ORM 层自动注入 WHERE 条件。Phase 1 通过 Drizzle 中间件自动附加 `tenant_id` 过滤。
 
 #### 字段级权限
 

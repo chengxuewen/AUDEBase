@@ -61,10 +61,15 @@
 - **状态**: 已决策，Phase 2 实现
 
 ### D4: 多租户数据库级隔离
-- **决策**: Phase 1 采用单数据库 + tenant_id 字段隔离；Phase 2 支持 Database-per-tenant
-- **替代方案**: Schema-per-tenant（PostgreSQL schema 隔离）、Shared-table（行级安全 RLS）
-- **理由**: Phase 1 简单高效验证架构；Phase 2 完整数据隔离满足合规需求；混合模式支持灵活部署
-- **参考**: Odoo Multi-Company、NocoBase 多租户
+- **决策**: Phase 1 采用单数据库 + tenant_id 字段隔离；Phase 1.5 PostgreSQL Schema-per-tenant；Phase 2 Database-per-tenant
+- **替代方案**: Schema-per-tenant（PostgreSQL schema 隔离）、Shared-table（行级安全 RLS）、instance-per-tenant（NocoBase 默认）
+- **理由**: Phase 1 简单高效验证架构；Phase 1.5 NocoBase 企业版验证的中间方案；Phase 2 完整数据隔离满足合规需求；混合模式支持灵活部署
+- **参考**: Odoo Multi-Company（tenant_id 模式）、NocoBase @nocobase/plugin-multi-tenant（Schema 模式）
+
+### D4.1: 文件存储多租户隔离
+- **决策**: Phase 1 本地文件系统按路径前缀隔离（`/data/audebase/storage/{tenantId}/`）；Phase 2 采用 Odoo ir.attachment 模式 — DB 元数据（tenant_id + sha256）+ MinIO/S3 content-addressed 去重存储
+- **理由**: Phase 1 零外部依赖快速启动；Phase 2 SHA-256 去重节省 40-70% 存储，presigned URL 直传减少 Core 带宽压力
+- **参考**: Odoo ir.attachment（DB 元数据 + filestore 路径）、Nextcloud S3 Primary Storage
 - **状态**: 已决策
 
 ### D5: TypeScript 全栈 + Node.js + Fastify 后端
