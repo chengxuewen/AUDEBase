@@ -499,8 +499,7 @@ PluginHost 路由层提取并注入到执行上下文。
 
 #### Saga 可靠性
 
-Saga 持久化：所有 Saga 步骤记录到 PostgreSQL `saga_log` 表（含状态、重试次数、创建时间）。
-补偿操作支持重试（最多 3 次，指数退避）。幂等性：每个步骤携带 `idempotency_key`。
+Saga 持久化：所有 Saga 步骤记录到 PostgreSQL `saga_log` 表（含 tenant_id 列 + 首列索引、状态、重试次数、创建时间）。
 
 Core 重启后需恢复未完成 Saga — 此项标注为已知限制（外部状态表可在 Core 恢复后重放）。
 ### 4.10 IPC 故障处理
@@ -734,7 +733,6 @@ packages/erp-core/
 └── locale/
     ├── zh-CN.json       # {"purchase.order.create": "创建采购订单"}
     ├── en-US.json        # {"purchase.order.create": "Create Purchase Order"}
-    └── default.json      # 回退语言（通常为 zh-CN）
 ```
 
 **manifest 声明**：
@@ -762,11 +760,13 @@ locale:
 
 **Phase 1 实现**：预加载所有翻译（插件数量少，内存可接受）。Phase 2 按需懒加载。
 
+**前端实现**：使用 react-i18next（详见 decisions.md D15）。以插件包名作为 i18next namespace（如 `@audebase/plugin-erp`），manifest.locale.path → i18next backend 加载 `locale/{lang}.json`。React 组件中使用 `useTranslation('@audebase/plugin-erp')` Hook。
+
 **参考**：
 - NocoBase: `@nocobase/i18n`，`app.i18n.t('pluginName.key')`，按插件命名空间隔离
 - Odoo: `.po` 文件 + `_()` 函数，按模块 `i18n/` 目录
 - VS Code: `package.nls.json` + `package.nls.{lang}.json`
-- i18next: JSON namespace + lazy load + react-i18next
+- react-i18next: JSON namespace + lazy load（已决策采用）
 ## 五、分阶段落地计划
 
 > **范围说明**：本文档聚焦插件隔离架构设计。Phase 1 整体范围（含 RBAC、日志、UI、多租户）

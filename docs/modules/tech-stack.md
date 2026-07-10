@@ -10,8 +10,9 @@
 | **主语言** | TypeScript | 类型安全、全栈统一、生态最大 |
 | **后端运行时** | Node.js + Fastify | Fastify 插件系统与 AUDEBase 插件框架天然契合；内置 JSON Schema 验证；性能 2-3× Express |
 | **ORM** | Drizzle ORM | Type-safe、轻量、SQL-like API、自动参数化防注入 |
-| **前端框架** | React 19 + Tailwind CSS v4 | React 生态最大；Tailwind v4 @theme 语法定义设计令牌 |
-| **UI 组件** | shadcn/ui + Ant Design 5 | shadcn/ui 负责通用 UI；antd 负责数据密集型场景（Table/Form/Tree/ProTable） |
+| **前端框架** | React 19 + Ant Design 5 | React 生态最大；NocoBase 已验证 antd 可独立覆盖全部企业 UI 需求 |
+| **UI 组件** | Ant Design 5 + @ant-design/pro-components | ProLayout/ProTable/ProForm 等开箱即用的企业级后台组件 |
+| **国际化** | react-i18next + i18next | 双命名空间（插件包名 + client 共享）；与 D15 一致
 | **数据库** | PostgreSQL 16+ | 成熟可靠、Schema 支持、行级安全可用于多租户 |
 | **缓存/队列** | Redis / Valkey | Phase 1 Redis OSS，Phase 2 Valkey（drop-in replacement，保留 BSD 许可） |
 | **任务队列** | BullMQ + Redis | Phase 1 后台任务，Phase 2 Saga 补偿重试 |
@@ -48,25 +49,19 @@
 
 - **参考**: Fastify 官方文档、NocoBase 技术栈
 
-### D6: React + Tailwind CSS v4 + shadcn/ui + Ant Design 5
+### D6: React + Ant Design 5
 
-- **决策**: React 19 + Tailwind v4 作为基础框架；shadcn/ui 处理通用组件；Ant Design 5 处理数据密集型页面
-- **替代方案**: Vue 3 + Element Plus（国内流行但生态略小）、纯 shadcn/ui（Table/Form 不够强）、纯 antd（定制主题不便）
-- **理由**:
-  - React 生态最大
-  - shadcn/ui 可复制不捆绑——组件源码直接纳入项目，非 npm 依赖
-  - antd 企业级组件成熟（Table/ProTable、Form/ProForm、Tree、Transfer 等远超 shadcn/ui）
-  - 两者共存互补：shadcn/ui 负责通用 UI（按钮、对话框、卡片、布局），antd 负责管理页面（数据表格、复杂表单、树形选择）
-  - shadcn/ui 硬依赖 Tailwind v4，两者绑定选择
-- **生产策略**: Phase 1 仅使用 shadcn/ui（~577KB gzip）。Phase 2 按需引入 antd 组件，目标总量 <2MB gzip（Bundle Analyzer 监控）
-- **参考**: React 官方、shadcn/ui、Ant Design
+- **决策**: React 19 + Ant Design 5 作为唯一 UI 组件库。详见 [decisions.md D6](#)。ProTable/ProForm 为差异化选择（非 NocoBase 验证路径，需自行跟踪 antd v6 兼容性）。ProLayout findDOMNode 已知限制（不使用 Strict Mode 规避）
+- **替代方案**: Vue 3 + Element Plus、React + shadcn/ui + Tailwind v4（已废弃，见废弃记录）
+- **理由**: NocoBase 已验证 Ant Design 5 可独立覆盖全部企业 UI 需求
+- **参考**: NocoBase（纯 antd 5.24.2 + @ant-design/pro-layout 7.22.1）、React 官方、Ant Design 5
 
-### D6.1: shadcn/ui 供应链安全
+### D6.1: Ant Design 5 供应链安全
 
-- **决策**: 锁定 shadcn/ui 组件版本（不自动更新），registry URL 指向项目私有 fork
-- **理由**: shadcn/ui 的 copy-model 将组件源码直接加入项目（非 npm 依赖），registry 注入攻击可被 Git diff 直接审计
-- **审计**: 组件更新通过 PR review + diff 审查（与 npm audit 互补）
+- **决策**: antd 通过 npm 安装，版本锁定在 package.json 中（精确版本，不用 ^/~）；CI 集成 npm audit；Renovate 自动升级；定期检查 antd CVE
+- **理由**: npm 依赖安全模型——npm audit + lockfile + Renovate。@ant-design/pro-components 同等对待
 
+---
 ### D8: Zod 边界验证
 
 - **决策**: Zod schema 用于所有系统边界输入验证，自动推导 TypeScript 类型
