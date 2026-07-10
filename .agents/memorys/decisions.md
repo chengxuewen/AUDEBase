@@ -9,7 +9,7 @@
 - **替代方案**: Odoo 单体模式（所有业务逻辑在同一进程中）、纯微服务（运维成本高）
 - **理由**: 故障隔离、独立开发/部署、插件市场支持、业务灵活性
 - **参考**: NocoBase 微内核设计、Odoo 模块化思想
-- **状态**: 已决策，Phase 1 MVP 实现插件框架。Phase 2 采用四层信任分组模型（见 D1.1）。
+- **状态**: 已决策，Phase 1 实现 inline 模式（SYSTEM/Domain 共享进程），Phase 2 扩展到 process 和 container 隔离（见 D1.1）。
 
 ### D1.1: 四层信任分组模型
 - **决策**: 插件不采用「每插件独立进程」，而采用基于信任度的四层进程分组
@@ -46,6 +46,79 @@
 - **决策**: Phase 1 包含字段：name/version/display_name/description/category/license/application/entry/author/dependencies/assets/lifecycle/runtime(mode+partition+crash_policy)/security(db_namespace)/exports/provides/permissions/models/locale/data
 - **Phase 2 增加**: external_dependencies/demo/sequence/auto_install
 - **状态**: 已决策
+
+### D1.6: 内核插件与 Bootstrap 流程
+- **决策**: 定义 `@audebase/plugin-core` 为零依赖内核插件（类比 Odoo `base` 模块），负责首次运行时创建核心数据。内核插件在插件依赖图中优先级最高，确保最先加载
+- **Bootstrap 数据**: admin 用户（默认密码强制首次修改）、默认角色（admin/member）、系统租户（tenant_id=NULL）、默认菜单结构（插件管理/用户管理）、核心权限项
+- **Bootstrap 流程**: Core 启动 → 检查数据库是否已初始化（如模块注册表） → 如未初始化，创建核心表 → 加载 `plugin-core` → 执行核心插件的 `install()` 创建 Bootstrap 数据 → 继续加载其余插件
+- **约束**: 内核插件 `dependencies: []`（零依赖）、`auto_install: true`（不可卸载）、仅包含平台运行必需的初始数据，不包含业务逻辑
+- **理由**: 解决 Phase 1 首次运行的核心引导问题——admin 用户需要 RBAC，RBAC 需要数据库表，数据库表需要首次初始化。Odoo 的 `base` 模块经过 20 年验证是处理此问题的最佳模式
+- **参考**: Odoo `base` 模块（ir.model/ir.ui.view/ir.ui.menu/res.users/res.groups）、NocoBase 首次启动初始化
+- **状态**: 已决策，Phase 1 实现
+
+### D1.7: 数据库迁移版本管理
+- **决策**: 采用 Odoo 式按版本排序 + NocoBase 3 阶段迁移。迁移文件组织为 `migrations/{version}/` 目录，每个目录含 `preload.sql`、`postsync.sql`、`postload.sql` 三个文件（对应三个阶段）
+- **排序**: 迁移按 manifest.yaml 中 `version` 字段（SemVer）排序执行。`migration_history` 表追踪每个插件的已执行迁移版本
+- **三阶段**:
+  1. `preload.sql` — 在所有 `beforeLoad()` 执行前运行，用于 DDL（ALTER TABLE 等）
+  2. `postsync.sql` — 在 Core DB 同步完成后运行，用于数据迁移（INSERT/UPDATE 等）
+  3. `postload.sql` — 在所有 `load()` 完成后运行，用于后处理（索引重建等）
+- **回滚**: Phase 1 不支持自动回滚。迁移失败时记录错误日志并阻止启动。生产环境需在迁移前手动备份
+- **version_gated**: manifest.yaml 中 `lifecycle.migration_version` 字段声明当前版本。Core 对比 `migration_history` 表，仅执行版本号 > 已记录版本的迁移
+- **理由**: NocoBase 3 阶段模式已在 D1.4 中决策，Odoo 按版本排序经过 20 年生产验证。此决策为 D1.4 的补充细节
+- **参考**: NocoBase beforeLoad/afterSync/afterLoad 三阶段、Odoo module version + ir.module.module 追踪表
+- **状态**: 已决策，Phase 1 实现
+- **升级流程**: Core 定期或手动检测 manifest.yaml 中 `version` 字段变化 → 对比 `migration_history` 表 → 执行新版本迁移（preload → postsync → postload 三阶段） → 更新 migration_history 记录。升级前 Core 自动创建数据库快照（pg_dump），升级失败时管理员可手动恢复
+- **触发方式**: Phase 1 支持 CLI 命令 `aude plugin upgrade <name>` 和 Admin UI "升级"按钮；Phase 2 支持自动检测 + 通知
+
+### D1.8: API 版本控制
+- **决策**: manifest.exports 中增加 `api_version` 字段（SemVer），Core 通过 URL 路径 `/api/v{major}/{resource}` 路由暴露插件 API。向后兼容保证到下一个主版本
+- **实现**: manifest.exports 中每个导出的接口声明 `api_version: "1.0.0"`，Core 路由注册时提取主版本号作为 URL 前缀。同一资源可注册多个主版本（如 v1 和 v2 并存过渡期）
+- **兼容策略**: 主版本（major）变更允许不兼容修改，次版本（minor）/补丁（patch）必须向后兼容。废弃接口提前 1 个主版本标记 deprecated，之后移除
+- **理由**: 插件市场场景下，API 不兼容变更会导致依赖插件崩溃。Directus、Strapi 等均采用路径版本化策略
+- **参考**: Directus `/api/v1/` 路径版本、SemVer 2.0 规范
+- **状态**: 已决策，Phase 1 实现基础版本路由
+
+### D1.9: 插件事件总线
+- **决策**: Core 提供应用层 EventBus，插件通过 `publish(subject, payload)` / `subscribe(subject, handler)` 实现松耦合通信。同进程直接函数回调（0ms），跨进程通过 Redis Pub/Sub 自动传播（D1.3）
+- **声明**: manifest.exports 可声明 `events: ['order.created', 'order.updated']`，表示插件发布的事件类型。Core 校验事件 payload 的 Zod schema
+- **作用域**: 事件默认在 partition 内传播（组内广播），需跨 partition 传播时显式声明 `scope: 'global'`
+- **与 D1.3 的关系**: D1.3 定义传输层（JSON-RPC + Redis Pub/Sub），D1.9 定义应用层事件抽象（主题订阅 + payload 校验）
+- **理由**: Odoo bus.bus、NocoBase app.on/emit、Strapi Lifecycle Hooks、Axelor ObserverService 全部采用事件总线模式——这是插件化平台松耦合通信的标准实践
+- **参考**: Odoo `env['bus.bus'].sendone()`、NocoBase `app.on()/app.emit()`、Axelor `@EventListener`
+- **状态**: 已决策，Phase 1 实现同进程 EventBus
+
+### D1.12: 审计日志
+- **决策**: Phase 1 定义 `audit_log` 表（tenant_id, actor_id, action, resource_type, resource_id, old_values, new_values, ip, user_agent, created_at）。Core 中间件在 API 写操作时自动记录审计日志
+- **索引**: `(tenant_id, resource_type, resource_id)` 复合索引支持按资源查询审计历史
+- **清理**: Phase 1 不自动清理，Phase 2 支持按保留期限（如 90 天）自动归档
+- **参考**: Odoo `mail.tracking.value`、Corteza Data Privacy Console
+- **状态**: 已决策，Phase 1 实现
+
+### D1.13: 健康检查
+- **决策**: Fastify 应用骨架内置 `GET /health`（返回 JSON `{ status: 'ok', db: true, redis: true, uptime: N }`）和 `GET /health/ready`（Kubernetes readiness probe，DB 连接成功后返回 200）
+- **状态**: 已决策，Phase 1 实现
+
+### D1.14: 通知系统接口
+- **决策**: Phase 1 定义 `NotificationProvider` 抽象接口（`send(recipient, template, data)`），不实现具体渠道。Phase 2 实现 Email（nodemailer）、InApp（数据库存储 + UI 展示）、Webhook 三种 Provider
+- **理由**: 通知是连接所有模块的横切关注点，Phase 1 定义接口可让插件预先声明通知需求而不依赖具体实现
+- **参考**: Odoo mail 模块、NocoBase notification plugin、Strapi email plugin
+- **状态**: 已决策，Phase 1 接口定义，Phase 2 渠道实现
+
+### D1.11: 实时通信（WebSocket）
+- **决策**: Phase 1 使用 HTTP polling 满足基础需求。Phase 2 引入 WebSocket 端点（`/ws`），支持 Collection 变更事件订阅（create/update/delete），客户端按需订阅指定 Collection + 事件类型
+- **实现**: Phase 2 使用 Fastify WebSocket 插件 + Redis Pub/Sub 跨进程事件传播。身份认证通过连接时 token 校验
+- **参考**: Directus WebSocket + GraphQL Subscriptions、Odoo Long Polling (/longpolling/poll)
+- **状态**: 已决策，Phase 2 实现
+
+### D1.10: 定时任务调度
+- **决策**: 使用 BullMQ repeatable jobs 实现定时任务。插件通过 `this.app.cron.add(schedule, handler)` API 注册定时任务
+- **声明**: manifest.yaml 中 `cron: [{ name, schedule, handler }]`，schedule 为 cron 表达式（兼容 node-cron），handler 为插件内函数名
+- **实现**: Core 将 manifest cron 声明转换为 BullMQ repeatable jobs，集成到已有 BullMQ + Redis 基础设施
+- **限制**: Phase 1 仅支持同进程执行（任务在 Core 进程中运行），Phase 2 支持独立 Worker 进程
+- **理由**: BullMQ 已在技术栈中（architecture.md §三），repeatable jobs 是 BullMQ 内置能力，零额外依赖
+- **参考**: Odoo `ir.cron` 模型、Strapi cron tasks、BullMQ repeatable jobs 文档
+- **状态**: 已决策，Phase 1 实现
 
 ### D2: manifest.yaml 插件声明系统
 - **决策**: 每个插件通过 manifest.yaml 声明元数据、依赖、版本、权限、数据模型
@@ -102,6 +175,25 @@
 - **参考**: NocoBase v2 FlowEngine、Appsmith WidgetFactory + ConfigRenderer
 - **状态**: 已决策，Phase 2 实现
 
+**映射器能力边界**：
+
+| 范围 | 说明 |
+|------|------|
+| **支持** | 标量字段（string/number/boolean/date/enum）、关联字段（belongsTo/hasMany 渲染为 Select/Transfer）、嵌套对象（渲染为子表单/折叠面板）、字段校验（Zod schema → antd Form rules）、列定义（JSON Schema properties → ProTable columns） |
+| **不支持** | 拖拽式 UI 编辑器（非低代码设计器）、双向绑定（Schema 是单向定义源）、自定义渲染器注册（Phase 2 仅内置映射规则）、复杂联动逻辑（x-reactions 风格，Phase 3+ 考虑） |
+
+**映射规则示例**（Phase 2 目标）：
+
+| JSON Schema | Ant Design 组件 |
+|------------|----------------|
+| `{ "type": "string", "maxLength": 100 }` | `<Input maxLength={100} />` |
+| `{ "type": "string", "format": "email" }` | `<Input type="email" />` |
+| `{ "type": "string", "enum": ["a", "b"] }` | `<Select options={[...]} />` |
+| `{ "type": "boolean" }` | `<Switch />` |
+| `{ "type": "number", "minimum": 0 }` | `<InputNumber min={0} />` |
+| `{ "type": "string", "format": "date" }` | `<DatePicker />` |
+| `{ "$ref": "#/definitions/User" }` (belongsTo) | `<Select ...>` (异步加载关联数据) |
+
 ### D8: Zod 边界验证
 - **决策**: Zod schema 用于所有系统边界输入验证，自动推导 TypeScript 类型
 - **理由**: TypeScript 类型推导、运行时验证、声明式 schema 定义、与 Fastify JSON Schema 互补
@@ -133,6 +225,27 @@
 - **参考**: Odoo ACL + Record Rules
 - **状态**: 已决策
 
+**Domain Filter 语法规范**：
+
+AUDEBase 采用 Odoo 式 Poland notation（前缀表达式）数组语法：
+
+```typescript
+// 示例: state = 'draft' AND amount > 1000
+['&', ['state', '=', 'draft'], ['amount', '>', 1000]]
+
+// 示例: (category = 'A' OR category = 'B') AND active = true
+['&', ['|', ['category', '=', 'A'], ['category', '=', 'B']], ['active', '=', true]]
+```
+
+| 运算符 | 含义 | 参数 |
+|--------|------|------|
+| `&` | AND | 2 个子条件 |
+| `|` | OR | 2 个子条件 |
+| `!` | NOT | 1 个子条件 |
+| `=` / `!=` / `>` / `<` / `>=` / `<=` | 比较 | `[field, operator, value]` |
+| `in` / `not in` | 集合包含 | `[field, op, [...values]]` |
+| `like` / `ilike` | 模糊匹配 | `[field, op, 'pattern']` |
+
 ### D11: 字段级权限
 - **决策**: manifest.exports 中 visible_to 声明字段可见角色
 - **实现**: Core API 响应时自动过滤不可见字段；Schema UI 自动隐藏不可见输入框
@@ -146,6 +259,15 @@
 - **参考**: Odoo ORM 单一数据访问路径、NocoBase CVE GHSA-v8vm-cqh8-q87q
 - **状态**: 已决策
 
+### D12.1: 插件间数据模型扩展
+- **决策**: 采用 Odoo 类继承模式。插件通过 manifest.yaml 中 `extends` 字段声明对目标 Collection 的字段扩展，Core 在插件加载时合并字段定义
+- **声明**: `manifest.yaml` 中 `extends: [{ collection: 'order', addFields: [{ name: 'warehouse_id', type: 'belongsTo', target: 'warehouse' }] }]`
+- **实现**: Core CollectionRegistry 在插件 load() 阶段合并所有 extends 声明，生成最终 Collection 定义。字段冲突（同名不同类型）时拒绝加载并报错
+- **限制**: Phase 1 仅支持添加字段（不支持覆写/删除已有字段）。字段校验（required/unique）由声明插件自行负责
+- **Phase 2**: 与 D3 Schema Engine 统一 — extends 声明直接转化为 Collection schema 合并操作；支持关联表扩展（多对多中间表）
+- **理由**: 插件化平台的核心能力 — 允许 ERP Suite 的多个独立插件协作构建完整数据模型。Odoo 类继承模式经过 20 年生产验证
+- **参考**: Odoo `_inherit` 模式、NocoBase Collection field extension
+- **状态**: 已决策，Phase 1 实现基础 extends 声明解析 + 字段合并
 ### D13: Saga 跨插件事务
 - **决策**: 跨插件工作流采用 Saga 补偿模式
 - **实现**: execute() + compensate() + 持久化日志（saga_log 表，含 tenant_id 列 + 首列索引）+ 幂等性（idempotency_key）
@@ -217,6 +339,8 @@
 - **理由**: 与 D7 自研 Schema 映射器避免重复。Phase 1 插件数少无需懒加载。lazy 选项是 D16 API 的自然扩展
 - **参考**: NocoBase v2 FlowEngine lazy loading、Strapi PR #17685/#17674 反模式
 - **状态**: 已决策（2026-07-10 新增）
+
+  参见 D17 插件前端加载策略：D17 定义加载机制（文件来源与浏览器加载方式），D22 定义注册 API（路由如何声明懒加载）。
 
 ### D23: UI 扩展插槽 — Registry + Slot
 - **决策**: Core 预定义命名 Slot（`header.actions.right`、`sidebar.bottom`、`settings.panels` 等），插件通过 `this.app.slot.add()` 注册组件。Slot 容器自动权限过滤（aclSnippet）+ 排序（order）。Slot 无注册组件时渲染 null（不占 DOM 节点，不渲染占位 UI）
