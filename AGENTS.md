@@ -1,11 +1,11 @@
 # AGENTS.md — AUDEBase Project Knowledge Base
 
-**Generated:** 2026-07-08
+**Generated:** 2026-07-10
 **Commit:** `a024b10`
 **Branch:** `main`
 
 ## OVERVIEW
-AUDEBase — 企业应用开发平台。微内核 + 插件热插拔架构，对标 Odoo、NocoBase、云表。当前 Phase 0 — 架构定义完成，文档基础设施就绪。
+AUDEBase — 企业应用开发平台。微内核 + 插件热插拔架构，对标 Odoo、NocoBase、云表。当前 Phase 0 — 架构定义完成，文档基础设施就绪，3 轮交叉审计通过，Phase 1 拆分为 1a/1b 五阶段路线图。
 
 ## STRUCTURE
 ```
@@ -19,7 +19,16 @@ AUDEBase/
 │   ├── skills/         # 6 个技能（design-system + 5 openspec-*）
 │   └── memorys/        # 4 个项目记忆文件（status/conventions/decisions/pitfalls）
 ├── docs/
-│   └── architecture.md # 726 行 — 架构文档（企业应用平台，含完整多租户设计）
+│   ├── architecture.md # 484 行 — 架构文档（10 章节，含 MVP 验收标准、Phase 1a/1b 路线图）
+│   ├── competitive-landscape.md # 386 行 — 39+ 产品竞品调研报告
+│   ├── plugin-architecture-analysis.md # ~850 行 — 四层信任分组深度分析
+│   ├── modules/        # 5 份模块设计文档
+│   │   ├── tech-stack.md
+│   │   ├── plugin-framework.md
+│   │   ├── plugin-communication.md
+│   │   ├── multi-tenant.md
+│   │   └── file-storage.md
+│   └── reference/      # 15 份竞品产品画像
 ├── SKILL.md            # 82 行 — 技能注册表（superpowers + 项目专属 + agents）
 ├── README.md           # 18 行 — 项目简介
 ├── package.json        # 极简：仅 `name: "AUDEBase"` + `@colbymchenry/codegraph` 开发依赖
@@ -31,16 +40,19 @@ AUDEBase/
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
-| 项目状态和阶段 | `.agents/memorys/status.md` | 模块状态表、已知缺失 |
-| 架构决策 | `.agents/memorys/decisions.md` | D1-D14 + G1-G4，192行 |
+| 项目状态和阶段 | `.agents/memorys/status.md` | 模块状态表、已知缺失、近期工作 |
+| 架构决策 | `.agents/memorys/decisions.md` | D1-D24 + G1-G4，388行 |
 | 编码约定 | `.agents/memorys/conventions.md` | 命名、不可变性、TS 规范 |
-| 已知坑点 | `.agents/memorys/pitfalls.md` | MODACS 适配相关坑 |
+| 已知坑点 | `.agents/memorys/pitfalls.md` | MODACS 适配 + 技术栈 + 行业 CVE 教训 |
 | 语言规则 | `.agents/rules/{lang}/` | 各语言专属规则 |
 | Agent 配置 | `.opencode/opencode.json` | instructions、MCP、LSP |
 | Agent 使用指南 | `.opencode/agent-guide.md` | OMO 编排体系、5 层模型路由 |
 | 技能注册表 | `SKILL.md` | superpowers + 项目专属技能清单 |
-| 架构文档 | `docs/architecture.md` | 架构文档（企业应用平台，726行，含完整多租户设计）|
-| 插件架构分析 | `docs/plugin-architecture-analysis.md` | 852 行 — 四层信任分组 + 通信 + 安全 + 生命周期 |
+| 架构文档 | `docs/architecture.md` | 架构文档（企业应用平台，484行，含 MVP 验收标准、Phase 1a/1b 五阶段路线图）|
+| 插件架构分析 | `docs/plugin-architecture-analysis.md` | ~850 行 — 四层信任分组 + 通信 + 安全 + 生命周期 |
+| 竞品调研 | `docs/competitive-landscape.md` | 386 行 — 39+ 产品，五大分类 |
+| 竞品参考 | `docs/reference/` | 15 份详细产品画像（Odoo/NocoBase/ERPNext 等）|
+| 模块设计 | `docs/modules/` | 5 份模块设计文档 |
 | 通用规则 | `.agents/rules/common/` | 安全、编码风格、测试、Git 工作流 |
 | 安全规则 | `.agents/rules/common/security.md` | Secret management、XSS、CSRF |
 
@@ -49,17 +61,22 @@ _当前无源代码。以下为架构文档中规划的模块：_
 
 | 模块 | 状态 | 规划路径 |
 |------|------|----------|
+
 | 插件框架 | 🔲 Phase 1 | `packages/plugin-framework/` |
+| plugin-core (Bootstrap) | 🔲 Phase 1 | `packages/plugin-core/` — 内核插件，零依赖（D1.6） |
 | manifest.yaml 系统 | 🔲 Phase 1 | `packages/manifest-engine/` |
-| RBAC 权限引擎 | 🔲 Phase 1 | `packages/rbac/` |
+| RBAC 权限引擎 | 🔲 Phase 1 | `packages/rbac/` — Phase 1 基础 tenant_id，Phase 2 完整 Record Rules（D10） |
 | 插件通信 | 🔲 Phase 1 | `packages/plugin-communication/` |
+| 审计日志 | 🔲 Phase 1 | `packages/audit/` — D1.12 |
+| 迁移管理 | 🔲 Phase 1 | `packages/migration/` — D1.7 |
+| 事件总线 | 🔲 Phase 1 | `packages/event-bus/` — D1.9 |
 | Schema Engine | 🔲 Phase 2 | `packages/schema-engine/` |
 | 插件市场 | 🔲 Phase 2 | — |
 | 工作流引擎 | 🔲 Phase 4 | `packages/workflow-engine/` |
 
 ## CONVENTIONS
 ### AUDEBase 独有
-- **命名**: `AUDEBase` 全大写，npm scope `@AUDEBase/`
+### npm scope
 - **去 MODACS 化**: 保持零 MODACS 残留，每次修改后运行 `grep -ri modacs . --exclude-dir=.git --exclude-dir=.sisyphus`
 - **精确编辑**: 不全局 MODACS→AUDEBase 替换，使用手术式编辑
 - **架构骨架**: `docs/architecture.md` 中内容不足 50% 的章节使用 `TODO: 为 AUDEBase 重写此节` 占位
@@ -95,9 +112,10 @@ npm install    # 安装依赖（如需要）
 ```
 
 ## NOTES
-- **文档基础设施就绪** — 架构定义完成。6 轮团队审核（R1-R6，累计 139+ 发现），文档完善，等待 Phase 1 编码启动
+
+- **文档基础设施就绪** — 架构定义完成。8 轮团队审核（R1-R8，累计 185+ 发现全部关闭），2 轮文档交叉审计通过，文档完善等待 Phase 1 编码启动
 - **从 MODACS 分离** — 2026-07-08 首次提交。无 MODACS 代码共享
-- **.sisyphus/** 被 gitignore 排除 — 计划文件和证据不提交到仓库
+- **.sisyphus/** 被 gitignore 排除 — 计划文件、审计报告暂存于此
 - **双 package.json** — 根目录用 npm，`.opencode/` 用独立包（插件系统）
 - **Agent 超配** — 对于零代码项目，基础设施配置较重。规则（89 个文件）和 MCP 服务器（7 个活动）是为未来开发准备的
 - **test 基础设施** — 不存在。要求 80% 覆盖率、TDD、AAA 模式（在规则中声明，但无框架可执行）
