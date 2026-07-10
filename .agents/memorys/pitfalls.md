@@ -1,6 +1,6 @@
 # AUDEBase 已知坑点与反模式
 
-**更新日期**: 2026-07-09
+**更新日期**: 2026-07-10
 
 ## MODACS 适配相关
 
@@ -65,11 +65,49 @@
 - **正确做法**: 锁定 0.45.x LTS，通过 DatabaseProvider 接口抽象隔离。更换 ORM 零成本
 - **详见**: decisions.md D9
 
-### shadcn/ui copy-model 安全
-- **问题**: registry 注入攻击可将恶意代码直接写入项目源码（非 npm 依赖）
-- **正确做法**: 锁定组件版本 + 私有 registry fork + PR diff 审查
-- **详见**: decisions.md D6.1
+### Ant Design 5 供应链安全
+
+> shadcn/ui 已废弃（2026-07-10），原 D6.1 安全策略不再适用。
+
+- **决定**: antd 通过 npm 安装，版本锁定在 package.json 中（精确版本，不用 ^/~）
+- **CI**: npm audit 每次 PR；Renovate 自动升级 minor/patch
+- **CVE**: 定期检查 antd CVE（npm audit / GitHub Advisory Database）
+- **@ant-design/pro-components**: 同等对待
+- 详见 decisions.md D6.1
 
 ### Fastify 国内招聘池
 - **问题**: 国内 Fastify 开发者极少（Boss直聘约 3 vs NestJS 约 500）
 - **正确做法**: 保持技术适配优先；Express/Koa 开发者 1-2 天可学 Fastify
+
+## 前端架构相关
+
+### ProLayout findDOMNode 弃用警告
+- **问题**: ProLayout 内部使用 findDOMNode（ProLayout.js:213），React 18 Strict Mode 下产生 deprecated 警告
+- **正确做法**: Phase 1 不使用 React Strict Mode（NocoBase 同方案）；Phase 2 跟踪上游修复（pro-components#8686）
+- **详见**: decisions.md D6
+
+### ProTable/ProForm antd v6 兼容性风险
+- **问题**: @ant-design/pro-components 子包 peerDependencies 仅声明 antd ^4.24.15 || ^5.11.2，不含 v6
+- **正确做法**: 锁定 pro-components 版本 + 跟踪 pro-components#9629 上游更新
+- **详见**: decisions.md D6
+
+### 动态 import() 签名反模式
+- **问题**: `async () => { return await import() }` 破坏 code splitting（Strapi PR #17685 教训）
+- **问题**: `React.lazy()` 作为 lazy 值传入路由 API 会导致运行时崩溃（Strapi PR #17674 教训）
+- **正确做法**: lazy 必须为 `() => import()` 箭头函数直接返回，不接受 async 包装或 React.lazy() 包装
+- **详见**: decisions.md D22
+
+### 租户切换 CWE-524 信息泄露
+- **问题**: `queryClient.clear()` 后客户端 navigate 可能导致旧租户缓存数据瞬间闪现
+- **正确做法**: `onlineManager.setOnline(false)` → `queryClient.clear()` → `window.location.href` 全页重载
+- **详见**: decisions.md D24
+
+### React Router basename 不支持动态段
+- **问题**: React Router v7 的 basename 为静态字符串，不支持 `/{tenantId}/admin` 动态前缀
+- **正确做法**: 使用通配路由 `/:tenantId/admin/*` + 手动路径解析
+- **详见**: architecture.md §6.11
+
+### Vite 对 antd CSS-in-JS 的 tree-shaking 效果未经验证
+- **问题**: NocoBase 使用 Rspack 构建，非 Vite。Vite/Rollup 对 antd 5 的 CSS-in-JS 组件 tree-shaking 效果未知
+- **正确做法**: Phase 1 构建配置确定后实测 bundle 大小；若不理想，降级为按需引入子路径（如 antd/es/table）
+- **详见**: decisions.md D21

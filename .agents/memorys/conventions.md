@@ -1,6 +1,6 @@
 # AUDEBase 编码约定
 
-**更新日期**: 2026-07-09
+**更新日期**: 2026-07-10
 
 ## 命名约定
 
@@ -13,6 +13,10 @@
 - **自定义 hooks**: `use` 前缀 + camelCase
 - **manifest 字段**: `mode`（inline|process|container）、`partition`（SYSTEM|oa|erp|mes|isolated）
 - **插件包名**: `@audebase/plugin-{name}`
+- **路由名称**: dot 命名约定（如 `admin.erp.purchase`），分组使用 `type: 'group'` 显式注册
+- **Slot 名称**: dot 命名约定（如 `header.actions.right`、`sidebar.bottom`、`settings.panels`）
+- **i18n namespace**: 双命名空间 — 插件包名（`@audebase/plugin-{name}`）+ 全局共享 `'client'`
+- **TanStack Query key**: 强制 `[pluginName, ...]` 前缀（避免插件间缓存冲突）
 
 ## TypeScript 规范
 
@@ -57,3 +61,13 @@
 - 嵌套 < 4 层
 - 无魔术数字（使用命名常量）
 - 优先使用早期返回减少嵌套
+
+## 前端特定规范
+
+- **UI 组件**: Ant Design 5 为唯一 UI 库，不使用其他组件库
+- **错误隔离**: 每插件路由 ErrorBoundary + Slot 逐组件 ErrorBoundary（使用 react-error-boundary）
+- **权限检查**: 使用 `useACL().can()` / `<ACLGuard>` 声明式权限控制，不使用内联条件判断
+- **路由注册**: 仅通过 `this.app.router.add()` API 注册，不在组件内直接使用 `<Route>`
+- **Slot 注册**: 通过 `this.app.slot.add()` API 注册到预定义命名 Slot
+- **翻译调用**: React 组件使用 `useTranslation(pluginPkgName)` Hook；插件类使用 `this.t()`
+- **动态导入**: `lazy: () => import(...)` 必须为箭头函数直接返回 import()——禁止 `async` 包装和 `React.lazy()` 包装

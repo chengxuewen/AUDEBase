@@ -1,8 +1,8 @@
 # AUDEBase 架构决策记录
 
-**更新日期**: 2026-07-09
+**更新日期**: 2026-07-10
 
-## 架构决策 (D1-D9)
+## 架构决策 (D1-D14, D15-D24)
 
 ### D1: 微内核 + 插件热插拔架构
 - **决策**: 采用 NocoBase 式微内核架构，每个业务系统（OA/ERP/MES 等）作为独立插件套件运行
@@ -46,6 +46,7 @@
 - **决策**: Phase 1 包含字段：name/version/display_name/description/category/license/application/entry/author/dependencies/assets/lifecycle/runtime(mode+partition+crash_policy)/security(db_namespace)/exports/provides/permissions/models/locale/data
 - **Phase 2 增加**: external_dependencies/demo/sequence/auto_install
 - **状态**: 已决策
+
 ### D2: manifest.yaml 插件声明系统
 - **决策**: 每个插件通过 manifest.yaml 声明元数据、依赖、版本、权限、数据模型
 - **替代方案**: package.json 声明（信息不足）、数据库注册（耦合运行态）
@@ -79,24 +80,26 @@
 - **参考**: Fastify 官方文档、NocoBase 技术栈
 - **状态**: 已决策
 
-### D6: React + Tailwind CSS v4 + shadcn/ui + Ant Design 5
-- **决策**: React 19 + Tailwind v4 作为基础框架；shadcn/ui 处理通用组件；Ant Design 5 处理数据密集型页面
-- **替代方案**: Vue 3 + Element Plus（国内流行但生态略小）、纯 shadcn/ui（Table/Form 不够强）、纯 antd（定制主题不便）
-- **理由**: React 生态最大；shadcn/ui 可复制不捆绑；antd 企业级组件成熟；两者共存互补。shadcn/ui 依赖 Tailwind v4（硬依赖），两者绑定选择
-- **参考**: React 官方、shadcn/ui、Ant Design
-- **状态**: 已决策
+### D6: React + Ant Design 5
+- **决策**: React 19 + Ant Design 5 作为唯一 UI 组件库。使用 @ant-design/pro-layout 构建管理后台布局骨架，ProTable/ProForm 等 pro-components 用于数据密集型页面
+- **说明**: ProTable/ProForm 为 AUDEBase 差异化选择——NocoBase 生产环境仅使用 @ant-design/pro-layout，表单/表格使用 Formily + antd 原生组件。ProTable/ProForm 路径未被 NocoBase 验证，需自行跟踪 antd v6 兼容性（pro-components#9629）
+- **已知限制**: ProLayout 内部使用 findDOMNode，React 18 Strict Mode 产生弃用警告。Phase 1 不使用 Strict Mode 规避（NocoBase 同方案），Phase 2 跟踪上游修复（pro-components#8686）
+- **替代方案**: Vue 3 + Element Plus、React + shadcn/ui + Tailwind v4（已废弃，见废弃记录）
+- **理由**: NocoBase 已验证 Ant Design 5 可独立覆盖企业平台全部 UI 需求；单一组件库消除库间主题冲突；ConfigProvider.theme.token 统一主题体系
+- **参考**: NocoBase（纯 antd 5.24.2 + @ant-design/pro-layout 7.22.1）、React 官方、Ant Design 5
+- **状态**: 已决策（2026-07-10 更新，废弃原 shadcn/ui + Tailwind v4 混合方案）
 
-### D6.1: shadcn/ui 版本锁定与供应链安全
-- **决策**: 锁定shadcn/ui组件版本（不自动更新），registry URL指向项目私有fork
-- **理由**: shadcn/ui的copy-model将组件源码直接加入项目（非npm依赖），registry注入攻击可被Git diff直接审计
-- **审计**: 组件更新通过PR review + diff审查（与npm audit互补）
-- **状态**: 已决策
+### D6.1: Ant Design 5 供应链安全
+- **决策**: antd 通过 npm 安装，版本锁定在 package.json 中（精确版本，不用 ^/~）；CI 集成 npm audit（每次 PR）；Renovate 自动升级（minor/patch 自动创建 PR，major 需人工审核）；定期检查 antd CVE（npm audit / GitHub Advisory Database）
+- **理由**: antd 作为 npm 依赖的传统安全模型——npm audit + lockfile + Renovate。@ant-design/pro-components 同等对待。替代原 shadcn/ui copy-model 的 registry fork 策略
+- **状态**: 已决策（2026-07-10 更新，替代原 shadcn/ui D6.1）
 
 ### D7: Schema 驱动 UI
-- **决策**: 页面结构通过 JSON Schema 描述，运行时动态渲染，无需前端代码
-- **替代方案**: 纯代码组件（灵活但不低代码）、完全拖拽（复杂度高）
-- **理由**: NocoBase 验证过的模式；非开发者可配置页面；Schema 可存储/版本化/共享
-- **参考**: NocoBase Schema UI、Formily（阿里开源 Schema 表单方案）
+- **决策**: Phase 2 自研轻量 Schema→Ant Design 映射器，将 JSON Schema 声明映射为 ProTable/ProForm/Descriptions 等 antd 组件。不引入 Formily
+- **替代方案**: 引入 @formily/antd（NocoBase v1 路径，但 v2 正以自研 FlowEngine 替代 Formily）、纯手写代码（放弃低代码能力）
+- **理由**: NocoBase v2 从 Formily 迁移到自研 FlowEngine 证明自研路径长期更可控；Phase 1 手写 antd 页面积累的模式直接构成映射器初始规则；映射器范围限定为 antd 组件的声明式包装
+- **实现**: Phase 1 管理后台手写 antd 代码，Phase 2 自研映射器迁移
+- **参考**: NocoBase v2 FlowEngine、Appsmith WidgetFactory + ConfigRenderer
 - **状态**: 已决策，Phase 2 实现
 
 ### D8: Zod 边界验证
@@ -145,9 +148,9 @@
 
 ### D13: Saga 跨插件事务
 - **决策**: 跨插件工作流采用 Saga 补偿模式
-- **实现**: execute() + compensate() + 持久化日志（saga_log 表）+ 幂等性（idempotency_key）
+- **实现**: execute() + compensate() + 持久化日志（saga_log 表，含 tenant_id 列 + 首列索引）+ 幂等性（idempotency_key）
+- **多租户**: saga_log 表包含 tenant_id 列（遵循 D9.1 索引规则），确保跨租户 Saga 日志隔离
 - **限制**: Core 崩溃后未完成 Saga 悬挂（已知限制，Phase 4 解决）
-- **参考**: NocoBase workflow engine
 - **状态**: 已决策
 
 ### D14: i18n 国际化
@@ -156,6 +159,79 @@
 - **Phase 1**: 预加载所有翻译（eager loading）
 - **参考**: NocoBase @nocobase/i18n、Odoo .po 文件
 - **状态**: 已决策
+
+### D15: 前端 i18n — react-i18next
+- **决策**: 前端使用 react-i18next，双命名空间模式：插件专属命名空间（包名如 `@audebase/plugin-erp`）+ 全局共享命名空间 `'client'`（通用 UI 字符串如"保存"/"取消"）。后端 Core t() 注入 PluginHost context，前后端命名空间一致
+- **理由**: NocoBase 已验证路径（useTranslation + 包名 namespace + client 共享 namespace）；ICU 消息格式内置（复数、日期、插值）；懒加载支持（i18next-resources-to-backend）；生态成熟
+- **实现**: manifest.locale.path → i18next backend 加载 `locale/{lang}.json`；插件 namespace 自动设为包名；全局 `'client'` namespace 由 Core 提供通用 UI 字符串翻译
+- **参考**: NocoBase @nocobase/i18n + react-i18next（ns: [pkg.name, 'client'] 双命名空间）
+- **状态**: 已决策（2026-07-10 新增，2026-07-10 更新：增加 client 共享命名空间）
+
+### D16: Admin UI 布局 — Ant Design ProLayout
+- **决策**: 使用 @ant-design/pro-layout 作为管理后台骨架。插件通过代码 API（`this.app.router.add()`）注册路由，ProLayout 自动生成侧边栏菜单。菜单项通过 aclSnippet 字段声明权限，ACLProvider 自动过滤。不使用 ProLayout 内置 SettingDrawer——改为通过 D23 `settings.panels` Slot 承载自定义主题配置面板（与 NocoBase 自建 theme-editor 方案一致）
+- **菜单分组**: 采用 dot 命名约定（NocoBase 模式）：`router.add('admin.erp', { type: 'group' })` 创建分组，`router.add('admin.erp.purchase', ...)` 自动归入。冲突策略：route path 相同 → 报错；Slot key 相同 → 后注册覆盖
+- **理由**: NocoBase 已验证 ProLayout 可构建完整企业后台（多级菜单、面包屑、暗色模式）；开箱即用零开发成本；路由配置即菜单生成
+- **参考**: NocoBase ProLayout + 动态路由 + ACL 过滤
+- **状态**: 已决策（2026-07-10 新增）
+
+### D17: 插件前端加载策略 — 分层渐进
+- **决策**: 按信任层级分层：Phase 1（SYSTEM）Monorepo 构建时打包；Phase 2（Domain/Isolated）动态 import() ESM 模块；Phase 4（Container）iframe + postMessage
+- **理由**: 与四层信任分组模型（D1.1）对称。Phase 1 插件数少，Monorepo 打包最简；Phase 2 独立部署需动态加载
+- **实现**: Phase 2 插件输出 `dist/admin.mjs`（ESM）+ `dist/admin.css`，Core 提供 `/plugins/{name}/*` HTTP 端点代理插件目录，浏览器端 `import(plugin.assets.admin)` 动态加载
+- **Container 安全**: iframe `sandbox="allow-scripts"` + postMessage `event.origin` 校验；CSP 头限制 iframe 内脚本来源
+- **参考**: Directus extensions/ 目录动态加载、Strapi Monorepo 打包
+- **状态**: 已决策（2026-07-10 新增）
+
+### D18: 前端状态管理 — Provider Stack + 独立 Store
+- **决策**: Core 提供 TenantProvider / UserProvider / ACLProvider 等 Context Provider 包裹整个 Admin（Core 不用 Zustand）。插件内部可独立使用 Zustand Store。跨插件共享通过 Core Provider 或事件总线。TanStack Query 的 query key 强制 `[pluginName, ...]` 前缀避免冲突
+- **Provider 依赖**: ACLProvider 必须在 TenantProvider 内部（需 tenantId 获取权限）。其余 Provider 顺序无依赖，可互换
+- **租户切换**: 使用 `queryClient.removeQueries({ predicate: q => !q.queryKey.includes('system') })` 选择性清除——保留 system 全局查询，仅清除租户相关缓存
+- **理由**: NocoBase 已验证 Provider Stack 模式（ACLProvider → DataBlockProvider 链）；插件独立 Store 确保故障隔离；TanStack Query 命名空间规则防止缓存冲突
+- **参考**: NocoBase ACLProvider / CollectionProvider / DataBlockProvider
+- **状态**: 已决策（2026-07-10 新增）
+
+### D19: 前端权限控制 — ACLProvider + ACLGuard
+- **决策**: 三层权限控制：菜单级（路由 aclSnippet → ProLayout 自动过滤）、组件级（`<ACLGuard action resource>` 包裹 + `useACL().can()` Hook）、字段级（D11 后端过滤 + 前端 ACLGuard 防御层）
+- **理由**: NocoBase 已验证 aclSnippet + ACLProvider 模式；粒度恰好覆盖管理后台权限需求
+- **实现**: ACLProvider 启动时异步获取权限列表。加载期间 ACLGuard render null，加载完成恢复渲染。useACL() Hook 提供 can/canRoute/canField；菜单 ProLayout 自动过滤，按钮/字段用 ACLGuard 包裹
+- **参考**: NocoBase ACLProvider + useACLRoleContext
+- **状态**: 已决策（2026-07-10 新增）
+
+### D20: 插件 UI 错误隔离 — Error Boundary + Suspense
+- **决策**: 路由渲染处统一包裹 `<ErrorBoundary>`（使用 react-error-boundary）+ `<Suspense>`，插件崩溃仅影响该页面区域（显示降级 UI + 重试按钮），侧边栏/顶栏保持正常
+- **理由**: NocoBase 已验证 Error Boundary 包裹 SchemaComponent 模式；Suspense + ErrorBoundary 天然配对动态加载场景
+- **实现**: 降级 UI 显示插件名称 + 错误摘要（不暴露堆栈）+ 重试按钮 + 返回首页链接。崩溃记录到 Core 审计日志
+- **参考**: NocoBase SchemaComponent Error Boundary
+- **状态**: 已决策（2026-07-10 新增）
+
+### D21: 前端构建 — Vendor 分组 + 共享依赖
+- **决策**: React/antd/react-i18next/@tanstack/react-query 等作为 Core Admin host 提供的共享依赖（peerDependencies），插件不重复打包。生产 Code Splitting 参照 NocoBase PR #8963 模式：vendor-react / vendor-antd / vendor-i18n / vendor-query 各自独立 chunk，插件按需加载
+- **理由**: 避免 50 插件 × 150KB 重复 = 7.5MB 浪费；vendor 分组变更频率低（仅依赖升级时），插件 chunk 频繁更新但体积小——兼顾缓存命中率和加载速度
+- **实现**: Vite build.rollupOptions.manualChunks 分组；插件构建声明 externals。Phase 1 Vite HMR 原生，Phase 2 远程代理。构建配置确定后实测 antd tree-shaking 效果，若不理想降级为按需引入子路径（如 `antd/es/table`）
+- **参考**: NocoBase PR #8963 stable vendor groups
+- **状态**: 已决策（2026-07-10 新增）
+
+### D22: 懒加载注册 — 渐进
+- **决策**: Phase 1 保持直接注册（D16 代码 API），Phase 2 扩展 `router.add()` 支持 `lazy: () => import(...)` 和 `loading: SkeletonComponent` 选项。不做完整 FlowModel 体系
+- **类型约束**: lazy 必须接受 `() => Promise<{ default: ComponentType }>`（即原生 `() => import()`）。**禁止** `async () => { return await import() }` 包装（破坏 code splitting，Strapi PR #17685）和 `React.lazy()` 包装（运行时崩溃，Strapi PR #17674）
+- **理由**: 与 D7 自研 Schema 映射器避免重复。Phase 1 插件数少无需懒加载。lazy 选项是 D16 API 的自然扩展
+- **参考**: NocoBase v2 FlowEngine lazy loading、Strapi PR #17685/#17674 反模式
+- **状态**: 已决策（2026-07-10 新增）
+
+### D23: UI 扩展插槽 — Registry + Slot
+- **决策**: Core 预定义命名 Slot（`header.actions.right`、`sidebar.bottom`、`settings.panels` 等），插件通过 `this.app.slot.add()` 注册组件。Slot 容器自动权限过滤（aclSnippet）+ 排序（order）。Slot 无注册组件时渲染 null（不占 DOM 节点，不渲染占位 UI）
+- **错误隔离**: 每个 Slot 组件包裹独立 ErrorBoundary（使用 react-error-boundary），单个组件崩溃不影响其他 Slot 组件
+- **理由**: Odoo MainComponentsContainer + Strapi Injection Zone + VS Code contribution points 全部使用此模式——这是插件化 UI 的标准实践。与 D16 的 router.add() API 风格一致
+- **参考**: Odoo registry.category() + MainComponentsContainer、Strapi injectionZones
+- **状态**: 已决策（2026-07-10 新增，Phase 1 最小 3-4 Slot，Phase 2 扩展。已知限制：Phase 1 仅启动时注册，Phase 2+ 运行时需支持动态更新）
+
+### D24: 多租户前端 — URL 路径前缀
+- **决策**: URL 路径前缀模式 `/{tenantId}/admin`。租户切换时：`onlineManager.setOnline(false)`（禁止自动 refetch）→ `queryClient.clear()` → `window.location.href = '/{newTenantId}/admin'`（全页重载，非客户端 navigate），消除 CWE-524 信息泄露风险
+- **理由**: NocoBase 已验证路径前缀模式；浏览器单标签页内支持多租户；部署最简单。全页重载确保 Zustand Store / 闭包引用全部清理（业界审计工具 AuditBuffet CWE-524 推荐）
+- **实现**: TenantProvider 提供 tenantId / tenantConfig / availableTenants / switchTenant()。品牌配置渐进加载：默认主题先行渲染（避免白屏）→ 异步 fetch theme.json（localStorage + ETag 缓存）→ 成功后 ConfigProvider 热切换主题 token
+- **参考**: NocoBase multi-tenant plugin、TanStack Query logout pattern、AuditBuffet CWE-524
+- **状态**: 已决策（2026-07-10 新增，2026-07-10 更新：全页重载 + 渐进式品牌配置加载）
+
 ## 通用决策 (G1-G4)
 
 ### G1: 不可变性优先
@@ -174,14 +250,15 @@
 - **决策**: 对象形状使用 interface，联合类型/映射类型使用 type
 - **理由**: interface 可扩展、更好的错误提示
 
-## 已废弃决策（旧 MODACS 架构）
+## 已废弃决策（旧 MODACS 架构 + 旧前端方案）
 
-以下决策原为 MODACS 工业控制平台制定，因 AUDEBase 定位变更已废弃。
-更新后的架构决策见 `docs/plugin-architecture-analysis.md`。所有新决策（D1.1-D1.5、D10-D14）详见 docs/plugin-architecture-analysis.md：
+以下决策原为 MODACS 工业控制平台制定，或因前端架构重新评估后废弃。
 
 | 决策 | 原内容 | 废弃原因 |
 |------|--------|----------|
-| D1 (旧) | 多进程插件隔离架构 | AUDEBase 采用渐进式隔离：Phase 1 inline + Phase 2 process。插件架构详情见 docs/plugin-architecture-analysis.md |
-| D2 (旧) | UDS JSON-RPC 进程间通信 | Phase 2+ 采用 JSON-RPC over stdin/stdout。Phase 1 所有插件 inline 运行，通过 PluginHost 接口抽象支持未来跨进程通信 |
+| D1 (旧) | 多进程插件隔离架构 | AUDEBase 采用渐进式隔离：Phase 1 inline + Phase 2 process |
+| D2 (旧) | UDS JSON-RPC 进程间通信 | 采用 JSON-RPC over stdin/stdout |
 | D5 (旧) | TypeScript + Rust 实时控制 | AUDEBase 不需要硬实时控制模块 |
 | D7 (旧) | 三层 UI 隔离架构 | 架构变更，不再需要 UIAdapter 抽象层 |
+| D6 (旧) | shadcn/ui + Tailwind v4 + Ant Design 5 混合 | 2026-07-10 废弃：双库混用增加主题冲突和包体积，NocoBase 证明纯 antd 即可覆盖全部企业 UI 需求 |
+| D6.1 (旧) | shadcn/ui registry fork 策略 | 随 D6 废弃（shadcn/ui copy-model 不再适用） |
