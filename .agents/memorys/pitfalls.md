@@ -111,3 +111,24 @@
 - **问题**: NocoBase 使用 Rspack 构建，非 Vite。Vite/Rollup 对 antd 5 的 CSS-in-JS 组件 tree-shaking 效果未知
 - **正确做法**: Phase 1 构建配置确定后实测 bundle 大小；若不理想，降级为按需引入子路径（如 antd/es/table）
 - **详见**: decisions.md D21
+
+## 行业安全教训
+
+从 15 份竞品参考文档中提取的关键安全 CVE/漏洞，AUDEBase 应在 Phase 1 设计中主动防范：
+
+| CVE / 漏洞 | 项目 | 严重度 | 类型 | AUDEBase 防范措施 |
+|------------|------|:------:|------|-------------------|
+| CVE-2025-13877 | NocoBase | 9.8 | 默认 JWT 密钥 | D8.1: 启动校验 ≥32 字符，拒绝默认值 |
+| GHSA-v8vm-cqh8-q87q | NocoBase | — | DB 直连绕过权限 | D12: Core 数据 API 代理，禁止插件直连 DB |
+| CVE-2025-50341 | Axelor | 7.5 | SQL 注入 via _domain 参数 | D9: Drizzle 自动参数化查询 |
+| 多个 XSS | Odoo/Strapi | — | 未净化用户输入渲染 | D6: React 默认转义 + CSP 头 |
+| 沙箱绕过 | Axelor/Directus | — | Groovy/JS 沙箱 | D1.1: Container 隔离 + sandbox CSP |
+| 默认密码/密钥 | Strapi/Directus | — | 默认 admin:admin | D1.6: admin 默认密码强制首次修改 |
+| IDOR（不安全的直接对象引用） | Strapi | — | 缺乏行级权限检查 | D10: Record Rules 自动注入 WHERE 条件 |
+
+**通用防范原则**：
+- 所有外部输入使用 Zod 验证（D8）
+- 所有 DB 操作通过 Core API 代理（D12）
+- 所有密钥通过环境变量注入，启动校验（D8.1）
+- 保持依赖更新（D6.1: Renovate + npm audit）
+- 安全设计评审纳入 Phase 1 编码前流程

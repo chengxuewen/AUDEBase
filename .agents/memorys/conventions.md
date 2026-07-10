@@ -5,7 +5,7 @@
 ## 命名约定
 
 - **项目名**: `AUDEBase` 全大写
-- **npm scope**: `@AUDEBase/`
+- **npm scope**: `@audebase/`
 - **变量/函数**: `camelCase`，描述性命名
 - **布尔值**: 前缀 `is`/`has`/`should`/`can`
 - **接口/类型/组件**: `PascalCase`

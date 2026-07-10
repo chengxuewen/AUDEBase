@@ -73,7 +73,7 @@ AUDEBase 架构分层
 ───────────────────────────────────────────────────────────
   平台服务层    Schema Engine │ RBAC │ Workflow │ Notify │ Audit │ ...
 ───────────────────────────────────────────────────────────
-  内核层        Plugin Manager  │  Dependency Resolver  │  DB Migration
+  内核层        Plugin Manager  │  Dependency Resolver  │  DB Migration  │  plugin-core（Bootstrap）
 ───────────────────────────────────────────────────────────
   基础设施      Node.js  │  PostgreSQL  │  Redis  │  MinIO/S3
 ═══════════════════════════════════════════════════════════
@@ -92,6 +92,20 @@ AUDEBase 架构分层
 
 ### 2.2 插件即应用
 
+AUDEBase 采用三层概念模型组织业务功能：
+
+| 层级 | 概念 | 说明 | 示例 |
+|------|------|------|------|
+| L1 | **插件（Plugin）** | 最小功能单元。通过 `manifest.yaml` 声明元数据、依赖、权限、数据模型。拥有独立的路由、Slot 注册、i18n 命名空间 | `@audebase/plugin-rbac`、`@audebase/plugin-purchase` |
+| L2 | **插件套件（Suite）** | 同一业务域的插件集合。套件内插件通过 D12 Core 数据 API 共享数据，通过事件总线松耦合通信，通过模型扩展机制（Phase 2）扩展彼此的 Collection 字段 | `ERP Suite = purchase + stock + account + mrp` |
+| L3 | **应用实例（Application）** | 一个完整部署实例，包含内核 + 若干 Suite/Plugin + 租户数据。用户通过 ProLayout 侧边栏按 Suite 分组访问所有已安装插件的功能 | 某客户的 AUDEBase 部署实例 |
+
+**套件内插件协作模式**：
+- **数据共享**：通过 Core 数据 API 代理（D12），统一注入 tenant_id + record_rules
+- **事件通信**：通过插件事件总线发布/订阅业务事件（如 `purchase.order.created`）
+- **模型扩展**（Phase 2）：类似 Odoo 类继承机制，插件 B 可在插件 A 的 Collection 上添加新 Field
+- **UI 扩展**：通过 Slot（D23）在已有页面插入自定义组件
+
 每个业务系统（OA/ERP/MES 等）以插件套件形式存在，通过 `manifest.yaml` 声明。详见 [插件架构分析](plugin-architecture-analysis.md)。
 
 ### 2.3 设计原则（详见 decisions.md）
@@ -108,7 +122,7 @@ AUDEBase 架构分层
 | 语言 | TypeScript | [技术栈选型](modules/tech-stack.md) |
 | 后端 | Node.js + Fastify | [技术栈选型](modules/tech-stack.md) |
 | ORM | Drizzle ORM | [技术栈选型](modules/tech-stack.md) |
-| 前端 | React 19 + Tailwind v4 + shadcn/ui + Ant Design 5 | [技术栈选型](modules/tech-stack.md) |
+| 前端 | React 19 + Ant Design 5（ProLayout + ProTable/ProForm） | [技术栈选型](modules/tech-stack.md) |
 | 数据库 | PostgreSQL 16+ | [技术栈选型](modules/tech-stack.md) |
 | 任务队列 | BullMQ + Redis | [技术栈选型](modules/tech-stack.md) |
 | 测试 | Vitest + Playwright | [技术栈选型](modules/tech-stack.md) |
@@ -116,7 +130,7 @@ AUDEBase 架构分层
 
 **关键安全决策**：
 - JWT 密钥通过环境变量注入，启动校验 ≥32 字符（参考 NocoBase CVE-2025-13877）
-- shadcn/ui 版本锁定 + 私有 registry fork（参考 decisions.md D6.1）
+- antd 精确版本锁定 + npm audit + Renovate（参考 decisions.md D6.1）
 
 **详细选型理由、替代方案分析、配置参数见 [技术栈选型](modules/tech-stack.md)**
 ---
@@ -308,72 +322,162 @@ TenantProvider 提供 tenantId / tenantConfig / availableTenants / switchTenant(
 
 MVP 的目标是**证明插件架构可行**：从零到一，实现"安装插件 → 管理用户 → 查看日志"的端到端流程。
 
-| 模块 | 核心交付 | 优先级 |
-|------|----------|--------|
-| **插件框架** | 插件发现、加载、manifest 验证、生命周期钩子 | P0 |
-| **内核** | Fastify 应用骨架、pnpm workspace 单仓结构、Drizzle 数据库连接 | P0 |
-| **基础 RBAC** | 用户 → 角色 → 权限模型、API 中间件拦截 | P0 |
-| **日志/调试** | pino 结构化日志、Request ID 追踪、调试 Web UI | P0 |
-| **管理后台** | 插件管理页（列表/安装/启用/禁用）、用户管理页（CRUD） | P0 |
+| 模块 | 核心交付 | 优先级/阶段 |
+|------|----------|:---:|
+| **插件框架** | 插件发现、加载、manifest 验证、生命周期钩子 | P0-1a |
+| **内核** | Fastify 应用骨架、pnpm workspace 单仓结构、Drizzle 数据库连接 | P0-1a |
+| **内核插件 (plugin-core)** | Bootstrap 流程、admin/角色/菜单初始数据、模块注册表（D1.6） | P0-1a |
+| **数据库迁移管理** | migration_history 表、三阶段迁移、version_gated（D1.7） | P0-1b |
+| **审计日志** | audit_log 表 + Core 中间件自动记录 API 写操作（D1.12） | P0-1a |
+| **国际化 (i18n)** | Core t() + locale/{lang}.json + react-i18next 双命名空间（D14/D15） | P0-1b |
+| **事件总线** | Core EventBus publish/subscribe、同进程直接回调、Zod payload 校验（D1.9） | P0-1b |
+| **文件上传** | 本地存储 + attachment 元数据表 + POST /api/files（D4.1） | P0-1b |
+| **速率限制** | Fastify rate-limit 插件、/api/auth/login 5/min、全局 100/min、X-RateLimit-* 响应头 | P0-1a |
+| **CLI 工具** | `aude dev`、`aude build`、`aude db migrate`、`aude plugin create`、`aude plugin install`（Phase 1a 最小 5 命令） | P0-1a |
+| **定时任务** | BullMQ repeatable jobs、`this.app.cron.add()` API、manifest cron 声明（D1.10） | P0-1b |
+| **基础 RBAC** | 用户 → 角色 → 权限模型、API 中间件拦截 | P0-1a |
+| **日志/调试** | pino 结构化日志、Request ID 追踪、调试 Web UI | P0-1a |
+| **管理后台** | 插件管理页（列表/安装/启用/禁用）、用户管理页（CRUD） | P0-1a |
 | **多租户（基础）** | tenant_id 字段隔离、Drizzle 查询自动过滤 | P1 |
 
-**MVP 不包含**：Schema Engine（P2）、工作流（P3）、插件市场（P2）、通知系统（P2）。
+**MVP 不包含**：Schema Engine（P2）、工作流（P4）、插件市场（P3）、WebSocket（P2）、通知系统渠道实现（P2）、审计日志归档（P2）、Record Rules 记录级权限（P1.5）、字段级权限（P1.5）、Saga 跨插件事务（P4）、独立 Worker 进程（P2）。
+
+### 7.1 验收标准（Done Criteria）
+
+以下为各模块的最小可验证标准（P0 必须全部通过，P1 可选）：
+
+| 模块 | 验收标准 |
+|------|----------|
+| **插件框架** | (1) 给定含 `manifest.yaml` 的插件目录，`PluginManager.discover()` 返回该插件实例 (2) 调用 `plugin.load()` 触发完整生命周期钩子链（afterAdd→beforeLoad→load），首次启用时额外触发 install→afterEnable (3) `manifest.yaml` 中 `name`/`version` 缺失时拒绝加载并给出明确错误信息 (4) 插件通过 Core 提供的 db 代理执行查询，不持有独立 PG 连接（D12） (5) InlinePluginHost mock 强制 async Promise 返回 + JSON 序列化往返 + 30s 超时（D1.2） |
+| **内核** | (1) Fastify 应用启动，`GET /health` 返回 `{ status:"ok", db:true, redis:true, uptime:N }`；`GET /health/ready` 在 DB 就绪后返回 200（D1.13） (2) Core 启动时自动检测并执行待运行迁移（preload→postsync→postload），migration_history 正确追踪版本（D1.7） (3) pnpm workspace 中 `packages/` 目录下模块可相互引用 (4) 启动时 assert(AUDE_JWT_SECRET.length >= 32)，默认值/缺失时拒绝启动并输出明确错误信息（D8.1） |
+| **基础 RBAC** | (1) admin 用户可以创建角色并分配权限项 (2) 携带无效 token 的 API 请求返回 401 (3) 无权限用户访问受保护 API 返回 403 |
+| **日志/调试** | (1) 每个 HTTP 请求自动注入 `X-Request-ID` 头 (2) pino 输出结构化 JSON 日志含 timestamp/level/requestId (3) `GET /api/logs` 返回最近 100 条日志（调试 UI 可查看） |
+| **管理后台** | (1) ProLayout 渲染，侧边栏显示"插件管理"和"用户管理"菜单项 (2) 插件管理页可查看已安装插件列表，支持启用/禁用操作 (3) 用户管理页支持创建、编辑、删除用户 (4) App 包裹 TenantProvider → UserProvider → ACLProvider → ProLayout 层级结构（D18） (5) 无权限用户不显示启用/禁用按钮（ACLGuard 包裹，D19） (6) 插件页面崩溃时显示降级UI+重试按钮，侧边栏/顶栏保持正常（D20） |
+| **多租户（P1）** | (1) 创建 tenant-A 和 tenant-B 后，各自用户数据互不可见 (2) Drizzle 查询自动注入 `WHERE tenant_id = currentTenantId` |
 
 ---
+
 
 ## 八、开发路线图
 
 | 阶段 | 内容 | 状态 |
 |------|------|------|
 | **Phase 0** | 基础设施初始化（配置、文档、代理、编码规范） | ✅ 进行中 |
-| **Phase 1** | 插件框架 + RBAC + 日志 + 管理UI + 多租户 + i18n + 生命周期基础 | 🔲 |
-| **Phase 2** | Schema Engine + 进程模式 + manifest.exports 契约 + 版本管理 + 5 状态机 + Record Rules + 多租户 Schema 隔离（Phase 1.5） | 🔲 |
-| **Phase 3** | 直连通道 + 流式传输 + OpenTelemetry + 请求优先级 + 插件市场 + 多租户 Database-per-tenant（大客户） | 🔲 |
-| **Phase 4** | 容器隔离 + Core 高可用 + 工作流引擎 + 业务插件套件 + 多租户混合模式（1000+ 租户） | 🔲 |
+| **Phase 1a** | 插件框架 + PluginHost + Manifest + plugin-core Bootstrap + JWT + RBAC + 审计日志 + 健康检查 + 管理 UI（插件管理/用户管理 2 页）+ 日志 + CLI（5 命令）+ 速率限制 + 多租户 | 🔲 |
+| **Phase 1b** | EventBus + Cron + 迁移管理 + i18n 框架 + API 版本路由 + 文件上传/存储 + 通知接口 | 🔲 |
+| **Phase 2** | Schema Engine + 进程模式 + Container 隔离 + manifest.exports 契约验证 + API 版本自动路由 + 5 状态机 + 完整 Record Rules + WebSocket + 通知渠道实现 + 多租户 Schema 隔离（Phase 1.5） | 🔲 |
+| **Phase 3** | OpenTelemetry + 插件市场 + 多租户 Database-per-tenant（大客户） + 混合模式基础 | 🔲 |
+| **Phase 4** | Core 高可用 + 工作流引擎 + 业务插件套件 + 多租户混合模式（1000+ 租户） | 🔲 |
 
 ---
 
 ## 九、决策记录索引
 
-以下架构决策已记录于 `.agents/memorys/decisions.md`：
+以下架构决策已记录于 `.agents/memorys/decisions.md`（共 47 条）：
+
+### 插件架构核心决策（Phase 1）
 
 | ID | 决策 | 状态 | 说明 |
 |----|------|------|------|
-| D3 | manifest.yaml 声明的模块系统 | 已决策 | 本节定义核心架构 |
-| D4 | 多租户数据库级隔离 | 已决策 | Phase 1 tenant_id → Phase 1.5 Schema → Phase 2 Database |
-| D4.1 | 文件存储多租户隔离 | 已决策 | Phase 1 本地 → Phase 2 DB元数据+MinIO混合 |
-| D5 | TypeScript 主语言 | 已决策 | 全栈 TypeScript |
-| D6 | Tailwind CSS v4 + shadcn/ui | 已决策 | 前端样式方案 |
-| D8 | Zod 边界验证 | 已决策 | 所有输入验证 |
-| D9 | Drizzle ORM | 已决策 | 数据库访问层 |
+| D1 | 微内核 + 插件热插拔架构 | 已决策 | Phase 1 inline 模式（SYSTEM/Domain 共享进程） |
+| D1.1 | 四层信任分组模型 | 已决策 | SYSTEM/Domain/Isolated/Container |
+| D1.2 | PluginHost 接口抽象 | 已决策 | Day 1 支持跨进程语义 |
+| D1.3 | 插件通信架构 | 已决策 | 组内直调 + 组间 JSON-RPC + Redis Pub/Sub |
+| D1.4 | 插件生命周期 | 已决策 | 7 钩子 + 3 阶段迁移 + 2 状态（Phase 1） |
+| D1.5 | manifest.yaml 规范 | 已决策 | name/version/runtime/security/exports 等字段 |
+| D1.6 | 内核插件与 Bootstrap 流程 | 已决策 | @audebase/plugin-core 零依赖内核插件 |
+| D1.7 | 数据库迁移版本管理 | 已决策 | migration_history + 三阶段 SQL + version_gated |
+| D1.8 | API 版本控制 | 已决策 | /api/v{major}/{resource} 路径版本 |
+| D1.9 | 插件事件总线 | 已决策 | publish/subscribe + Zod payload 校验 |
+| D1.10 | 定时任务调度 | 已决策 | BullMQ repeatable jobs + manifest cron 声明 |
+| D1.11 | 实时通信（WebSocket） | 已决策 | Phase 2 实现 |
+| D1.12 | 审计日志 | 已决策 | audit_log 表 + Core 中间件自动记录 |
+| D1.13 | 健康检查 | 已决策 | /health + /health/ready 端点 |
+| D1.14 | 通知系统接口 | 已决策 | Phase 1 接口定义，Phase 2 渠道实现 |
+
+### 数据与权限决策
+
+| ID | 决策 | 状态 | 说明 |
+|----|------|------|------|
+| D2 | manifest.yaml 插件声明系统 | 已决策 | Odoo 式声明模式 |
+| D3 | Schema Engine 动态模型 | 已决策 | Phase 2 实现 |
+| D4 | 多租户数据库级隔离 | 已决策 | Phase 1 tenant_id → Schema → Database |
+| D4.1 | 文件存储多租户隔离 | 已决策 | Phase 1 本地 → Phase 2 MinIO/S3 |
+| D5 | TypeScript 全栈 + Node.js + Fastify | 已决策 | 技术选型 |
+| D8 | Zod 边界验证 | 已决策 | 所有系统边界 |
+| D9 | Drizzle ORM 数据库操作 | 已决策 | 0.45.x LTS + DatabaseProvider 抽象 |
+| D10 | Record Rules（记录级权限） | 已决策 | Odoo domain filter 表达式 |
+| D11 | 字段级权限 | 已决策 | manifest.exports visible_to |
+| D12 | Core 数据 API 代理 | 已决策 | 禁止插件直连 DB |
+| D12.1 | 插件间数据模型扩展 | 已决策 | Odoo 类继承模式 extends 声明 |
+| D13 | Saga 跨插件事务 | 已决策 | 补偿模式 + 幂等性 |
+| D14 | i18n 国际化 | 已决策 | NocoBase 命名空间 + locale/{lang}.json |
+
+### 安全相关决策
+
+| ID | 决策 | 状态 | 说明 |
+|----|------|------|------|
+| D6.1 | Ant Design 5 供应链安全 | 已决策 | npm audit + Renovate + 精确版本锁定 |
+| D8.1 | JWT 密钥管理 | 已决策 | 环境变量注入，≥32 字符校验 |
+| D9.1 | Drizzle 连接池与监控 | 已决策 | pg-pool + pino 慢查询 |
+
+### 前端架构决策
+
+| ID | 决策 | 状态 | 说明 |
+|----|------|------|------|
+| D6 | React + Ant Design 5 | 已决策 | 唯一 UI 库，ProLayout + ProTable/ProForm |
+| D7 | Schema 驱动 UI | 已决策 | Phase 2 自研 Schema→antd 映射器 |
+| D15 | 前端 i18n — react-i18next | 已决策 | 双命名空间（插件包名 + client） |
+| D16 | Admin UI 布局 — ProLayout | 已决策 | 代码 API 注册路由 |
+| D17 | 插件前端加载策略 | 已决策 | Phase 1 monorepo → Phase 2 import() → Phase 4 iframe |
+| D18 | 前端状态管理 | 已决策 | Provider Stack + 独立 Zustand Store |
+| D19 | 前端权限控制 | 已决策 | ACLProvider + ACLGuard 三层权限 |
+| D20 | 插件 UI 错误隔离 | 已决策 | ErrorBoundary + Suspense |
+| D21 | 前端构建 — Vendor 分组 | 已决策 | NocoBase PR #8963 模式 |
+| D22 | 懒加载注册 | 已决策 | Phase 1 直接注册 → Phase 2 lazy: import() |
+| D23 | UI 扩展插槽 — Registry + Slot | 已决策 | 命名 Slot + ErrorBoundary 隔离 |
+| D24 | 多租户前端 — URL 路径前缀 | 已决策 | /{tenantId}/admin + 全页重载 |
+
+### 通用约定
+
+| ID | 决策 | 状态 | 说明 |
+|----|------|------|------|
 | G1 | 不可变性优先 | 已决策 | 所有数据操作 |
 | G2 | 小文件原则（200-400 行） | 已决策 | 代码组织 |
-| G3 | 禁用 `as any` / `@ts-ignore` | 已决策 | 类型安全 |
-| G4 | `interface` 优先于 `type` | 已决策 | TypeScript 规范 |
+| G3 | 零 as any / @ts-ignore | 已决策 | 类型安全 |
+| G4 | interface 优先于 type | 已决策 | TypeScript 规范 |
 
-- 插件架构深度分析: [plugin-architecture-analysis.md](plugin-architecture-analysis.md)（848 行，4 轮团队审核，8 项目对比）
+- 插件架构深度分析: [plugin-architecture-analysis.md](plugin-architecture-analysis.md)（~850 行，4 轮团队审核，8 项目对比）
+- 已废弃决策（旧 MODACS 架构）见 decisions.md §已废弃决策
 
 ---
 
 ## 十、参考与来源
 
+### 项目参考文档
+
+- **竞品调研**: [competitive-landscape.md](competitive-landscape.md) — 39+ 产品对标分析，五大类别
+- **产品画像（15 份）**: `docs/reference/` — Odoo、NocoBase、ERPNext、Axelor、Directus、Corteza、AuraBoot、Strapi、Appsmith、ToolJet、Budibase、Baserow、简道云、明道云、云表
+- **模块设计文档（5 份）**: `docs/modules/` — tech-stack.md、plugin-framework.md、plugin-communication.md、multi-tenant.md、file-storage.md
+- **插件架构分析**: [plugin-architecture-analysis.md](plugin-architecture-analysis.md) — ~850 行，四层模型设计，8 项目对比
+
 ### 竞品架构参考
 
-- **Odoo Architecture**: https://www.odoo.com/documentation/master/developer/reference/backend/orm.html
-  - 模块声明（`__manifest__.py`）、ORM、ACL + Record Rules、Workflow Engine
-- **NocoBase Architecture**: https://docs.nocobase.com/welcome/introduction
-  - 微内核设计、插件管理器、Schema Engine、Collection & Field 系统
-- **云表**: https://www.yunbiao.com
-  - 低代码表格建模、业务人员自助开发模式
+- **Odoo Architecture**: https://www.odoo.com/documentation/master/developer/reference/backend/orm.html — ORM、ACL + Record Rules
+- **NocoBase Architecture**: https://docs.nocobase.com/welcome/introduction — 微内核、Schema Engine、Collection 系统
+- **云表**: https://www.yunbiao.com — 低代码表格建模（商业产品）
 
 ### 技术栈参考
 
-- **Fastify**: https://fastify.dev/ — 插件系统、JSON Schema 验证、性能基准
-- **Drizzle ORM**: https://orm.drizzle.team/ — Schema 定义、迁移、查询构建
-- **pnpm Workspace**: https://pnpm.io/workspaces — Monorepo 管理
-- **shadcn/ui**: https://ui.shadcn.com/ — 可复制组件模式
-- **Ant Design 5**: https://ant.design/ — 企业级组件库
-- **Tailwind CSS v4**: https://tailwindcss.com/ — `@theme` 设计令牌
-- **Zod**: https://zod.dev/ — Schema 验证 + TypeScript 类型推导
-- **pino**: https://getpino.io/ — 结构化日志
-- **PostgreSQL Row Security**: https://www.postgresql.org/docs/current/ddl-rowsecurity.html — 行级安全用于多租户
+| 类别 | 技术 |
+|------|------|
+| 后端运行时 | **[Fastify](https://fastify.dev/)**、**[Node.js](https://nodejs.org/)** |
+| 数据库与 ORM | **[PostgreSQL](https://www.postgresql.org/)**、**[Drizzle ORM](https://orm.drizzle.team/)**、**[Redis](https://redis.io/)** |
+| 前端框架 | **[React](https://react.dev/)**、**[Ant Design 5](https://ant.design/)**、**[ProLayout](https://procomponents.ant.design/components/layout)** |
+| 前端库 | **[react-i18next](https://react.i18next.com/)**、**[TanStack Query](https://tanstack.com/query)**、**[Zustand](https://docs.pmnd.rs/zustand)**、**[react-error-boundary](https://github.com/bvaughn/react-error-boundary)** |
+| 构建工具 | **[Turborepo](https://turbo.build/repo)**、**[Vite](https://vitejs.dev/)**、**[pnpm](https://pnpm.io/)** |
+| 测试框架 | **[Vitest](https://vitest.dev/)**、**[Playwright](https://playwright.dev/)** |
+| 任务队列 | **[BullMQ](https://docs.bullmq.io/)** |
+| 验证 | **[Zod](https://zod.dev/)** |
+| 日志 | **[pino](https://getpino.io/)** |
+| 安全 | **[PostgreSQL Row Security](https://www.postgresql.org/docs/current/ddl-rowsecurity.html)**
