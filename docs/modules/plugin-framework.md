@@ -249,7 +249,7 @@ plugins:
 
 ## 三、插件生命周期
 
-### 3.1 生命周期钩子
+### 3.1 生命周期钩子（7 个）
 
 | 钩子 | 阶段 | 用途 | 参考 |
 |------|------|------|------|
@@ -259,9 +259,9 @@ plugins:
 | **install** | 安装 | 创建 DB 表、写入系统配置、加载 demo 数据 | Odoo data files |
 | **afterEnable** | 激活 | 启动定时任务、注册事件监听、开端口 | NocoBase afterEnable |
 | **afterDisable** | 停用 | 注销事件、停止定时任务 | NocoBase afterDisable |
-| **pre_upgrade** | 升级前 | 备份数据、版本兼容检查 | Odoo migration |
-| **post_upgrade** | 升级后 | 数据迁移、旧数据清理、DAO 同步 | Odoo migration |
 | **pre_uninstall** | 卸载前 | 提醒用户备份数据 | Odoo warning |
+
+> **升级流程**: 插件升级通过 D1.7 迁移框架处理（三阶段 SQL 引擎: preload → postsync → postload），不在生命周期钩子中定义独立的 pre_upgrade / post_upgrade。详见 decisions.md D1.4 + D1.7。
 
 ### 3.2 迁移三阶段（NocoBase 模式）
 
@@ -287,7 +287,7 @@ Phase 1 所有操作需要服务重启。Phase 2+ 支持热操作（不停机）
 | 操作 | 流程 |
 |------|------|
 | **安装** | stop → 复制 npm 包 → start |
-| **升级** | stop → 备份 → 安装新版本 → 运行迁移脚本 → start |
+| **升级** | stop → 备份 → 安装新版本 → 运行 D1.7 迁移框架（preload → postsync → postload 三阶段） → start |
 | **卸载** | stop → 运行清理脚本 → 删除文件 |
 
 ### 3.5 优雅关闭

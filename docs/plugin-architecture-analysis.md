@@ -1,6 +1,6 @@
 # AUDEBase 插件架构分析
 
-**版本**: 1.0 | **日期**: 2026-07-09 | **状态**: 讨论中
+**版本**: 1.0 | **日期**: 2026-07-09 | **状态**: 已决策（Phase 1a 实施依据）
 
 ## 〇、当前架构定位
 
@@ -699,8 +699,6 @@ const result = await context.call("erp.purchase.create", {
 | **install** | 安装 | 创建 DB 表、写入系统配置、加载 demo 数据 | Odoo data files |
 | **afterEnable** | 激活 | 启动定时任务、注册事件监听、开端口 | NocoBase afterEnable |
 | **afterDisable** | 停用 | 注销事件、停止定时任务 | NocoBase afterDisable |
-| **pre_upgrade** | 升级前 | 备份数据、版本兼容检查 | Odoo migration |
-| **post_upgrade** | 升级后 | 数据迁移、旧数据清理、DAO 同步 | Odoo migration |
 | **pre_uninstall** | 卸载前 | 提醒用户备份数据 | Odoo warning |
 
 #### 迁移三阶段（NocoBase 模式）

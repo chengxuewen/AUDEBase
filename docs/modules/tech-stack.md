@@ -1,7 +1,7 @@
 # AUDEBase 技术栈选型
 
 > 从 `docs/architecture.md` §三 + `.agents/memorys/decisions.md` D5-D9/D6.1/D8.1/D9.1 提取
-> Phase 0 — 架构定义阶段。Phase 1 实施时补充详细配置参数。
+> Phase 1a — 架构定义阶段。编码实施时补充详细配置参数。
 
 ## 总览
 
@@ -12,9 +12,9 @@
 | ORM | Drizzle ORM (0.45.x LTS) | D9 | 已决策 |
 | 前端 | React 19 + Ant Design 5（ProLayout + ProTable/ProForm） | D6 | 已决策 |
 | 数据库 | PostgreSQL 16+ | — | 已决策 |
-| 任务队列 | BullMQ + Redis | — | 已决策 |
+|| 任务队列 | BullMQ + Valkey（Redis 兼容） | — | 已决策 |
 | 测试 | Vitest + Playwright | — | 已决策 |
-| 构建 | Turborepo + tsup + Vite | — | 已决策 |
+| 构建 | Turborepo + tsc + tsc-alias（后端）+ Vite（前端） | — | 已决策 |
 | 验证 | Zod | D8 | 已决策 |
 | 日志 | pino | — | 已决策 |
 

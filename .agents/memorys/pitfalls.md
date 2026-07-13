@@ -1,6 +1,6 @@
 # AUDEBase 已知坑点与反模式
 
-**更新日期**: 2026-07-10
+**更新日期**: 2026-07-13
 
 ## MODACS 适配相关
 
@@ -34,14 +34,29 @@
 ### 对象突变
 - 始终返回新对象，不就地修改。使用 immer 或展开运算符
 
-## 文件操作反模式
+- **最新团队审计发现**: 无新增代码反模式，以下为审计中捕获的已知风险与验证点：
 
-### 不必要的文件写入
-- 文档文件仅在用户明确要求时创建
+### 测试基础设施占位风险
+- **问题**: 测试文档（test-seed-strategy.md, e2e-test-flows.md, redis-mock-guide.md）已就绪但测试框架（vitest + playwright）尚未安装
+- **正确做法**: Phase 1a Week 0 安装 vitest + @testing-library/react + playwright；对标文档中的种子工厂和 mock 约束
 
-### 大文件
-- 超过 800 行应拆分为独立模块
+### shared-types 初始化
+- **问题**: packages/shared-types/ 未创建，公共类型（User/Role/Permission/Plugin/ErrorCode/ApiResponse）散落在文档中
+- **正确做法**: Phase 1a Week 0 创建 shared-types 包，从 docs/modules/api-specification.md 和 api-conventions.md 提取类型定义
 
+### SDD 与实际编码的落差
+- **问题**: plugin-framework-sdd.md 和 migration-engine-sdd.md 是规格文档，非实现代码。SDD 与实现之间可能存在偏差
+- **正确做法**: 编码时以 SDD 为契约（Interface/API/生命周期必须匹配），实现细节可灵活调整。CI 集成测试验证偏差
+
+### 懒加载契约
+- **问题**: `lazy: () => import()` 签名约束仅存在于文档中，构建期无强制校验
+- **正确做法**: Phase 2 引入 ESLint 规则禁止 `async () => { return await import() }` 和 `React.lazy()` 作为路由 lazy 值。Phase 1 直接注册无需校验（见 D22）
+- **详见**: decisions.md D22、frontend-spec.md §5
+
+### RTL 测试 ACL 包裹器
+- **问题**: 管理 UI 组件测试需要 MockACLWrapper 提供 ACLContext，但此包裹器尚未实现
+- **正确做法**: Phase 1a 编码时同步创建 `test-utils.tsx`（MockACLWrapper + renderWithProviders）
+- **详见**: dev-workflow.md §3.6、frontend-spec.md §6
 ## 插件架构相关
 
 ### ProcessPluginHost mock 保真度

@@ -1,6 +1,6 @@
 # AUDEBase 编码约定
 
-**更新日期**: 2026-07-10
+**更新日期**: 2026-07-13
 
 ## 命名约定
 
@@ -71,3 +71,45 @@
 - **Slot 注册**: 通过 `this.app.slot.add()` API 注册到预定义命名 Slot
 - **翻译调用**: React 组件使用 `useTranslation(pluginPkgName)` Hook；插件类使用 `this.t()`
 - **动态导入**: `lazy: () => import(...)` 必须为箭头函数直接返回 import()——禁止 `async` 包装和 `React.lazy()` 包装
+
+## SDD/TDD 文档约定
+
+### SDD 文档命名与结构
+
+- **命名**: `{module-name}-sdd.md`（如 `plugin-framework-sdd.md`）
+- **存储**: `docs/modules/{module-name}-sdd.md`
+- **标准结构**:
+  1. **概要**: 模块定位、职责边界、设计目标
+  2. **接口定义**: 所有导出 API 的类型签名、参数描述、返回值
+  3. **生命周期**: 启动/关闭/加载/卸载顺序、钩子函数签名
+  4. **依赖关系**: 对其他模块或外部服务的依赖列表
+  5. **错误码与错误处理**: 错误码枚举、恢复策略、日志级别
+  6. **安全考虑**: 权限检查点、数据过滤规则
+  7. **Mock 约束**: Phase 1 测试用的 mock 接口约束（async Promise、JSON 序列化、超时等）
+  8. **变更记录**: 此文档的版本历史
+
+### TDD 测试计划格式
+
+- **文件命名**: `{module}.test.ts`（单元测试）/ `{module}.spec.ts`（E2E 测试）/ `{module}.contract.test.ts`（API Contract 测试）
+- **AAA 结构**: 每个测试用例必须遵循 Arrange → Act → Assert 三段式，用注释标注三段边界
+- **覆盖率**: 80% 最低覆盖率，CI 集成覆盖率闸门
+- **种子工厂**: 集成测试使用 docs/modules/test-seed-strategy.md 定义的 seed factory + transaction rollback
+- **Mock 约束**: ProcessPluginHost mock 必须满足 5 项约束（async Promise、JSON 序列化/反序列化、30s 超时、1-5ms 延迟注入）
+- **测试用例命名**: `test('{scenario description}')` 描述性名称，必须体现测试行为
+
+### AI 代理工作流约定
+
+- **SDD 生成**: AI 代理在编码前根据 architecture.md + phase-planning.md 需求生成 SDD 文档
+- **测试优先**: AI 代理在编码前根据 SDD 接口定义生成测试计划（TODO 列表 + 测试文件骨架）
+- **文档同步**: 编码完成后 AI 代理必须同步更新 AGENTS.md（CODEMAP + SDD 索引）和 .agents/memorys/
+
+## 术语表
+
+| 术语 | 含义 |
+|------|------|
+| SDD | Software Design Document — 模块设计规格文档（8 节结构：概要、接口、生命周期、依赖、错误码、安全、Mock、变更记录）|
+| TDD | Test-Driven Development — 测试驱动开发（RED→GREEN→IMPROVE 循环）|
+| partition | 插件所属信任域分组（SYSTEM、oa、erp、mes、isolated）|
+| inline | Phase 1a 插件运行模式 — 与 Core 同进程直接函数调用 |
+| process | Phase 2 插件运行模式 — 独立进程通过 JSON-RPC 通信 |
+| container | Phase 4 插件运行模式 — 不可信容器的沙箱隔离 |

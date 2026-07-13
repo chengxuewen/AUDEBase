@@ -1,6 +1,6 @@
 # AUDEBase 竞品/对标产品调研报告
 
-> **生成日期**: 2026-07-10  
+> **生成日期**: 2026-07-13
 > **目的**: 市场竞品分析、架构学习参考、差异化定位依据  
 > **调研范围**: 国际开源 ERP/低代码平台 + 国内低代码平台 + 新兴 AI-Native 平台
 
@@ -319,20 +319,20 @@
 | **Corteza** | Module + Field 配置 | 微服务 | RBAC + 联邦 | 无原生 | BPMN + JS 脚本 |
 | **AuraBoot** | JSON DSL 声明 | 单体 | 五层权限模型 | RBAC 多租户 | BPMN 2.0 |
 | **Directus** | DB Schema 感知 | 数据库优先 | 字段级 RBAC | 无原生 | Flows 可视化 |
-| **AUDEBase** | Schema Engine 动态模型 | 微内核 + 四级分组 | **进程隔离 + ACL 矩阵** | **四阶段演进** | Saga（Phase 4） |
+|| **AUDEBase** | Schema Engine 动态模型 | 微内核 + 四级分组 | **进程隔离 + ACL 矩阵**（Phase 2 设计目标） | **四阶段演进** | Saga（Phase 4） |
 
 ### 8.3 AUDEBase 差异化定位
 
 | 维度 | 市面产品普遍做法 | AUDEBase 差异化 |
 |------|-----------------|-----------------|
-| **插件安全** | 同一进程、信任所有插件 | **四层信任分组**（SYSTEM/Domain/Isolated/Container）+ 组间 JSON-RPC 隔离 |
-| **插件隔离** | 无隔离或全隔离（每插件独立进程，资源开销大） | 渐进式分组（50 插件从 50 进程/2.5-4GB 降至 8-12 进程/0.4-0.7GB） |
-| **权限模型** | 简单 RBAC 或 ACL | **Record Rules**（Odoo domain filter 表达式）+ 字段级 + 租户级三层权限 |
+|| **插件安全** | 同一进程、信任所有插件 | **四层信任分组**（SYSTEM/Domain/Isolated/Container）+ 组间 JSON-RPC 隔离（Phase 2 设计目标） |
+|| **插件隔离** | 无隔离或全隔离（每插件独立进程，资源开销大） | 渐进式分组（Phase 2 设计目标：50 插件从 50 进程/2.5-4GB 降至 8-12 进程/0.4-0.7GB） |
+| **权限模型** | 简单 RBAC 或 ACL | **Record Rules**（Odoo domain filter 表达式，Odoo 自 2005 年验证）+ 字段级 + 租户级三层权限 |
 | **多租户** | 大多无原生支持或简单的 tenant_id | **四阶段演进路径**（tenant_id→PG Schema→Database-per-tenant→混合），Phase 1 可跑，Phase 2 可合规 |
 | **ORM 抽象** | 强绑定特定 ORM | **DatabaseProvider 接口抽象**（Drizzle 0.45.x LTS 锁定，可零成本切换 ORM） |
 | **前端** | Formily/自研框架/原生代码 | **Anti Design 5 + ProLayout**（NocoBase 验证路径）+ 自研 Schema→antd 映射器 |
 | **扩展模型** | 插件即功能（NocoBase/WordPress） | **manifest.exports 契约**（API 声明 + Zod Schema 校验 + ServiceRegistry 服务发现） |
-| **文件存储** | 本地文件系统或 DB 存储 | **content-addressed 去重存储**（SHA-256 + MinIO/S3，Odoo ir.attachment 模式） |
+| **文件存储** | 本地文件系统或 DB 存储 | **SHA-256 content-addressed 去重存储**（行业标准模式：MinIO/S3 + DB 元数据，Odoo ir.attachment 同款） |
 
 ---
 
