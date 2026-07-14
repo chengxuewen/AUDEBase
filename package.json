@@ -1,0 +1,8 @@
+{
+  "devDependencies": {
+    "@colbymchenry/codegraph": "^1.4.1",
+    "@iflow-mcp/defrex-drizzle-mcp": "^1.0.0",
+    "@jzone-mcp/antd-components-mcp": "^1.0.45",
+    "@playwright/mcp": "^0.0.78"
+  }
+}
