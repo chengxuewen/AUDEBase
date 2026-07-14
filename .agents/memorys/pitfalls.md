@@ -1,6 +1,6 @@
 # AUDEBase 已知坑点与反模式
 
-**更新日期**: 2026-07-13
+**更新日期**: 2026-07-14
 
 ## MODACS 适配相关
 
@@ -127,6 +127,59 @@
 - **正确做法**: Phase 1 构建配置确定后实测 bundle 大小；若不理想，降级为按需引入子路径（如 antd/es/table）
 - **详见**: decisions.md D21
 
+## MCP 集成相关
+
+### drizzle-mcp npm 包名陷阱
+- **问题**: npm 上不存在 `drizzle-mcp` 包。搜索到的 Drizzle MCP 实际包名为 `@iflow-mcp/defrex-drizzle-mcp` v1.0.0，binary 名为 `iflow-mcp_defrex-drizzle-mcp`（非直观命名）
+- **正确做法**: init-mcp-drizzle.mjs 中包名使用 `@iflow-mcp/defrex-drizzle-mcp`，binary 名使用 `iflow-mcp_defrex-drizzle-mcp`。首次启动时 auto-install
+- **详见**: .opencode/init-mcp-drizzle.mjs
+
+### npmmirror 镜像缺失 scoped 包
+- **问题**: npm 配置的 npmmirror.com（淘宝镜像）未同步 `@iflow-mcp/defrex-drizzle-mcp` 等新发布的 scoped 包，导致 `npm install` 返回 404，进而 init 脚本 spawn 找不到 binary → `-32000: Connection closed`
+- **正确做法**: init-mcp-drizzle.mjs 中 install 命令显式指定 `--registry=https://registry.npmjs.org/`。通用方案：在 `.npmrc` 中为 `@iflow-mcp` scope 单独设置 registry
+- **详见**: .opencode/init-mcp-drizzle.mjs
+
+### MCP 首次启动超时
+- **问题**: npm 包名错误 → 安装失败 → spawn 找不到 binary → 超时 30000ms。或环境变量缺失（如 POSTGRES_MCP_CONNECTION_STRING）→ 进程立即退出 → 连接断开
+- **正确做法**: 验证 `npm view <pkg> name version bin` 确认包存在；检查 init 脚本中的依赖环境变量
+- **详见**: .opencode/opencode.json §mcp
+
+## Bootstrap + Pixi 脚本相关
+
+### pixi `platforms` 跨平台锁文件陷阱
+- **问题**: 在 `pixi.toml` 添加 `platforms` (如 win-64) 后，`pixi install` 会尝试为所有平台解析依赖。如果 `pixi.lock` 未包含该平台包，解析失败导致整个 install 不可用
+- **正确做法**: 添加新平台后立即运行 `pixi lock` 重新生成锁文件；或在 CI 中生成多平台锁文件。临时可回退 platforms 列表
+- **详见**: pixi.toml:5、pixi.lock
+
+### pixi task 不支持 shell 展开
+- **问题**: pixi.toml `[tasks]` 直接执行命令，不经过 shell。`archive = "git archive ... -o $(date +%Y%m%d).tar.gz"` 中 `$(date)` 不会被展开
+- **正确做法**: 将需要 shell 展开的命令移到独立脚本（如 `scripts/archive-source.sh`），pixi task 引用脚本路径
+- **详见**: pixi.toml:49 → scripts/archive-source.sh
+
+### pixi `[feature.runtime]` 必须显式声明
+- **问题**: 环境定义 `runtime = { features = ["runtime"] }` 引用不存在的 feature → `pixi install` 静默成功但零依赖解析
+- **正确做法**: 每个被环境引用的 feature 必须有对应的 `[feature.xxx]` 或 `[feature.xxx.dependencies]` 节
+- **详见**: pixi.toml:21（新增 [feature.runtime.dependencies]）
+
+### openspace MCP `pixi run` 连接断开
+- **问题**: init-mcp-openspace.mjs 使用 `pixi run openspace-mcp` 调用，但 pixi.toml 无此 task → spawn 失败 → MCP 报告 `-32000: Connection closed`
+- **正确做法**: 直接使用 `.pixi/envs/default/bin/openspace-mcp` 路径，绕过 pixi task 查找。添加 auto-install via `pixi run python -m pip install`
+- **详见**: .opencode/init-mcp-openspace.mjs
+
+### macOS `realpath` 不可用
+- **问题**: `pixi-init.sh` 使用 `realpath` 解析路径，macOS 默认不提供此命令（需 `brew install coreutils`）
+- **正确做法**: 使用 POSIX 兼容的 `cd "$dir" && pwd -P` 替代 `realpath`
+- **详见**: scripts/pixi-init.sh:23 → `cd "$2" && pwd -P`
+
+### batch `setlocal` 导致 pixi 环境变量丢失
+- **问题**: `.bat` 脚本中 `setlocal enabledelayedexpansion` 创建的局部环境在脚本结束时销毁，`pixi shell-hook` 输出的 PATH 等修改全部丢失
+- **正确做法**: 移除 `setlocal`（如 pixi.bat），或使用 `endlocal &` 模式保留变量
+- **详见**: pixi.bat:6（已移除 setlocal）
+
+### pixi-shell.bat 无法修改父进程环境
+- **问题**: `.bat` 中 `pixi shell` 启动新 shell 子进程，无法像 `.sh` 的 `eval "$(pixi shell-hook ...)"` 那样修改调用者的环境变量
+- **正确做法**: .bat 版本改用 `pixi shell-hook` 输出 + 逐行执行，或文档说明只能用于打开新的子 shell
+- **详见**: scripts/pixi-shell.bat（已改用 `pixi shell`）
 ## 行业安全教训
 
 从 15 份竞品参考文档中提取的关键安全 CVE/漏洞，AUDEBase 应在 Phase 1 设计中主动防范：

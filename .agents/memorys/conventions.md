@@ -1,6 +1,6 @@
 # AUDEBase 编码约定
 
-**更新日期**: 2026-07-13
+**更新日期**: 2026-07-14
 
 ## 命名约定
 
@@ -113,3 +113,21 @@
 | inline | Phase 1a 插件运行模式 — 与 Core 同进程直接函数调用 |
 | process | Phase 2 插件运行模式 — 独立进程通过 JSON-RPC 通信 |
 | container | Phase 4 插件运行模式 — 不可信容器的沙箱隔离 |
+
+## Shell 脚本约定
+
+- **Shebang**: 所有项目脚本统一 `#!/usr/bin/env bash`
+- **错误守卫**: 所有脚本必须以 `set -euo pipefail` 开头
+- **路径解析**: 使用 `cd "$dir" && pwd -P` 替代 `realpath`（macOS 兼容）
+- **SCRIPT_DIR DRY**: 通过 `source "$(dirname "${BASH_SOURCE[0]}")/_common.sh"` 获取 SCRIPT_DIR 和 PROJECT_ROOT
+- **_common.sh 守卫**: `_common.sh` 使用 `_COMMON_SH_LOADED` 变量防止重复 source
+- **错误消息**: 统一使用大写 `ERROR:` 前缀（非 `Error:`）
+- **$HOME 守卫**: 使用 pixi 环境变量前检查 `[ -z "${HOME:-}" ]` 避免 unbound variable
+
+## Pixi 配置约定
+
+- **Feature 分层**: `runtime`（生产, nodejs）、`dev`（开发工具）、`test`（测试框架）— 零冗余 conda 依赖
+- **环境映射**: `runtime` = features[runtime], `dev` = features[runtime+dev], `default` = features[runtime+dev+test]
+- **Shell 展开**: pixi task 不支持 `$(...)` 等 shell 语法 → 移到独立脚本
+- **跨平台**: `platforms` 变更后必须 `pixi lock` 重新生成锁文件
+- **部署**: `deploy-pack.py` 用于打包，`deploy-unpack.py` 用于解包；后者自动平台自适应

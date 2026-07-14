@@ -15,30 +15,9 @@ tags
 *.app
 Thumbs.db
 
-# xemacs temporary files
-*.flc
-
 # Vim temporary files
 .*.swp
 
-# Visual Studio generated files
-*.ib_pdb_index
-*.idb
-*.ilk
-*.pdb
-*.sln
-*.suo
-*.vcproj
-*vcproj.*.*.user
-*.ncb
-*.sdf
-*.opensdf
-*.vcxproj
-*vcxproj.*
-
-# MinGW generated files
-*.Debug
-*.Release
 
 # Python byte code
 *.pyc
@@ -79,11 +58,27 @@ node_modules
 !.vscode/settings.json
 
 # Agent dirs
+.venv-openspace
 .playwright-mcp
+.codegraph
 .sisyphus
 .omo
-.codegraph
 
 # Test and build artifacts
 test-results
+coverage/
 *.tsbuildinfo
+*.log
+# Pixi environments
+.pixi
+.pixi-pack
+.pixi-cache
+# Deployment outputs
+deploy/
+audebase-*.tar
+audebase-*.tar.gz
+audebase-*.tar.zst
+
+# Environment files
+*.env
+.env.*
