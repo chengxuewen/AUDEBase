@@ -390,6 +390,22 @@ type PluginError =
 | #10 审计日志 | `PluginManager.*` | 每次状态变更写入 audit_log |
 | #12 管理 UI | `PluginManager` 全部公共 API | REST API `/api/plugins/*` 代理 |
 
+### 6.2 PluginManager 方法与 HTTP 端点映射
+
+PluginManager 公共方法通过 REST API `/api/plugins/*` 暴露给 Admin UI：
+
+| PluginManager 方法 | HTTP 方法 | 端点 | 说明 |
+|---------------------|-----------|------|------|
+| `discover()` | `GET` | `/api/plugins` | 列出所有已发现/已安装插件 |
+| `install(name)` | `POST` | `/api/plugins/{name}/install` | 安装插件 |
+| `enable(name)` | `POST` | `/api/plugins/{name}/enable` | 启用插件 |
+| `disable(name)` | `POST` | `/api/plugins/{name}/disable` | 禁用插件 |
+| `uninstall(name)` | `DELETE` | `/api/plugins/{name}` | 卸载插件（先 disable 再 preUninstall）|
+| `isLoaded(name)` | - | 内部方法，不暴露 HTTP | - |
+| `getPlugin(name)` | - | 内部方法，不暴露 HTTP | - |
+
+详见 [api-specification.md](api-specification.md) 端点 #13-#15, #22。
+
 ---
 
 ## 7. Open Questions (Phase 1a 期间解决)

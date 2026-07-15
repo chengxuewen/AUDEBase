@@ -178,8 +178,8 @@
 
 ### batch `setlocal` 导致 pixi 环境变量丢失
 - **问题**: `.bat` 脚本中 `setlocal enabledelayedexpansion` 创建的局部环境在脚本结束时销毁，`pixi shell-hook` 输出的 PATH 等修改全部丢失
-- **正确做法**: 移除 `setlocal`（如 pixi.bat），或使用 `endlocal &` 模式保留变量
-- **详见**: pixi.bat:6（已移除 setlocal）
+- **正确做法**: 移除 `setlocal`（如 pixi-init.bat），或使用 `endlocal &` 模式保留变量
+- **详见**: scripts/pixi-init.bat:4（setlocal 仍在，待 Phase 1a Windows 环境测试后处理）
 
 ### pixi-shell.bat 无法修改父进程环境
 - **问题**: `.bat` 中 `pixi shell` 启动新 shell 子进程，无法像 `.sh` 的 `eval "$(pixi shell-hook ...)"` 那样修改调用者的环境变量
@@ -205,6 +205,7 @@
 | 沙箱绕过 | Axelor/Directus | - | Groovy/JS 沙箱（AsyncFunction/GeneratorFunction 构造器绕过、原型链污染） | D1.1: Container 隔离 + sandbox CSP；Phase 4 禁用 eval/Function 构造器 |
 | 默认密码/密钥 | Strapi/Directus | - | 默认 admin:admin | D1.6: admin 默认密码强制首次修改 |
 | IDOR（不安全的直接对象引用） | Strapi | - | 缺乏行级权限检查 | D10: Record Rules 自动注入 WHERE 条件 |
+| CVE-2026-44442 | ERPNext | - | CWE-862 缺失授权检查 | D10: Record Rules + D19: ACLProvider/ACLGuard 声明式权限控制 |
 
 **通用防范原则**：
 - 所有外部输入使用 Zod 验证（D8）

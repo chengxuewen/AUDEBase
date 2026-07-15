@@ -16,6 +16,7 @@ AUDEBase/
 │   ├── run-node.sh      # MCP/LSP node 包装器（pixi 环境路径解析）
 │   ├── agent-model-tiers.md # 模型层级定义文档
 │   ├── oh-my-openagent.jsonc # OMO Agent 模型分配配置
+│   ├── init-lsp-wrap.mjs # LSP 包装器初始化脚本
 │   └── init-mcp-*.mjs  # 6 个 MCP 自动安装脚本（codegraph/antd/drizzle/playwright/openspace/postgres）
 ├── .agents/
 │   ├── rules/          # 84 个编码规则文件（12 语言+common+中文副本）
@@ -42,9 +43,9 @@ AUDEBase/
 │   │   ├── redis-mock-guide.md       # ioredis-mock + BullMQ testMode
 │   │   ├── test-seed-strategy.md     # seed factory + transaction rollback
 │   │   └── e2e-test-flows.md         # 5 核心 E2E 流程 + Playwright
-│   ├── plans/          # 5 份 Phase 1a 执行计划文档（~160KB）
+│   ├── plans/          # 5 份 Phase 1a 执行计划文档（~160KB，含 1 份 README.md）
 │   └── reference/      # 15 份竞品产品画像
-├── package.json        # npm 根配置
+├── package.json        # pnpm workspace 根配置
 ├── pixi.toml           # Pixi 环境配置（runtime/dev/test 分层）
 ├── scripts/            # 部署/构建脚本目录
 ├── SKILL.md            # 技能注册表（superpowers + 项目专属 + agents）
@@ -156,6 +157,10 @@ _当前无源代码。以下为架构文档中规划的模块：_
 | 国际化 (i18n) | 🔲 Phase 1a→1b | `packages/i18n/` — D14 | ✅ i18n-sdd.md | ✅ i18n-tdd.md |
 | 健康检查 | 🔲 Phase 1a | `packages/health-check/` - D1.13 | 🔲 待生成 | ✅ health-check-tdd.md |
 | 日志/调试基础设施 | 🔲 Phase 1a | `packages/logging-infra/` - 结构化日志 + Core 聚合 | ✅ logging-infra-sdd.md | ✅ logging-infra-tdd.md |
+| Core 内核骨架 | 🔲 Phase 1a | `packages/core/` - Fastify bootstrap + 中间件 + 配置（GO-021） | 🔲 待生成 | 🔲 待生成 |
+| CLI 工具 | 🔲 Phase 1a | `packages/cli/` - aude dev/db:migrate/plugin:create（GO-023） | 🔲 待生成 | 🔲 待生成 |
+| JWT 认证 | 🔲 Phase 1a | `packages/auth/` - JWT 签发/验证 + token_version（GO-022） | 🔲 待生成 | 🔲 待生成 |
+| 速率限制 | 🔲 Phase 1a | `packages/rate-limit/` - @fastify/rate-limit（GO-024） | 🔲 待生成 | 🔲 待生成 |
 
 ## CONVENTIONS
 ### AUDEBase 独有
@@ -192,6 +197,6 @@ _当前无源代码。以下为架构文档中规划的模块：_
 - **文档基础设施就绪** — 架构定义完成。8 轮团队审核（R1-R8，累计 185+ 发现全部关闭），2 轮文档交叉审计通过，2 轮交互审计（34+29=63 项全部落实到文档），可进入 Phase 1a 编码
 - **从 MODACS 分离** — 2026-07-08 首次提交。无 MODACS 代码共享
 - **.sisyphus/** 被 gitignore 排除 — 计划文件、审计报告暂存于此
-- **双 package.json** — 根目录用 npm，`.opencode/` 用独立包（插件系统）
+- **双 package.json** - 根目录用 pnpm workspace，`.opencode/` 用独立 npm 包（插件系统）
 - **Agent 超配** - 对于零代码项目，基础设施配置较重。规则（84 个文件）和 MCP 服务器（6 个活动）是为未来开发准备的
 - **test 基础设施** — 框架尚未安装。测试计划文档已就绪（11 份 TDD），vitest + @testing-library/react + Playwright 框架安装待 Phase 1a Week 0

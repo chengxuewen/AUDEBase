@@ -211,8 +211,9 @@ CREATE TABLE migration_history (
     filename VARCHAR(500),         -- 迁移文件路径
     
     -- 执行结果
-    status VARCHAR(20) NOT NULL DEFAULT 'success',
-    -- 状态枚举: success | failed | skipped
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    -- 状态枚举: pending | running | success | failed | skipped
+    CHECK (status IN ('pending', 'running', 'success', 'failed', 'skipped')),
     error_message TEXT,            -- 失败时记录错误详情
     execution_time_ms INTEGER,     -- 执行耗时
     

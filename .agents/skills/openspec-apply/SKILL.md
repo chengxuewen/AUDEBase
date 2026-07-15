@@ -1,9 +1,9 @@
 ---
 name: openspec-apply
 description: >-
-  Implement tasks from an MSRCS change proposal. Use when the user wants to
+  Implement tasks from an AUDEBase change proposal. Use when the user wants to
   start implementing, continue implementation, or work through tasks in the
-  C++17 / Qt5.15 / ROS2 Jazzy codebase.
+  TypeScript / Fastify / React / Ant Design codebase.
 license: MIT
 compatibility: Designed for Claude Code, GitHub Copilot, and similar agents.
 disable-model-invocation: false
@@ -11,12 +11,12 @@ metadata:
   author: openspec
   version: "1.0"
   category: workflow
-  project: MSRCS
+  project: AUDEBase
 ---
 
-# OpenSpec Apply — MSRCS
+# OpenSpec Apply - AUDEBase
 
-Implement tasks from an MSRCS change proposal. Work through design-specified tasks in the MSRCS codebase (C++17 / Qt5.15 / ROS2 Jazzy / pixi / colcon).
+Implement tasks from an AUDEBase change proposal. Work through design-specified tasks in the AUDEBase codebase (TypeScript / Fastify / React 19 / Ant Design 5 / Drizzle ORM / pnpm workspace / pixi).
 
 ---
 
@@ -39,11 +39,11 @@ Always announce: "Using change: `<name>`".
 
 Read these files in order to understand the full scope:
 
-- `.sisyphus/plans/<change-name>/proposal.md` — What & why
-- `.sisyphus/plans/<change-name>/design.md` — How
-- `.sisyphus/plans/<change-name>/tasks.md` — Tasks
+- `.sisyphus/plans/<change-name>/proposal.md` - What & why
+- `.sisyphus/plans/<change-name>/design.md` - How
+- `.sisyphus/plans/<change-name>/tasks.md` - Tasks
 
-Also read relevant MSRCS source files referenced in the design for context.
+Also read relevant AUDEBase source files and SDD docs referenced in the design for context.
 
 ### 3. Show current progress
 
@@ -57,19 +57,23 @@ Display:
 For each pending task:
 - **Show** which task is being worked on
 - **Read** any source files that need modification
-- **Edit** files following the design
+- **Edit** files following the design and SDD specifications
 - **Build** the affected packages to verify:
   ```bash
-  ./make.sh --packages <affected-packages> --skip-pack --skip-archive
+  pnpm --filter <package-name> build
+  ```
+- **Run tests** if applicable:
+  ```bash
+  pnpm --filter <package-name> test
   ```
 - **Check LSP** diagnostics on changed files
 - **Mark** task complete in the tasks file: `- [ ]` to `- [x]`
 - **Continue** to next task
 
 **Pause if:**
-- Task is unclear — ask for clarification
-- Implementation reveals a design issue — suggest updating design.md
-- Build error or blocker encountered — report and wait for guidance
+- Task is unclear - ask for clarification
+- Implementation reveals a design issue - suggest updating design.md
+- Build error or blocker encountered - report and wait for guidance
 - User interrupts
 
 ### 5. On completion or pause, show status
@@ -79,8 +83,9 @@ For each pending task:
 
 Working on task 3/7: <task description>
   [...] implementation happening ...
-  [build] ./make.sh --packages ...
+  [build] pnpm --filter <package-name> build
   [lsp] diagnostics clean
+  [test] pnpm --filter <package-name> test
   Task complete
 
 Working on task 4/7: <task description>
@@ -90,45 +95,56 @@ Working on task 4/7: <task description>
 
 ---
 
-## MSRCS Build & Verification Commands
+## AUDEBase Build & Verification Commands
 
 For use during implementation:
 
 ```bash
-# Build specific packages
-./make.sh --packages ms_rcs_hmi_common ms_rcs_hmi_window --skip-pack
+# Build specific package
+pnpm --filter @audebase/<package-name> build
 
-# Debug build
-./make.sh --debug --skip-pack --skip-archive
+# Type-check without emitting
+pnpm --filter @audebase/<package-name> tsc --noEmit
 
-# Full build (slow, use selectively)
-./make.sh --skip-pack --skip-archive
+# Run tests for a package
+pnpm --filter @audebase/<package-name> test
 
-# Enter pixi environment for manual testing
-source scripts/env-source.sh
+# Run all tests
+pnpm test
+
+# Lint
+pnpm lint
+
+# Enter pixi environment
+pixi shell
 ```
 
-### C++ Implementation Reminders
+### TypeScript Implementation Reminders
 
-- Follow C++17 standard with RAII and smart pointers
-- Use `ament_cmake` for package build configuration
-- Add `package.xml` dependencies when adding ROS2 message/service deps
-- Qt5.15 from conda-forge — includes in CMakeLists.txt via `find_package(Qt5 ...)`
-- Include Qt headers explicitly: `#include <QtWebEngine/qtwebengineglobal.h>`
-- Use `qRegisterMetaType` for cross-thread signal/slot with non-standard types
-- ROS2 thread safety: use `call_async` + polling, not `spin_until_future_complete`
+- Follow TypeScript strict mode with explicit public API type annotations
+- Use `interface` for object shapes, `type` for unions/intersections
+- Use `unknown` over `any` - never use `as any` or `@ts-ignore`
+- Use Zod for boundary layer validation (API inputs, plugin communication)
+- Follow immutability patterns - use spread operators, never mutate
+- Use Drizzle ORM for all database operations (parameterized queries)
+- Follow SDD specifications as contracts - interfaces/APIs must match
+- Error handling: use `UserError`/`SystemError` with `ErrorCode` enum
+- Frontend: Ant Design 5 components only, no other UI libraries
+- Frontend: use `useTranslation(pluginPkgName)` for i18n
+- Plugin manifest: `runtime.mode` (inline|process|container) + `runtime.partition` (SYSTEM|oa|erp|...)
 
 ---
 
 ## Guardrails
 
 - Keep going through tasks until done or blocked
-- Always read context files before starting
+- Always read context files (proposal, design, SDD) before starting
 - If task is ambiguous, pause and ask before implementing
 - If implementation reveals issues, pause and suggest artifact updates
 - Keep code changes minimal and scoped to each task
 - Update task checkbox immediately after completing each task
-- Pause on errors, blockers, or unclear requirements — don't guess
-- After each task, verify with lsp_diagnostics + build
-- Do NOT modify `version.txt` — versioning is user-managed
-- Do NOT modify QExt/OpenCTK submodules — use their separate repos
+- Pause on errors, blockers, or unclear requirements - don't guess
+- After each task, verify with lsp_diagnostics + build + tests
+- Do NOT modify `pixi.toml` version field - versioning is user-managed
+- Do NOT bypass Core data API proxy (D12) - plugins must not direct-connect to DB
+- Follow TDD: write tests first (RED), implement (GREEN), refactor (IMPROVE)

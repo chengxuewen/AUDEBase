@@ -104,9 +104,9 @@ Phase 1a 交付一个可工作的微内核底座，包括：
 | #5 迁移管理 | ✅ migration-engine-sdd.md | ✅ migration-engine-tdd.md | 📋 就绪 |
 | #8 RBAC | ✅ rbac-sdd.md | ✅ rbac-tdd.md | 📋 就绪 |
 | #10 审计日志 | ✅ audit-sdd.md | ✅ audit-tdd.md | 📋 就绪 |
-| #1 健康检查子项 | ✅ health-check-sdd.md | ✅ health-check-tdd.md | 📋 就绪 |
+| #9 健康检查子项 | 🔲 health-check-sdd.md | ✅ health-check-tdd.md | 🔲 SDD 待生成 |
 | #11 i18n | ✅ i18n-sdd.md | ✅ i18n-tdd.md | 📋 就绪 |
-| #12 管理 UI | ✅ admin-ui-sdd.md | ✅ admin-ui-tdd.md | 📋 就绪 |
+| #12 管理 UI | 🔲 admin-ui-sdd.md | ✅ admin-ui-tdd.md | 🔲 SDD 待生成 |
 | #13 日志/调试 | ✅ logging-infra-sdd.md | ✅ logging-tdd.md | 📋 就绪 |
 
 ---

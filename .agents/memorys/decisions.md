@@ -43,7 +43,7 @@
 - **状态**: 已决策
 
 ### D1.5: manifest.yaml 规范
-- **决策**: Phase 1a 包含字段：name/version/display_name/description/category/license/application/entry/author/dependencies/assets/lifecycle(mode+partition+crash_policy+migration_version)/security(db_namespace)/exports/provides/permissions/models/locale/data/auto_install
+- **决策**: Phase 1a 包含字段：name/version/display_name/description/category/license/application/entry/author/dependencies/assets/runtime(mode+partition)/lifecycle(crash_policy+migration_version)/security(db_namespace)/exports/provides/permissions/models/locale/data/auto_install
 - **Phase 2 增加**: external_dependencies/demo/sequence
 - **状态**: 已决策
 
@@ -224,7 +224,7 @@
 - **决策**: 借鉴 Odoo domain filter 表达式，manifest.permissions 中声明 record_rule
 - **实现**: Core ORM 层自动注入 WHERE 条件（tenant_id + record_rule）
 - **参考**: Odoo ACL + Record Rules
-- **状态**: 已决策
+- **状态**: 已决策，Phase 1a 实现基础 tenant_id 过滤，Phase 2 实现完整 Record Rules（domain filter 表达式）
 
 **Domain Filter 语法规范**：
 
@@ -251,7 +251,7 @@ AUDEBase 采用 Odoo 式 Poland notation（前缀表达式）数组语法：
 - **决策**: manifest.exports 中 visible_to 声明字段可见角色
 - **实现**: Core API 响应时自动过滤不可见字段；Schema UI 自动隐藏不可见输入框
 - **参考**: NocoBase field-level ACL
-- **状态**: 已决策，Phase 1.5 实现（与 Record Rules D10 同期，详见 architecture.md §7 MVP 不包含）
+- **状态**: 已决策，Phase 2 实现（与 Record Rules D10 完整版同期，详见 architecture.md §7 MVP 不包含）
 
 ### D12: Core 数据 API 代理
 - **决策**: 插件默认不直连数据库。所有 DB 操作通过 Core 数据 API 代理（JSON-RPC）

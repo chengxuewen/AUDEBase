@@ -1,8 +1,8 @@
 ---
 name: openspec-archive
 description: >-
-  Archive a completed MSRCS change proposal after implementation and verification.
-  Use when the user wants to finalize a change — record decisions, update memory,
+  Archive a completed AUDEBase change proposal after implementation and verification.
+  Use when the user wants to finalize a change - record decisions, update memory,
   clean up artifacts.
 license: MIT
 compatibility: Designed for Claude Code, GitHub Copilot, and similar agents.
@@ -11,12 +11,12 @@ metadata:
   author: openspec
   version: "1.0"
   category: workflow
-  project: MSRCS
+  project: AUDEBase
 ---
 
-# OpenSpec Archive — MSRCS
+# OpenSpec Archive - AUDEBase
 
-Archive a completed MSRCS change proposal. Record what was done, update project memory, and clean up working artifacts.
+Archive a completed AUDEBase change proposal. Record what was done, update project memory, and clean up working artifacts.
 
 ---
 
@@ -51,25 +51,25 @@ Record what was done in the project's memory files:
 
 #### a. Update `status.md`
 
-Add the completed change to the status file under "Completed Items" or update "Recent Changes":
+Add the completed change to the status file under "近期工作":
 
 ```
-- 2026-06-15: [description of what was implemented]
+- 2026-07-15: [description of what was implemented]
 ```
 
 File: `.agents/memorys/status.md`
 
 #### b. Update `decisions.md` (if applicable)
 
-If the change involved architectural decisions, add an ADR entry:
+If the change involved architectural decisions, add a decision entry:
 
 ```
-## ADR-NNN: [Title]
+### DXX: [Title]
 
-- **Date**: 2026-06-15
-- **Decision**: [what was decided]
-- **Background**: [context]
-- **Alternative**: [other options considered]
+- **决策**: [what was decided]
+- **理由**: [rationale]
+- **参考**: [references]
+- **状态**: 已决策
 ```
 
 File: `.agents/memorys/decisions.md`
@@ -79,31 +79,24 @@ File: `.agents/memorys/decisions.md`
 If the change uncovered technical pitfalls, add an entry:
 
 ```
-## 2026-06-15: [Pitfall title]
+### [Pitfall title]
 
-- **现象**: [what happened]
-- **原因**: [root cause]
-- **解决**: [how it was fixed]
+- **问题**: [what happened]
+- **正确做法**: [how to fix/avoid]
+- **详见**: [relevant file/decision]
 ```
 
 File: `.agents/memorys/pitfalls.md`
 
 ### 4. Update changelog
 
-Add an entry to `changes/changes-<version>.txt`:
+Add an entry to git commit history (AUDEBase uses git log, not separate changelog files):
 
-```
-## 修复
-- [<version>] [description of fix]
-
-## 优化
-- [<version>] [description of optimization]
-
-## 新增
-- [<version>] [description of new feature]
+```bash
+git log --oneline -5  # Show recent commits for context
 ```
 
-Do NOT modify `version.txt` — only the user may update it.
+Do NOT modify `pixi.toml` version field - only the user may update it.
 
 ### 5. Archive the proposal directory (optional)
 
@@ -114,7 +107,7 @@ mkdir -p .sisyphus/plans/archive
 mv .sisyphus/plans/<change-name> .sisyphus/plans/archive/<change-name>
 ```
 
-Or keep it for reference — the user decides.
+Or keep it for reference - the user decides.
 
 ### 6. Display summary
 
@@ -126,55 +119,56 @@ Or keep it for reference — the user decides.
 
 ### Recorded
 - [x] Project status updated (status.md)
-- [x] Changelog updated (changes/changes-<version>.txt)
-- [x] ADR recorded (decisions.md) — [if applicable]
-- [x] Pitfalls recorded (pitfalls.md) — [if applicable]
+- [x] Decisions recorded (decisions.md) - [if applicable]
+- [x] Pitfalls recorded (pitfalls.md) - [if applicable]
 
 ### Next Steps
-- User may update version.txt
+- User may update pixi.toml version
 - Consider cleanup of any temporary/test files
 ```
 
 ---
 
-## MSRCS-Specific Archival Context
+## AUDEBase-Specific Archival Context
 
 ### Memory files to update
 
 | File | Purpose | Update When |
 |------|---------|-------------|
 | `.agents/memorys/status.md` | Project status, recent changes | Always |
-| `.agents/memorys/decisions.md` | Key architecture decisions | Design decision made |
+| `.agents/memorys/decisions.md` | Architecture decisions (D1-D24, G1-G5) | Design decision made |
 | `.agents/memorys/pitfalls.md` | Technical pitfalls | New issue encountered |
 | `.agents/memorys/conventions.md` | Coding conventions | Convention established |
 
-### When to record an ADR (decisions.md)
+### When to record a decision (decisions.md)
 
 Any of these during the change:
-- New Qt/ROS2 integration pattern established
-- Build system change (new cmake target, new package)
-- Process management change (new PM2 app, new startup profile)
-- Architectural tradeoff resolved (e.g., QWidget vs QML)
-- Thread safety strategy decision
+- New plugin architecture pattern established
+- Database schema change (new table, new column, index strategy)
+- API design decision (new endpoint, response format change)
+- Security decision (auth flow, permission model)
+- Frontend architecture decision (component pattern, state management)
+- Build/tooling change (new dependency, config change)
 
 ### When to record a pitfall (pitfalls.md)
 
 Any of these during the change:
 - Build error that required non-obvious fix
-- Qt/ROS2 runtime issue (signal not firing, DDS QoS mismatch)
-- Toolchain incompatibility (CMake version, compiler, pixi)
-- Process/chrome issue (X11 embedding, DISPLAY, PM2)
-- Thread safety issue (race condition, deadlock)
+- TypeScript type system issue (generic inference, conditional types)
+- Drizzle ORM migration issue
+- Fastify plugin registration order issue
+- React/Ant Design rendering issue
+- Plugin lifecycle hook timing issue
+- Multi-tenant data isolation edge case
 
 ---
 
 ## Guardrails
 
 - Always prompt for change selection if not provided
-- Do NOT block archive on warnings — just inform and confirm
-- Do NOT modify `version.txt` — only the user may update it
-- Do NOT modify QExt/OpenCTK submodules from here
-- Write changelog entries in Chinese (per project convention)
+- Do NOT block archive on warnings - just inform and confirm
+- Do NOT modify `pixi.toml` version field - only the user may update it
 - Memory file updates should be concise, not verbose
 - If the change involves no new pitfalls or decisions, skip those files
 - Offer to clean up the proposal directory but do not force it
+- Update AGENTS.md if new modules/packages were added

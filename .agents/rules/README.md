@@ -36,7 +36,7 @@ Rules are project-local and read directly by the AI assistant from `.agents/rule
 ## Rules vs Skills
 
 - **Rules** define standards, conventions, and checklists that apply broadly (e.g., "80% test coverage", "no hardcoded secrets").
-- **Skills** (`.agents/skills/` directory) provide deep, actionable reference material for specific tasks (e.g., `cpp-coding-standards`, `cpp-testing`).
+- **Skills** (`.agents/skills/` directory) provide deep, actionable reference material for specific tasks (e.g., `design-system`, `test-harness`).
 
 Language-specific rule files reference relevant skills where appropriate. Rules tell you *what* to do; skills tell you *how* to do it.
 

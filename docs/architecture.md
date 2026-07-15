@@ -97,13 +97,13 @@ AUDEBase 采用三层概念模型组织业务功能：
 | 层级 | 概念 | 说明 | 示例 |
 |------|------|------|------|
 | L1 | **插件（Plugin）** | 最小功能单元。通过 `manifest.yaml` 声明元数据、依赖、权限、数据模型。拥有独立的路由、Slot 注册、i18n 命名空间 | `@audebase/plugin-rbac`、`@audebase/plugin-purchase` |
-| L2 | **插件套件（Suite）** | 同一业务域的插件集合。套件内插件通过 D12 Core 数据 API 共享数据，通过事件总线松耦合通信，通过模型扩展机制（Phase 2）扩展彼此的 Collection 字段 | `ERP Suite = purchase + stock + account + mrp` |
+| L2 | **插件套件（Suite）** | 同一业务域的插件集合。套件内插件通过 D12 Core 数据 API 共享数据，通过事件总线松耦合通信，通过模型扩展机制（Phase 1b）扩展彼此的 Collection 字段 | `ERP Suite = purchase + stock + account + mrp` |
 | L3 | **应用实例（Application）** | 一个完整部署实例，包含内核 + 若干 Suite/Plugin + 租户数据。用户通过 ProLayout 侧边栏按 Suite 分组访问所有已安装插件的功能 | 某客户的 AUDEBase 部署实例 |
 
 **套件内插件协作模式**：
 - **数据共享**：通过 Core 数据 API 代理（D12），统一注入 tenant_id + record_rules
 - **事件通信**：通过插件事件总线发布/订阅业务事件（如 `purchase.order.created`）
-- **模型扩展**（Phase 2）：类似 Odoo 类继承机制，插件 B 可在插件 A 的 Collection 上添加新 Field
+- **模型扩展**（Phase 1b）：类似 Odoo 类继承机制，插件 B 可在插件 A 的 Collection 上添加新 Field
 - **UI 扩展**：通过 Slot（D23）在已有页面插入自定义组件
 
 每个业务系统（OA/ERP/MES 等）以插件套件形式存在，通过 `manifest.yaml` 声明。详见 [插件架构分析](plugin-architecture-analysis.md)。

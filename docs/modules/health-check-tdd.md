@@ -202,6 +202,36 @@ describe('GET /health 集成', () => {
   })
 })
 
+describe('GET /api/health 集成', () => {
+  test('返回 200 + { status, db, redis, uptime }', async () => {
+    // Arrange & Act
+    await withTestApp(async (app) => {
+      const res = await app.inject({ method: 'GET', url: '/api/health' })
+
+      // Assert
+      expect(res.statusCode).toBe(200)
+      const body = res.json()
+      expect(body.status).toBe('ok')
+      expect(body.db).toBe(true)
+      expect(body.uptime).toBeGreaterThanOrEqual(0)
+    })
+  })
+
+  test('无需认证即可访问', async () => {
+    // Arrange & Act
+    await withTestApp(async (app) => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/health',
+        // 无 Authorization header
+      })
+
+      // Assert
+      expect(res.statusCode).toBe(200)
+    })
+  })
+})
+
 describe('GET /health/ready 集成', () => {
   test('DB 就绪 → 200', async () => {
     // Arrange & Act
