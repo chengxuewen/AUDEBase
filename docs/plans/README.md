@@ -29,7 +29,7 @@
 | `../phase-planning.md` | Phase 划分单一真实来源（模块编号、依赖、分工、验收标准） |
 | `../architecture.md` | 架构文档（§七 MVP 范围、§八 路线图） |
 | `../../.agents/memorys/status.md` | 项目状态（模块状态表、SDD/TDD 文档状态） |
-| `../../.agents/memorys/decisions.md` | 架构决策记录（47 条 G1-G5、D1-D24） |
+| `../../.agents/memorys/decisions.md` | 架构决策记录（48 条 G1-G5、D1-D24） |
 | `../../.agents/memorys/conventions.md` | 编码约定（命名、不可变性、TS 规范、SDD/TDD 约定） |
 | `../modules/*-sdd.md` | 10 份 SDD 接口契约 |
 | `../modules/*-tdd.md` | 11 份 TDD 测试计划 |

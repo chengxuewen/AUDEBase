@@ -90,7 +90,7 @@
 
 ### TDD 测试计划格式
 
-- **文件命名**: `{module}.test.ts`（单元测试）/ `{module}.spec.ts`（E2E 测试）/ `{module}.contract.test.ts`（API Contract 测试）
+- **文件命名**: `{module}.test.ts`（单元测试）/ `{module}.integration.test.ts`（集成测试）/ `{module}.contract.test.ts`（API Contract 测试）/ `{feature}.e2e.ts`（E2E 测试）
 - **AAA 结构**: 每个测试用例必须遵循 Arrange → Act → Assert 三段式，用注释标注三段边界
 - **覆盖率**: 80% 最低覆盖率，CI 集成覆盖率闸门
 - **种子工厂**: 集成测试使用 docs/modules/test-seed-strategy.md 定义的 seed factory + transaction rollback

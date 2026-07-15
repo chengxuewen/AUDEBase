@@ -36,15 +36,15 @@
 - **状态**: 已决策
 
 ### D1.4: 插件生命周期
-- **决策**: 7 个生命周期钩子（afterAdd → beforeLoad → load → install → afterEnable → afterDisable → pre_uninstall）。插件升级通过 D1.7 迁移框架处理，不在生命周期钩子中定义独立的 pre_upgrade/post_upgrade
+- **决策**: 7 个生命周期钩子（afterAdd -> beforeLoad -> load -> install -> afterEnable -> afterDisable -> preUninstall）。插件升级通过 D1.7 迁移框架处理，不在生命周期钩子中定义独立的 preUpgrade/postUpgrade
 - **迁移**: NocoBase 3 阶段迁移（beforeLoad→afterSync→afterLoad）+ version_gated
 - **状态机**: Phase 1 2 状态（loaded/disabled），Phase 2 NocoBase 5 状态
 - **参考**: NocoBase PluginManager、Odoo module lifecycle
 - **状态**: 已决策
 
 ### D1.5: manifest.yaml 规范
-- **决策**: Phase 1a 包含字段：name/version/display_name/description/category/license/application/entry/author/dependencies/assets/lifecycle/runtime(mode+partition+crash_policy)/security(db_namespace)/exports/provides/permissions/models/locale/data
-- **Phase 2 增加**: external_dependencies/demo/sequence/auto_install
+- **决策**: Phase 1a 包含字段：name/version/display_name/description/category/license/application/entry/author/dependencies/assets/lifecycle(mode+partition+crash_policy+migration_version)/security(db_namespace)/exports/provides/permissions/models/locale/data/auto_install
+- **Phase 2 增加**: external_dependencies/demo/sequence
 - **状态**: 已决策
 
 ### D1.6: 内核插件与 Bootstrap 流程
@@ -96,7 +96,7 @@
 - **状态**: 已决策，Phase 1a 实现
 
 ### D1.13: 健康检查
-- **决策**: Fastify 应用骨架内置 `GET /health`（返回 JSON `{ status: 'ok', db: true, redis: true, uptime: N }`）和 `GET /health/ready`（Kubernetes readiness probe，DB 连接成功后返回 200）
+- **决策**: Fastify 应用骨架内置 `GET /health`（无 API 前缀，Kubernetes probe 用）和 `GET /api/health`（有 API 前缀，API 一致性用），均返回 JSON `{ status: 'ok', db: true, redis: true, uptime: N }`。另提供 `GET /health/ready`（Kubernetes readiness probe，DB 连接成功后返回 200）
 - **状态**: 已决策，Phase 1a 实现
 
 ### D1.14: 通知系统接口
@@ -135,9 +135,9 @@
 - **状态**: 已决策，Phase 2 实现
 
 ### D4: 多租户数据库级隔离
-- **决策**: Phase 1 采用单数据库 + tenant_id 字段隔离；Phase 1.5 PostgreSQL Schema-per-tenant；Phase 2 Database-per-tenant
+- **决策**: Phase 1 采用单数据库 + tenant_id 字段隔离；Phase 1.5 PostgreSQL Schema-per-tenant；Phase 3 Database-per-tenant
 - **替代方案**: Schema-per-tenant（PostgreSQL schema 隔离）、Shared-table（行级安全 RLS）、instance-per-tenant（NocoBase 默认）
-- **理由**: Phase 1 简单高效验证架构；Phase 1.5 NocoBase 企业版验证的中间方案；Phase 2 完整数据隔离满足合规需求；混合模式支持灵活部署
+- **理由**: Phase 1 简单高效验证架构；Phase 1.5 NocoBase 企业版验证的中间方案；Phase 3 完整数据隔离满足合规需求；混合模式支持灵活部署
 - **参考**: Odoo Multi-Company（tenant_id 模式）、NocoBase @nocobase/plugin-multi-tenant（Schema 模式）
 
 ### D4.1: 文件存储多租户隔离

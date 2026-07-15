@@ -337,7 +337,7 @@ assets:                           # 静态资源
 lifecycle:                        # 生命周期钩子注册
   beforeLoad: "registerModels"
   afterEnable: "startScheduler"
-  pre_uninstall: "warnUserDataLoss"
+  preUninstall: "warnUserDataLoss"
 ```
 
 > Phase 2 新增字段：`external_dependencies`（系统级依赖如 Python）、`data`（必须数据文件）、`demo`（演示数据）、`sequence`（加载顺序）、`auto_install`（自动安装）。
@@ -699,7 +699,7 @@ const result = await context.call("erp.purchase.create", {
 | **install** | 安装 | 创建 DB 表、写入系统配置、加载 demo 数据 | Odoo data files |
 | **afterEnable** | 激活 | 启动定时任务、注册事件监听、开端口 | NocoBase afterEnable |
 | **afterDisable** | 停用 | 注销事件、停止定时任务 | NocoBase afterDisable |
-| **pre_uninstall** | 卸载前 | 提醒用户备份数据 | Odoo warning |
+| **preUninstall** | 卸载前 | 提醒用户备份数据 | Odoo warning |
 
 #### 迁移三阶段（NocoBase 模式）
 

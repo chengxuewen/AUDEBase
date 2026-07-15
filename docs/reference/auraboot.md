@@ -300,7 +300,7 @@ AuraBoot 使用 PF4J（Plugin Framework for Java）作为插件基础：
 
 **对 AUDEBase 的启示**：
 
-- PF4J 的插件生命周期管理（load/start/stop/uninstall）与 AUDEBase D1.4 的 7 钩子相比，PF4J 更简洁。AUDEBase 的 7 钩子（afterAdd/beforeLoad/load/install/afterEnable/afterDisable/pre_uninstall）提供了更细粒度的控制
+- PF4J 的插件生命周期管理（load/start/stop/uninstall）与 AUDEBase D1.4 的 7 钩子相比，PF4J 更简洁。AUDEBase 的 7 钩子（afterAdd/beforeLoad/load/install/afterEnable/afterDisable/preUninstall）提供了更细粒度的控制
 - AuraBoot 的"插件 = 声明包"模式值得 AUDEBase 参考——AUDEBase 的插件也可以定义为 Model + Route + Permission 的声明组合，而非必须包含可执行代码
 
 ---

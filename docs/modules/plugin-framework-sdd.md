@@ -57,7 +57,7 @@ interface PluginManager {
   /**
    * 卸载插件
    * 1. 如果插件为 enabled 状态，先执行 disable
-   * 2. 触发 pre_uninstall 生命周期
+   * 2. 触发 preUninstall 生命周期
    * 3. 写入 audit_log（action='lifecycle:uninstall'）
    */
   uninstall(pluginName: string): Promise<void>
@@ -221,7 +221,7 @@ async function testDelayInjection() {
 | installed | enable | enabled | 无 | 执行 afterEnable |
 | enabled | disable | disabled | 无其他启用插件依赖它 | 执行 afterDisable |
 | disabled | enable | enabled | 无 | 执行 afterEnable |
-| disabled | uninstall | (移除) | 无其他插件依赖它 | 执行 pre_uninstall |
+| disabled | uninstall | (移除) | 无其他插件依赖它 | 执行 preUninstall |
 | * | (迁移失败) | migration_failed | 迁移执行失败 | 记录 audit_log + logger.error |
 
 ---

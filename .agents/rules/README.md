@@ -16,9 +16,16 @@ Rules are part of the `.agents/` directory, organized into a **common** layer pl
 ├── typescript/      # TypeScript/JavaScript specific
 ├── python/          # Python specific
 ├── golang/          # Go specific
-├── web/             # Web and frontend specific
+├── rust/            # Rust specific
+├── java/            # Java specific
+├── kotlin/          # Kotlin specific
+├── csharp/          # C# specific
 ├── swift/           # Swift specific
-└── php/             # PHP specific
+├── php/             # PHP specific
+├── perl/            # Perl specific
+├── dart/            # Dart specific
+├── web/             # Web and frontend specific
+└── zh/              # 中文副本（common 规则中文版）
 ```
 
 - **common/** contains universal principles — no language-specific code examples.

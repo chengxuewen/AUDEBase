@@ -106,7 +106,7 @@ test('load plugin', () => {
 | 测试类型 | 命名模式 | 示例 |
 |----------|----------|------|
 | 单元测试 | `{module}.test.ts` | `plugin-manager.test.ts` |
-| 集成测试 | `{module}.spec.ts` | `auth.spec.ts` |
+| 集成测试 | `{module}.integration.test.ts` | `auth.integration.test.ts` |
 | API Contract 测试 | `{module}.contract.test.ts` | `rbac-api.contract.test.ts` |
 | E2E 测试 | `{feature}.e2e.ts` | `plugin-install.e2e.ts` |
 
