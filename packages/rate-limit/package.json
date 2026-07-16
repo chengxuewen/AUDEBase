@@ -1,8 +1,7 @@
 {
-  "name": "@audebase/cli",
+  "name": "@audebase/rate-limit",
   "private": true,
   "type": "module",
-  "bin": { "aude": "./src/index.ts" },
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
@@ -12,9 +11,6 @@
     "check": "tsc --noEmit"
   },
   "dependencies": {
-    "@audebase/shared-types": "workspace:*",
-    "@audebase/core": "workspace:*",
-    "@audebase/migration": "workspace:*",
-    "commander": "^12.0.0"
+    "@audebase/shared-types": "workspace:*"
   }
 }

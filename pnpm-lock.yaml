@@ -123,9 +123,15 @@ importers:
       '@audebase/core':
         specifier: workspace:*
         version: link:../core
+      '@audebase/migration':
+        specifier: workspace:*
+        version: link:../migration
       '@audebase/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      commander:
+        specifier: ^12.0.0
+        version: 12.1.0
 
   packages/core:
     dependencies:
@@ -194,6 +200,12 @@ importers:
       zod:
         specifier: ^3.24.0
         version: 3.25.76
+
+  packages/rate-limit:
+    dependencies:
+      '@audebase/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
 
   packages/rbac:
     dependencies:
