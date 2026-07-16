@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect } from 'vitest'
-import { generateBootstrapData } from '../bootstrap-data'
+import { generateBootstrapData } from '../bootstrap-data.js'
 
 describe('generateBootstrapData', () => {
   it('应生成 admin 用户数据', () => {

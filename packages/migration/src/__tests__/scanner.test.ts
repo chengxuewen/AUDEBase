@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { MigrationScanner } from '../index'
+import { MigrationScanner } from '../index.js'
 import * as fs from 'node:fs/promises'
 
 // mock 文件系统

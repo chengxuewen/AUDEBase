@@ -1,7 +1,7 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, beforeEach } from 'vitest'
 import { Writable } from 'node:stream'
-import { createLogger, type Logger } from '../index'
+import { createLogger, type Logger } from '../index.js'
 
 function createCaptureStream(): { output: string[]; stream: Writable } {
   const output: string[] = []

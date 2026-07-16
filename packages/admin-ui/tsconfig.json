@@ -6,5 +6,5 @@
     "jsx": "react-jsx"
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["src/**/__tests__/**","node_modules", "dist"]
 }

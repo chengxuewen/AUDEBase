@@ -1,7 +1,7 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, vi } from 'vitest'
-import { InlinePluginHost } from '../plugin-host'
-import type { Manifest } from '../manifest-schema'
+import { InlinePluginHost } from '../plugin-host.js'
+import type { Manifest } from '../manifest-schema.js'
 
 function createMockManifest(overrides: Partial<Manifest> = {}): Manifest {
   return {

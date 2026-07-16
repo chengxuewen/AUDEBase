@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, vi } from 'vitest'
-import { HealthService } from '../health/service'
+import { HealthService } from '../health/service.js'
 
 describe('HealthService', () => {
   it('should return db: true when DB connection succeeds', async () => {

@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, vi } from 'vitest'
-import { isBootstrapComplete } from '../bootstrap-check'
+import { isBootstrapComplete } from '../bootstrap-check.js'
 
 describe('Bootstrap 幂等性', () => {
   it('数据库中已有 admin 时应跳过创建', async () => {

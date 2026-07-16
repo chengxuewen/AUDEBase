@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { RBACService } from '../index'
+import { RBACService } from '../index.js'
 
 const mockDb = {
   query: {

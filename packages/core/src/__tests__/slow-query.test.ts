@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, vi } from 'vitest'
-import { createSlowQueryHook } from '../index'
+import { createSlowQueryHook } from '../index.js'
 
 describe('SlowQueryDetection', () => {
   it('should log a warn when query duration exceeds 100ms threshold', () => {

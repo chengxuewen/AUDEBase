@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect } from 'vitest'
-import { MigrationEngine } from '../index'
+import { MigrationEngine } from '../index.js'
 
 describe('MigrationEngine - 三阶段执行顺序', () => {
   it('应按照 preload(全部插件) -> postsync(全部插件) -> postload(全部插件) 顺序执行', async () => {

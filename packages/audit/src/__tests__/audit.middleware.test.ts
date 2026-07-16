@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, vi } from 'vitest'
-import { createAuditMiddleware } from '../index'
+import { createAuditMiddleware } from '../index.js'
 
 describe('AuditMiddleware', () => {
   it('should not record audit for GET requests', async () => {

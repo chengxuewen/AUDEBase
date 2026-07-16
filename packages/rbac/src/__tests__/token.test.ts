@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect } from 'vitest'
-import { signToken, verifyToken, generateAccessToken, generateRefreshToken, hashToken, assertJwtSecret } from '../index'
+import { signToken, verifyToken, generateAccessToken, generateRefreshToken, hashToken, assertJwtSecret } from '../index.js'
 
 const TEST_SECRET = 'test-secret-at-least-32-characters-long-!!'
 

@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect } from 'vitest'
-import { parseManifestYaml } from '../index'
+import { parseManifestYaml } from '../index.js'
 
 describe('parseManifestYaml', () => {
   it('应正确解析标准 YAML', () => {

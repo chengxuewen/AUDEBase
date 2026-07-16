@@ -1,7 +1,7 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, vi } from 'vitest'
-import { MigrationExecutor } from '../index'
-import type { MigrationTask } from '../index'
+import { MigrationExecutor } from '../index.js'
+import type { MigrationTask } from '../index.js'
 
 describe('MigrationExecutor.dryRun', () => {
   it('应报告正常迁移任务', async () => {

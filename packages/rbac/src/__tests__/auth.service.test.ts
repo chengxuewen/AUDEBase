@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { AuthService } from '../index'
+import { AuthService } from '../index.js'
 
 // 使用 mock DB provider 隔离数据库依赖
 const mockDb = {

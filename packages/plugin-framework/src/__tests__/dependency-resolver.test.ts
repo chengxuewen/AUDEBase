@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect } from 'vitest'
-import { resolveDependencyOrder } from '../plugin-manager'
+import { resolveDependencyOrder } from '../plugin-manager.js'
 import type { PluginDescriptor } from '@audebase/shared-types'
 
 // 辅助函数：创建测试 PluginDescriptor

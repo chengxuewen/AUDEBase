@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { MigrationExecutor } from '../index'
+import { MigrationExecutor } from '../index.js'
 
 // These tests require a real PG connection (integration-style),
 // but since no implementation exists, they are unit tests that

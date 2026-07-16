@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect } from 'vitest'
-import { manifestSchema } from '../manifest-schema'
+import { manifestSchema } from '../manifest-schema.js'
 
 describe('manifestSchema - 合法 manifest', () => {
   it('应通过合法的完整 manifest', () => {

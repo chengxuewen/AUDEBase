@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import PluginCore from '../index'
+import PluginCore from '../index.js'
 import type { PluginHost } from '@audebase/shared-types'
 
 // 创建 mock PluginHost（提供 db, t(), logger, config）

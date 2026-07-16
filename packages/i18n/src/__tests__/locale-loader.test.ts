@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, vi } from 'vitest'
-import { loadLocaleFile, validateLocaleFile } from '../index'
+import { loadLocaleFile, validateLocaleFile } from '../index.js'
 
 describe('validateLocaleFile', () => {
   it('should pass validation for a valid flat-key zh-CN.json', () => {

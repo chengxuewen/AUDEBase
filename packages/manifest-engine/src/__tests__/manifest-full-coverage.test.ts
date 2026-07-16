@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect } from 'vitest'
-import { manifestSchema } from '../index'
+import { manifestSchema } from '../index.js'
 
 // 合法全量 manifest 作为基线
 const FULL_VALID_MANIFEST = {

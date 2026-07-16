@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { aclMiddleware, requireAuth } from '../index'
+import { aclMiddleware, requireAuth } from '../index.js'
 
 const mockAuthService = {
   verifyAccessToken: vi.fn(),

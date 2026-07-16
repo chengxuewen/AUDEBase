@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect } from 'vitest'
-import { parseDomainFilter, applyRecordRule, injectTenantFilter } from '../index'
+import { parseDomainFilter, applyRecordRule, injectTenantFilter } from '../index.js'
 
 describe('Domain Filter Expression Parsing (Poland Notation)', () => {
   describe('parseDomainFilter', () => {

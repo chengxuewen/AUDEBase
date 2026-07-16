@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { AuditService } from '../index'
+import { AuditService } from '../index.js'
 
 interface MockDb {
   insert: ReturnType<typeof vi.fn>

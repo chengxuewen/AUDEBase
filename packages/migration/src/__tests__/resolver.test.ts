@@ -1,7 +1,7 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect } from 'vitest'
-import { MigrationResolver } from '../index'
-import type { MigrationVersion } from '../index'
+import { MigrationResolver } from '../index.js'
+import type { MigrationVersion } from '../index.js'
 
 // 模拟 migration_history 查询结果
 function createMockHistory(records: Array<{ plugin: string; version: string }>) {

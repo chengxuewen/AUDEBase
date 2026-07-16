@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, vi } from 'vitest'
-import { createRequestIdMiddleware } from '../index'
+import { createRequestIdMiddleware } from '../index.js'
 
 describe('RequestIdMiddleware', () => {
   it('should reuse client-provided X-Request-ID', async () => {

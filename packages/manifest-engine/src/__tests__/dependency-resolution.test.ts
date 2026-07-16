@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect } from 'vitest'
-import { resolveDependencyOrder } from '../index'
+import { resolveDependencyOrder } from '../index.js'
 
 const baseManifest = {
   version: '1.0.0',

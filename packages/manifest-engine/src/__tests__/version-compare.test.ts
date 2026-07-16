@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect } from 'vitest'
-import { compareVersions, isVersionGt, semverSort } from '../index'
+import { compareVersions, isVersionGt, semverSort } from '../index.js'
 
 describe('版本比较工具', () => {
   describe('compareVersions', () => {

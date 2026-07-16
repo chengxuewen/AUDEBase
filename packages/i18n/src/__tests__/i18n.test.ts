@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createTranslator } from '../index'
+import { createTranslator } from '../index.js'
 
 const zhCNTranslations: Record<string, Record<string, string>> = {
   'plugin-core': {

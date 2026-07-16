@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect } from 'vitest'
-import { containsDangerousOperation } from '../index'
+import { containsDangerousOperation } from '../index.js'
 
 describe('containsDangerousOperation', () => {
   it('应检测 DROP TABLE', () => {

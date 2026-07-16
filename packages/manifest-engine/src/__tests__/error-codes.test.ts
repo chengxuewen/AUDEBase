@@ -1,6 +1,6 @@
 // RED PHASE: imports will resolve once implementation is created
 import { describe, it, expect } from 'vitest'
-import { validateManifest, registerManifests } from '../index'
+import { validateManifest, registerManifests } from '../index.js'
 
 const VALID_MINIMAL_MANIFEST = {
   name: '@audebase/plugin-test',
