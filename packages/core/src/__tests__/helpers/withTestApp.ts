@@ -1,12 +1,13 @@
-import { createTestApp, type TestApp } from './createTestApp'
+import { createTestApp } from './createTestApp.js'
+import type { FastifyInstance } from 'fastify'
 
 export async function withTestApp(
-  fn: (app: TestApp) => Promise<void>,
+  fn: (app: FastifyInstance) => Promise<void>,
 ): Promise<void> {
-  const app = await createTestApp()
+  const testApp = await createTestApp()
   try {
-    await fn(app)
+    await fn(testApp.app)
   } finally {
-    // Cleanup will be implemented when createTestApp is real
+    await testApp.cleanup()
   }
 }

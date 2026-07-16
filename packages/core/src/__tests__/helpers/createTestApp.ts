@@ -1,5 +1,6 @@
+import { fastify, type FastifyInstance } from 'fastify'
 import Redis from 'ioredis-mock'
-import { sql } from 'drizzle-orm'
+import { registerHealthRoutes } from '../../health/routes.js'
 
 interface TestAppOptions {
   withRedis?: boolean
@@ -9,20 +10,66 @@ interface TestAppOptions {
     admin?: boolean
     tenant?: string
   }
+  dbUrl?: string
+}
+
+interface DbLike {
+  execute: (sql: string) => Promise<unknown>
 }
 
 interface TestApp {
-  app: unknown // FastifyInstance - will be typed when core is implemented
-  db: unknown // DrizzleDB - will be typed when core is implemented
+  app: FastifyInstance
+  db: unknown
   redis: { client: Redis; publisher: Redis; subscriber: Redis } | null
   queues: Record<string, unknown> | null
   withTransaction: <T>(fn: (tx: unknown) => Promise<T>) => Promise<T>
+  cleanup: () => Promise<void>
+}
+
+function createMockDb(dbUrl?: string): DbLike {
+  if (dbUrl && dbUrl.includes('invalid')) {
+    return {
+      async execute(): Promise<never> {
+        throw new Error('Connection refused')
+      },
+    }
+  }
+  return {
+    async execute(): Promise<void> {},
+  }
 }
 
 export async function createTestApp(options: TestAppOptions = {}): Promise<TestApp> {
-  // ponytail: placeholder - will be implemented when core package is built
-  // This exists so tests can import it and fail (RED phase) rather than not compile
-  throw new Error('createTestApp not yet implemented - Phase 1a Week 0')
+  const app = fastify({ logger: false })
+  const db = createMockDb(options.dbUrl)
+
+  let redis: { client: Redis; publisher: Redis; subscriber: Redis } | null = null
+  if (options.withRedis === true) {
+    redis = {
+      client: new Redis(),
+      publisher: new Redis(),
+      subscriber: new Redis(),
+    }
+  }
+
+  registerHealthRoutes(app, db, redis?.client ?? null)
+
+  const withTransaction = async <T>(fn: (tx: unknown) => Promise<T>): Promise<T> => {
+    return fn(db)
+  }
+
+  const cleanup = async (): Promise<void> => {
+    await app.close()
+  }
+
+  return {
+    app,
+    db,
+    redis,
+    queues: null,
+    withTransaction,
+    cleanup,
+  }
 }
 
 export type { TestApp, TestAppOptions }
