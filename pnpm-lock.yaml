@@ -145,6 +145,9 @@ importers:
       '@audebase/auth':
         specifier: workspace:*
         version: link:../auth
+      '@audebase/health-check':
+        specifier: workspace:*
+        version: link:../health-check
       '@audebase/rate-limit':
         specifier: workspace:*
         version: link:../rate-limit

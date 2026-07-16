@@ -6,7 +6,7 @@
  * @audebase/core
  */
 
-import Fastify, { type FastifyInstance } from 'fastify'
+import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply } from 'fastify'
 import cors from '@fastify/cors'
 import { Redis } from 'ioredis'
 
@@ -14,7 +14,7 @@ import type { AppConfig } from './config.js'
 import { createDatabase, type DrizzleDB } from './db/connection.js'
 import { createLogger, type Logger } from './logger.js'
 import { createRequestIdMiddleware } from './middleware/request-id.js'
-import { registerHealthRoutes } from './health/routes.js'
+import { HealthCheckService, registerHealthRoutes } from '@audebase/health-check'
 import { AuthService } from '@audebase/auth'
 import { AuditService, createAuditMiddleware } from '@audebase/audit'
 import { requireAuth } from '@audebase/rbac'
@@ -95,12 +95,18 @@ export class CoreApp {
     await app.register(cors, this.createCorsConfig())
 
     // 2. Request ID
-    app.addHook('onRequest', createRequestIdMiddleware() as never)
+    app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
+      const requestIdMiddleware = createRequestIdMiddleware()
+      await requestIdMiddleware(request as unknown as Parameters<typeof requestIdMiddleware>[0], reply as unknown as Parameters<typeof requestIdMiddleware>[1])
+    })
 
     // 3. Rate limit
     const rateLimiter = new RateLimiter({ windowMs: 60_000, max: 100 })
     const rateLimitMiddleware = createRateLimitMiddleware(rateLimiter)
-    app.addHook('onRequest', rateLimitMiddleware as never)
+    app.addHook('onRequest', (request: FastifyRequest, reply: FastifyReply, done: () => void) => {
+      rateLimitMiddleware(request, reply)
+      done()
+    })
 
     // 4. Global error handler
     app.setErrorHandler((err, request, reply) => {
@@ -127,12 +133,13 @@ export class CoreApp {
     })
 
     // 5. Health routes (no auth)
-    const dbLike = {
-      execute: async (sqlStr: string): Promise<unknown> => {
-        return sql.unsafe(sqlStr)
-      },
-    }
-    registerHealthRoutes(app, dbLike, this._redis)
+    const healthService = new HealthCheckService(
+      { execute: async (sqlStr: string) => sql.unsafe(sqlStr) },
+      this._redis,
+      Date.now(),
+      '0.1.0',
+    )
+    registerHealthRoutes(app, healthService)
 
     // 6. API routes
     this.registerApiRoutes(app)
