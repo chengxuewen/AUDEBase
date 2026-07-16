@@ -1,11 +1,12 @@
 // RED PHASE: imports will resolve once implementation is created
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderWithProviders } from '../../../__tests__/helpers/test-utils'
 import { PluginListPage } from '../PluginListPage'
+import { usePlugins } from '../hooks/usePlugins'
 
 // Mock TanStack Query hooks
-vi.mock('../hooks/usePlugins', () => ({
-  usePlugins: () => ({
+vi.mock('../hooks/usePlugins', () => {
+  const mockData = {
     data: {
       data: [
         { id: '1', name: '@audebase/plugin-core', display_name: '内核插件', version: '0.1.0', status: 'loaded', category: 'system' },
@@ -15,8 +16,25 @@ vi.mock('../hooks/usePlugins', () => ({
     },
     isLoading: false,
     isError: false,
-  }),
-}))
+  }
+  return {
+    usePlugins: vi.fn(() => mockData),
+  }
+})
+
+beforeEach(() => {
+  vi.mocked(usePlugins).mockReturnValue({
+    data: {
+      data: [
+        { id: '1', name: '@audebase/plugin-core', display_name: '内核插件', version: '0.1.0', status: 'loaded', category: 'system' },
+        { id: '2', name: '@audebase/plugin-rbac', display_name: '权限管理', version: '0.1.0', status: 'loaded', category: 'security' },
+      ],
+      meta: { count: 2, page: 1, pageSize: 20, totalPages: 1 },
+    },
+    isLoading: false,
+    isError: false,
+  })
+})
 
 describe('PluginListPage', () => {
   it('should show loading state when data is loading', async () => {

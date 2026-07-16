@@ -1,4 +1,5 @@
 import { render, type RenderOptions } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { type ReactElement, type ReactNode } from 'react'
 
 interface MockACLWrapperOptions {
@@ -12,7 +13,6 @@ function MockACLWrapper({
   permissions: Set<string>
 }) {
   // ponytail: minimal mock - returns children as-is
-  // Will be expanded to provide ACLContext when ACLProvider is implemented
   return <>{children}</>
 }
 
@@ -21,9 +21,14 @@ export function renderWithProviders(
   options: MockACLWrapperOptions & RenderOptions = {},
 ) {
   const { aclPermissions = new Set<string>(), ...renderOptions } = options
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   return render(ui, {
     wrapper: ({ children }) => (
-      <MockACLWrapper permissions={aclPermissions}>{children}</MockACLWrapper>
+      <QueryClientProvider client={queryClient}>
+        <MockACLWrapper permissions={aclPermissions}>{children}</MockACLWrapper>
+      </QueryClientProvider>
     ),
     ...renderOptions,
   })

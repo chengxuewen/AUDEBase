@@ -1,10 +1,11 @@
 // RED PHASE: imports will resolve once implementation is created
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderWithProviders } from '../../../__tests__/helpers/test-utils'
 import { RoleListPage } from '../RoleListPage'
+import { useRoles } from '../hooks/useRoles'
 
-vi.mock('../hooks/useRoles', () => ({
-  useRoles: () => ({
+vi.mock('../hooks/useRoles', () => {
+  const mockData = {
     data: {
       data: [
         { id: '1', name: 'admin', display_name: '管理员', permissions: [], user_count: 1 },
@@ -14,8 +15,25 @@ vi.mock('../hooks/useRoles', () => ({
     },
     isLoading: false,
     isError: false,
-  }),
-}))
+  }
+  return {
+    useRoles: vi.fn(() => mockData),
+  }
+})
+
+beforeEach(() => {
+  vi.mocked(useRoles).mockReturnValue({
+    data: {
+      data: [
+        { id: '1', name: 'admin', display_name: '管理员', permissions: [], user_count: 1 },
+        { id: '2', name: 'member', display_name: '成员', permissions: [], user_count: 5 },
+      ],
+      meta: { count: 2, page: 1, pageSize: 20, totalPages: 1 },
+    },
+    isLoading: false,
+    isError: false,
+  })
+})
 
 describe('RoleListPage', () => {
   it('should render role table with role names', async () => {

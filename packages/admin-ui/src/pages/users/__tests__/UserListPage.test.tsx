@@ -1,10 +1,11 @@
 // RED PHASE: imports will resolve once implementation is created
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderWithProviders } from '../../../__tests__/helpers/test-utils'
 import { UserListPage } from '../UserListPage'
+import { useUsers } from '../hooks/useUsers'
 
-vi.mock('../hooks/useUsers', () => ({
-  useUsers: () => ({
+vi.mock('../hooks/useUsers', () => {
+  const mockData = {
     data: {
       data: [
         { id: '1', username: 'admin', is_active: true, tenant_id: null, created_at: '2026-07-01T00:00:00Z' },
@@ -14,8 +15,25 @@ vi.mock('../hooks/useUsers', () => ({
     },
     isLoading: false,
     isError: false,
-  }),
-}))
+  }
+  return {
+    useUsers: vi.fn(() => mockData),
+  }
+})
+
+beforeEach(() => {
+  vi.mocked(useUsers).mockReturnValue({
+    data: {
+      data: [
+        { id: '1', username: 'admin', is_active: true, tenant_id: null, created_at: '2026-07-01T00:00:00Z' },
+        { id: '2', username: 'user1', is_active: true, tenant_id: 'tenant-1', created_at: '2026-07-02T00:00:00Z' },
+      ],
+      meta: { count: 2, page: 1, pageSize: 20, totalPages: 1 },
+    },
+    isLoading: false,
+    isError: false,
+  })
+})
 
 describe('UserListPage', () => {
   it('should render user table with usernames', async () => {

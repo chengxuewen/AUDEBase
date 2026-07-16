@@ -11,6 +11,14 @@ export default defineWorkspace([
   },
   {
     test: {
+      name: 'ui',
+      include: ['packages/*/src/**/*.test.tsx'],
+      environment: 'jsdom',
+      setupFiles: ['packages/admin-ui/src/__tests__/setup.ts'],
+    },
+  },
+  {
+    test: {
       name: 'integration',
       include: ['packages/*/src/**/*.integration.test.ts'],
       environment: 'node',

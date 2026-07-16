@@ -1,10 +1,11 @@
 // RED PHASE: imports will resolve once implementation is created
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderWithProviders } from '../../../__tests__/helpers/test-utils'
 import { AuditLogPage } from '../AuditLogPage'
+import { useAuditLogs } from '../hooks/useAuditLogs'
 
-vi.mock('../hooks/useAuditLogs', () => ({
-  useAuditLogs: () => ({
+vi.mock('../hooks/useAuditLogs', () => {
+  const mockData = {
     data: {
       data: [
         {
@@ -25,8 +26,36 @@ vi.mock('../hooks/useAuditLogs', () => ({
     },
     isLoading: false,
     isError: false,
-  }),
-}))
+  }
+  return {
+    useAuditLogs: vi.fn(() => mockData),
+  }
+})
+
+beforeEach(() => {
+  vi.mocked(useAuditLogs).mockReturnValue({
+    data: {
+      data: [
+        {
+          id: '1',
+          tenant_id: null,
+          actor_id: 'user-1',
+          action: 'create',
+          resource_type: 'plugin',
+          resource_id: 'plugin-1',
+          old_values: null,
+          new_values: { name: '@audebase/plugin-core' },
+          ip: '127.0.0.1',
+          user_agent: 'curl/8.0',
+          created_at: '2026-07-13T10:00:00Z',
+        },
+      ],
+      meta: { count: 1, page: 1, pageSize: 20, totalPages: 1 },
+    },
+    isLoading: false,
+    isError: false,
+  })
+})
 
 describe('AuditLogPage', () => {
   it('should render audit log table with entries', async () => {

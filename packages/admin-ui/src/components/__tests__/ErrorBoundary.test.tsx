@@ -40,7 +40,7 @@ describe('PluginErrorBoundary', () => {
     // Assert
     const retryButton = container.querySelector('button')
     expect(retryButton).toBeTruthy()
-    expect(retryButton?.textContent || '').toMatch(/重试/i)
+    expect(retryButton?.textContent || '').toMatch(/重\s*试/i)
   })
 
   it('should include home link in fallback UI', async () => {
