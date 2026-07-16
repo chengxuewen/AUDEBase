@@ -73,3 +73,6 @@ export {
 
 // Manifest 类型（从 Zod schema 推导）
 export type { Manifest } from './manifest.js'
+
+// PluginHost 接口
+export type { PluginHost, PluginManifest, PluginLogger, PluginConfig } from './plugin-host.js'
