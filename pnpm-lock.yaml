@@ -7,6 +7,13 @@ settings:
 importers:
 
   .:
+    dependencies:
+      jose:
+        specifier: ^6.2.3
+        version: 6.2.3
+      yaml:
+        specifier: ^2.9.0
+        version: 2.9.0
     devDependencies:
       '@colbymchenry/codegraph':
         specifier: ^1.4.1
@@ -87,6 +94,19 @@ importers:
         specifier: workspace:*
         version: link:../shared-types
 
+  packages/manifest-engine:
+    dependencies:
+      '@audebase/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      yaml:
+        specifier: ^2.7.0
+        version: 2.9.0
+    devDependencies:
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
+
   packages/migration:
     dependencies:
       '@audebase/core':
@@ -105,6 +125,16 @@ importers:
         specifier: workspace:*
         version: link:../shared-types
 
+  packages/plugin-framework:
+    dependencies:
+      '@audebase/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+    devDependencies:
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
+
   packages/rbac:
     dependencies:
       '@audebase/core':
@@ -113,6 +143,9 @@ importers:
       '@audebase/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      jose:
+        specifier: ^6.0.0
+        version: 6.2.3
 
   packages/shared-types:
     devDependencies:
