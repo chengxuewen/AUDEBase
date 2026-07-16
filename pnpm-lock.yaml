@@ -148,6 +148,12 @@ importers:
       '@audebase/health-check':
         specifier: workspace:*
         version: link:../health-check
+      '@audebase/plugin-core':
+        specifier: workspace:*
+        version: link:../plugin-core
+      '@audebase/plugin-framework':
+        specifier: workspace:*
+        version: link:../plugin-framework
       '@audebase/rate-limit':
         specifier: workspace:*
         version: link:../rate-limit

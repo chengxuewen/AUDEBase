@@ -17,6 +17,8 @@
     "@audebase/audit": "workspace:*",
     "@audebase/rate-limit": "workspace:*",
     "@audebase/health-check": "workspace:*",
+    "@audebase/plugin-core": "workspace:*",
+    "@audebase/plugin-framework": "workspace:*",
     "drizzle-orm": "^0.45.0",
     "postgres": "^3.4.5",
     "ioredis": "^5.4.2",

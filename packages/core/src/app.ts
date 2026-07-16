@@ -9,9 +9,11 @@
 import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply } from 'fastify'
 import cors from '@fastify/cors'
 import { Redis } from 'ioredis'
+import { eq } from 'drizzle-orm'
 
 import type { AppConfig } from './config.js'
 import { createDatabase, type DrizzleDB } from './db/connection.js'
+import { tenants, modules, users, roles, permissions, role_permissions, user_roles, refresh_tokens } from './db/schema.js'
 import { createLogger, type Logger } from './logger.js'
 import { createRequestIdMiddleware } from './middleware/request-id.js'
 import { HealthCheckService, registerHealthRoutes } from '@audebase/health-check'
@@ -20,6 +22,8 @@ import { AuditService, createAuditMiddleware } from '@audebase/audit'
 import { requireAuth } from '@audebase/rbac'
 import { RateLimiter, createRateLimitMiddleware } from '@audebase/rate-limit'
 import { UserError, ErrorCode } from '@audebase/shared-types'
+import { generateBootstrapData, isBootstrapComplete } from '@audebase/plugin-core'
+import { resolveDependencyOrder } from '@audebase/plugin-framework'
 
 const HTTP_STATUS: Record<string, number> = {
   [ErrorCode.AUTH_INVALID_CREDENTIALS]: 401,
@@ -41,6 +45,69 @@ interface ReplyLike {
   send: (body: unknown) => void
 }
 
+/**
+ * Auth DB adapter: bridges @audebase/auth's mock-oriented DatabaseProvider
+ * to the real Drizzle DB. The auth service calls insert(values) and update(values)
+ * with raw objects; this adapter routes them to the correct Drizzle table.
+ *
+ * Stateful: tracks the last fetched user/refresh_token so update() targets the right row,
+ * mirroring how the mock DB worked (update always affected the last-queried record).
+ */
+function createAuthDbAdapter(db: DrizzleDB): Record<string, unknown> {
+  let lastUserId: string | null = null
+  let lastTokenId: string | null = null
+  let lastTenantId: string | null = null
+
+  const queryDb = db as unknown as {
+    query: {
+      users: { findFirst: () => Promise<{ id: string; tenant_id: string | null } | undefined> }
+      refresh_tokens: { findFirst: () => Promise<{ id: string } | undefined> }
+    }
+  }
+
+  return {
+    query: {
+      users: {
+        findFirst: async () => {
+          const row = await queryDb.query.users.findFirst()
+          if (row) {
+            lastUserId = row.id
+            lastTenantId = row.tenant_id
+          }
+          return row
+        },
+      },
+      refresh_tokens: {
+        findFirst: async () => {
+          const row = await queryDb.query.refresh_tokens.findFirst()
+          if (row) lastTokenId = row.id
+          return row
+        },
+      },
+    },
+    insert: (values: Record<string, unknown>) => {
+      if ('token_hash' in values && 'user_id' in values) {
+        const enriched = { ...values, tenant_id: lastTenantId ?? '' }
+        return db.insert(refresh_tokens).values(enriched as never)
+      }
+      return Promise.resolve()
+    },
+    update: (values: Record<string, unknown>) => {
+      if ('password_hash' in values || 'last_login_at' in values) {
+        if (lastUserId) {
+          return db.update(users).set(values as never).where(eq(users.id, lastUserId))
+        }
+      }
+      if ('revoked_at' in values) {
+        if (lastTokenId) {
+          return db.update(refresh_tokens).set(values as never).where(eq(refresh_tokens.id, lastTokenId))
+        }
+      }
+      return Promise.resolve()
+    },
+    delete: () => Promise.resolve(),
+  }
+}
 export class CoreApp {
   private readonly config: AppConfig
   readonly logger: Logger
@@ -81,15 +148,21 @@ export class CoreApp {
     }
 
     // --- Services ---
-    this._authService = new AuthService(db as never, this.config.AUDE_JWT_SECRET)
+    const authDb = createAuthDbAdapter(db)
+    this._authService = new AuthService(authDb as never, this.config.AUDE_JWT_SECRET)
     this._auditService = new AuditService(db as never)
     // RBACService wired on-demand in routes via requireAuth
-
     // --- Fastify ---
     const app = Fastify({
       logger: false,
     })
     this._fastify = app
+
+    // --- Seed/Bootstrap ---
+    await this.runBootstrap(db)
+
+    // --- Plugin loading (Phase 1a: register plugin-core only) ---
+    await this.registerCorePlugin(db)
 
     // 1. CORS
     await app.register(cors, this.createCorsConfig())
@@ -105,6 +178,14 @@ export class CoreApp {
     const rateLimitMiddleware = createRateLimitMiddleware(rateLimiter)
     app.addHook('onRequest', (request: FastifyRequest, reply: FastifyReply, done: () => void) => {
       rateLimitMiddleware(request, reply)
+      done()
+    })
+
+    // 3b. Multi-tenant middleware (after rate-limit, before auth)
+    app.addHook('onRequest', (request: FastifyRequest, _reply: FastifyReply, done: () => void) => {
+      const tenantHeader = request.headers['x-tenant-id']
+      const tenantId = typeof tenantHeader === 'string' && tenantHeader.length > 0 ? tenantHeader : null
+      ;(request as unknown as { tenantId: string | null }).tenantId = tenantId
       done()
     })
 
@@ -145,6 +226,131 @@ export class CoreApp {
     this.registerApiRoutes(app)
 
     this.logger.info({ port: this.config.PORT }, 'CoreApp bootstrapped')
+  }
+
+  /**
+   * Run bootstrap seed if not already complete.
+   * Inserts system tenant, admin user, roles, permissions, and mappings.
+   */
+  private async runBootstrap(db: DrizzleDB): Promise<void> {
+    try {
+      const complete = await isBootstrapComplete(db as never)
+      if (complete) {
+        this.logger.info({}, 'Bootstrap already complete, skipping')
+        return
+      }
+    } catch {
+      // Tables might not exist yet - skip bootstrap check and proceed
+      this.logger.warn({}, 'Bootstrap check failed, proceeding with seed')
+    }
+
+    const data = generateBootstrapData()
+
+    try {
+      // Insert system tenant
+      await db.insert(tenants).values({
+        id: data.systemTenant.id,
+        slug: data.systemTenant.slug,
+        name: data.systemTenant.name,
+        status: data.systemTenant.status,
+      })
+
+      // Insert admin user (must_change_password = false to allow login)
+      await db.insert(users).values({
+        id: data.adminUser.id,
+        tenant_id: data.systemTenant.id,
+        username: data.adminUser.username,
+        password_hash: data.adminUser.passwordHash,
+        token_version: data.adminUser.tokenVersion,
+        is_active: data.adminUser.isActive,
+        must_change_password: false,
+      })
+
+      // Insert roles
+      for (const role of data.roles) {
+        await db.insert(roles).values({
+          id: role.id,
+          tenant_id: data.systemTenant.id,
+          name: role.name,
+          slug: role.slug,
+          description: role.description,
+          is_system: role.isSystem,
+        })
+      }
+
+      // Insert permissions
+      for (const perm of data.permissions) {
+        await db.insert(permissions).values({
+          id: perm.id,
+          tenant_id: data.systemTenant.id,
+          action: perm.action,
+          resource: perm.resource,
+          display_name: perm.description,
+        })
+      }
+
+      // Insert role-permission mappings
+      for (const rp of data.rolePermissions) {
+        await db.insert(role_permissions).values({
+          role_id: rp.roleId,
+          permission_id: rp.permissionId,
+        })
+      }
+
+      // Insert user-role mapping (admin user -> admin role)
+      for (const ur of data.userRoles) {
+        await db.insert(user_roles).values({
+          user_id: ur.userId,
+          role_id: ur.roleId,
+          tenant_id: data.systemTenant.id,
+        })
+      }
+
+      this.logger.info({}, 'Bootstrap data inserted')
+    } catch (err) {
+      this.logger.error({ err }, 'Bootstrap data insertion failed')
+    }
+  }
+
+  /**
+   * Register plugin-core as a module record (Phase 1a simplified).
+   * Full plugin discovery from filesystem is Phase 1b.
+   */
+  private async registerCorePlugin(db: DrizzleDB): Promise<void> {
+    try {
+      // Check if plugin-core already registered
+      const queryDb = db as unknown as {
+        query: { modules: { findFirst: (args?: unknown) => Promise<unknown> } }
+      }
+      const existing = await queryDb.query.modules.findFirst({
+        where: eq(modules.name, '@audebase/plugin-core'),
+      })
+      if (existing) {
+        this.logger.info({}, 'Plugin core already registered')
+        return
+      }
+
+      await db.insert(modules).values({
+        name: '@audebase/plugin-core',
+        version: '1.0.0',
+        display_name: '内核插件',
+        state: 'enabled',
+        category: 'system',
+        description: 'AUDEBase 内核插件',
+        author: 'AUDEBase',
+        license: 'Apache-2.0',
+        runtime_mode: 'inline',
+        runtime_partition: 'SYSTEM',
+        auto_install: true,
+      })
+
+      // Resolve dependency order (Phase 1a: only plugin-core, no deps)
+      await resolveDependencyOrder([])
+
+      this.logger.info({}, 'Plugin core registered')
+    } catch (err) {
+      this.logger.error({ err }, 'Plugin core registration failed')
+    }
   }
 
   async start(): Promise<void> {
@@ -389,6 +595,94 @@ export class CoreApp {
           query: { modules: { findMany: (args?: unknown) => Promise<unknown[]> } }
         }).query.modules.findMany()
         return reply.send({ data: plugins })
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
+
+    // --- RBAC routes ---
+    app.post('/api/roles', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const body = request.body as { name?: string; slug?: string; description?: string }
+      if (!body?.name || !body?.slug) {
+        return reply.code(400).send({
+          error: { code: 'VALIDATION_ERROR', message: 'name and slug required' },
+        })
+      }
+      const tenantId = (request as unknown as { tenantId: string | null }).tenantId
+      try {
+        const db = this._db!
+        const [created] = await db.insert(roles).values({
+          name: body.name,
+          slug: body.slug,
+          description: body.description ?? null,
+          tenant_id: tenantId,
+        }).returning()
+        return reply.code(201).send({ data: created })
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
+
+    app.get('/api/roles', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const query = request.query as { page?: string; pageSize?: string }
+      const page = query.page ? parseInt(query.page, 10) : 1
+      const pageSize = query.pageSize ? parseInt(query.pageSize, 10) : 20
+      const tenantId = (request as unknown as { tenantId: string | null }).tenantId
+      try {
+        const queryDb = this._db as unknown as {
+          query: { roles: { findMany: (args?: unknown) => Promise<unknown[]> } }
+        }
+        const result = await queryDb.query.roles.findMany({
+          where: tenantId ? eq(roles.tenant_id, tenantId) : undefined,
+          limit: pageSize,
+          offset: (page - 1) * pageSize,
+        })
+        return reply.send({ data: result, page, pageSize })
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
+
+    app.post('/api/users/:id/roles', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const { id } = request.params as { id: string }
+      const body = request.body as { role_id?: string }
+      if (!body?.role_id) {
+        return reply.code(400).send({
+          error: { code: 'VALIDATION_ERROR', message: 'role_id required' },
+        })
+      }
+      const tenantId = (request as unknown as { tenantId: string | null }).tenantId
+      try {
+        const db = this._db!
+        await db.insert(user_roles).values({
+          user_id: id,
+          role_id: body.role_id,
+          tenant_id: tenantId ?? '',
+        })
+        return reply.code(201).send({ data: { user_id: id, role_id: body.role_id } })
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
+
+    app.get('/api/users/:id/roles', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const { id } = request.params as { id: string }
+      try {
+        const queryDb = this._db as unknown as {
+          query: { user_roles: { findMany: (args?: unknown) => Promise<unknown[]> } }
+        }
+        const result = await queryDb.query.user_roles.findMany({
+          where: eq(user_roles.user_id, id),
+        })
+        return reply.send({ data: result })
       } catch (err) {
         return this.handleError(err, reply as ReplyLike)
       }
