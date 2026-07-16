@@ -1,0 +1,42 @@
+# AUDEBase Development Environment
+# GO-032: Docker Compose for local development
+# Usage: docker compose up -d
+# PostgreSQL 16 + Valkey (Redis-compatible) for Phase 1a
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: audebase-postgres
+    environment:
+      POSTGRES_USER: audebase
+      POSTGRES_PASSWORD: audebase_dev
+      POSTGRES_DB: audebase
+    ports:
+      - "5432:5432"
+    volumes:
+      - audebase-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U audebase -d audebase"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: audebase-valkey
+    environment:
+      VALKEY_PASSWORD: audebase_dev
+    command: valkey-server --requirepass audebase_dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - audebase-valkeydata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -a audebase_dev ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  audebase-pgdata:
+  audebase-valkeydata:
