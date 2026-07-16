@@ -106,6 +106,18 @@ importers:
         specifier: workspace:*
         version: link:../shared-types
 
+  packages/auth:
+    dependencies:
+      '@audebase/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      bcryptjs:
+        specifier: ^2.4.3
+        version: 2.4.3
+      jose:
+        specifier: ^6.0.0
+        version: 6.2.3
+
   packages/cli:
     dependencies:
       '@audebase/core':
@@ -116,6 +128,12 @@ importers:
         version: link:../shared-types
 
   packages/core:
+    dependencies:
+      '@audebase/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+
+  packages/health-check:
     dependencies:
       '@audebase/shared-types':
         specifier: workspace:*
@@ -1507,6 +1525,9 @@ packages:
     resolution: {integrity: sha512-AjYpR78kDWAY3Efj+cDTFH9t9SCoL7OoTp1BOb0mQV7S+6CiLwnWM3FyxhJtdPufDFKzmCSFoUncKjWgJEZTCQ==}
     engines: {node: '>=6.0.0'}
     hasBin: true
+
+  bcryptjs@2.4.3:
+    resolution: {integrity: sha512-V/Hy/X9Vt7f3BbPJEi8BdVFMByHi+jNXrYkW3huaybV/kQ0KJg0Y6PkEMbn+zeT+i+SiKZ/HMqJGIIt4LZDqNQ==}
 
   bcryptjs@3.0.3:
     resolution: {integrity: sha512-GlF5wPWnSa/X5LKM1o0wz0suXIINz1iHRLvTS+sLyi7XPbe5ycmYI3DlZqVGZZtDgl4DmasFg7gOB3JYbphV5g==}
@@ -4381,6 +4402,8 @@ snapshots:
   balanced-match@4.0.4: {}
 
   baseline-browser-mapping@2.10.43: {}
+
+  bcryptjs@2.4.3: {}
 
   bcryptjs@3.0.3: {}
 
