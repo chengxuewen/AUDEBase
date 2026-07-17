@@ -224,6 +224,12 @@ importers:
         specifier: ^3.24.0
         version: 3.25.76
 
+  packages/file-upload:
+    dependencies:
+      '@audebase/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+
   packages/health-check:
     dependencies:
       '@audebase/shared-types':
@@ -257,6 +263,12 @@ importers:
       '@audebase/core':
         specifier: workspace:*
         version: link:../core
+      '@audebase/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+
+  packages/notification:
+    dependencies:
       '@audebase/shared-types':
         specifier: workspace:*
         version: link:../shared-types
