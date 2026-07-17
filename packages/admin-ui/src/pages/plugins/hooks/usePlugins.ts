@@ -1,27 +1,22 @@
 import { useQuery } from '@tanstack/react-query'
+import { apiGet } from '../../../api/client.js'
 
-interface Plugin {
+export interface Plugin {
   id: string
   name: string
   display_name: string
   version: string
-  status: string
+  state: string
   category: string
 }
 
-interface PaginatedResponse<T> {
-  data: T[]
-  meta: { count: number; page: number; pageSize: number; totalPages: number }
+interface PluginsResponse {
+  data: Plugin[]
 }
 
 export function usePlugins() {
   return useQuery({
     queryKey: ['@audebase/admin-ui', 'plugins'],
-    queryFn: async (): Promise<PaginatedResponse<Plugin>> => {
-      return {
-        data: [],
-        meta: { count: 0, page: 1, pageSize: 20, totalPages: 0 },
-      }
-    },
+    queryFn: () => apiGet<PluginsResponse>('/api/plugins'),
   })
 }

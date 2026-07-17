@@ -13,7 +13,7 @@ import { eq } from 'drizzle-orm'
 
 import type { AppConfig } from './config.js'
 import { createDatabase, type DrizzleDB } from './db/connection.js'
-import { tenants, modules, users, roles, permissions, role_permissions, user_roles, refresh_tokens } from './db/schema.js'
+import { tenants, modules, users, roles, permissions, role_permissions, user_roles, refresh_tokens, audit_log } from './db/schema.js'
 import { createLogger, type Logger } from './logger.js'
 import { createRequestIdMiddleware } from './middleware/request-id.js'
 import { HealthCheckService, registerHealthRoutes } from '@audebase/health-check'
@@ -24,6 +24,8 @@ import { RateLimiter, createRateLimitMiddleware } from '@audebase/rate-limit'
 import { UserError, ErrorCode } from '@audebase/shared-types'
 import { generateBootstrapData, isBootstrapComplete } from '@audebase/plugin-core'
 import { resolveDependencyOrder } from '@audebase/plugin-framework'
+import { registerLogRoutes } from './logs/routes.js'
+import { checkLoginRateLimit, loginRateLimitBody } from './middleware/login-rate-limit.js'
 
 const HTTP_STATUS: Record<string, number> = {
   [ErrorCode.AUTH_INVALID_CREDENTIALS]: 401,
@@ -447,6 +449,10 @@ export class CoreApp {
 
     // --- Auth routes (no auth required) ---
     app.post('/api/auth/login', async (request, reply) => {
+      const loginLimit = checkLoginRateLimit(request.ip)
+      if (!loginLimit.allowed) {
+        return reply.code(429).header('Retry-After', String(loginLimit.retryAfter)).send(loginRateLimitBody())
+      }
       const body = request.body as { username?: string; password?: string }
       if (!body?.username || !body?.password) {
         return reply.code(400).send({
@@ -564,22 +570,7 @@ export class CoreApp {
       const pageSize = query.pageSize ? parseInt(query.pageSize, 10) : 20
 
       try {
-        const filter: Record<string, string> = {}
-        if (query.resource_type) filter.resource_type = query.resource_type
-        if (query.resource_id) filter.resource_id = query.resource_id
-        if (query.action) filter.action = query.action
-        if (query.actor_id) filter.actor_id = query.actor_id
-
-        const params = {
-          tenant_id: null as string | null,
-          page,
-          pageSize,
-        } as Record<string, unknown>
-        if (Object.keys(filter).length > 0) {
-          params.filter = filter
-        }
-
-        const results = await auditService.query(params as never)
+        const results = await this._db!.select().from(audit_log).limit(pageSize).offset((page - 1) * pageSize)
         return reply.send({ data: results, page, pageSize })
       } catch (err) {
         return this.handleError(err, reply as ReplyLike)
@@ -687,6 +678,8 @@ export class CoreApp {
         return this.handleError(err, reply as ReplyLike)
       }
     })
+    // --- Log routes ---
+    registerLogRoutes(app, authHook)
   }
 
   private handleError(err: unknown, reply: ReplyLike): void {

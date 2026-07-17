@@ -8,13 +8,12 @@ interface PluginItem {
   name: string
   display_name: string
   version: string
-  status: string
+  state: string
   category: string
 }
 
-interface PaginatedData<T> {
-  data: T[]
-  meta: { count: number; page: number; pageSize: number; totalPages: number }
+interface PluginsResponse {
+  data: PluginItem[]
 }
 
 export function PluginListPage(): ReactNode {
@@ -33,7 +32,7 @@ export function PluginListPage(): ReactNode {
     )
   }
 
-  const paginated = data as PaginatedData<PluginItem> | undefined
+  const paginated = data as PluginsResponse | undefined
   const list = paginated?.data ?? []
 
   if (list.length === 0) {
@@ -46,9 +45,9 @@ export function PluginListPage(): ReactNode {
     { title: '版本', dataIndex: 'version', key: 'version' },
     {
       title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => <Tag color={status === 'loaded' ? 'green' : 'default'}>{status}</Tag>,
+      dataIndex: 'state',
+      key: 'state',
+      render: (state: string) => <Tag color={state === 'enabled' ? 'green' : 'default'}>{state}</Tag>,
     },
     { title: '分类', dataIndex: 'category', key: 'category' },
     {

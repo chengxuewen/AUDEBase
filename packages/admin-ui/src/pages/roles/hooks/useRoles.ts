@@ -1,26 +1,23 @@
 import { useQuery } from '@tanstack/react-query'
+import { apiGet } from '../../../api/client.js'
 
-interface Role {
+export interface Role {
   id: string
   name: string
-  display_name: string
-  permissions: unknown[]
-  user_count: number
+  slug: string
+  description: string | null
+  is_system: boolean
 }
 
-interface PaginatedResponse<T> {
-  data: T[]
-  meta: { count: number; page: number; pageSize: number; totalPages: number }
+interface RolesResponse {
+  data: Role[]
+  page: number
+  pageSize: number
 }
 
 export function useRoles() {
   return useQuery({
     queryKey: ['@audebase/admin-ui', 'roles'],
-    queryFn: async (): Promise<PaginatedResponse<Role>> => {
-      return {
-        data: [],
-        meta: { count: 0, page: 1, pageSize: 20, totalPages: 0 },
-      }
-    },
+    queryFn: () => apiGet<RolesResponse>('/api/roles'),
   })
 }

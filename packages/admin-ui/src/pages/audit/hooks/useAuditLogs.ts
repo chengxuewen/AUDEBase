@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
+import { apiGet } from '../../../api/client.js'
 
-interface AuditLog {
+export interface AuditLog {
   id: string
   tenant_id: string | null
   actor_id: string
@@ -14,19 +15,15 @@ interface AuditLog {
   created_at: string
 }
 
-interface PaginatedResponse<T> {
-  data: T[]
-  meta: { count: number; page: number; pageSize: number; totalPages: number }
+interface AuditLogResponse {
+  data: AuditLog[]
+  page: number
+  pageSize: number
 }
 
 export function useAuditLogs() {
   return useQuery({
     queryKey: ['@audebase/admin-ui', 'audit-logs'],
-    queryFn: async (): Promise<PaginatedResponse<AuditLog>> => {
-      return {
-        data: [],
-        meta: { count: 0, page: 1, pageSize: 20, totalPages: 0 },
-      }
-    },
+    queryFn: () => apiGet<AuditLogResponse>('/api/audit-log'),
   })
 }

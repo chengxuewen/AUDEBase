@@ -9,8 +9,8 @@ vi.mock('../hooks/usePlugins', () => {
   const mockData = {
     data: {
       data: [
-        { id: '1', name: '@audebase/plugin-core', display_name: '内核插件', version: '0.1.0', status: 'loaded', category: 'system' },
-        { id: '2', name: '@audebase/plugin-rbac', display_name: '权限管理', version: '0.1.0', status: 'loaded', category: 'security' },
+        { id: '1', name: '@audebase/plugin-core', display_name: '内核插件', version: '0.1.0', state: 'enabled', category: 'system' },
+        { id: '2', name: '@audebase/plugin-rbac', display_name: '权限管理', version: '0.1.0', state: 'enabled', category: 'security' },
       ],
       meta: { count: 2, page: 1, pageSize: 20, totalPages: 1 },
     },
@@ -26,8 +26,8 @@ beforeEach(() => {
   vi.mocked(usePlugins).mockReturnValue({
     data: {
       data: [
-        { id: '1', name: '@audebase/plugin-core', display_name: '内核插件', version: '0.1.0', status: 'loaded', category: 'system' },
-        { id: '2', name: '@audebase/plugin-rbac', display_name: '权限管理', version: '0.1.0', status: 'loaded', category: 'security' },
+        { id: '1', name: '@audebase/plugin-core', display_name: '内核插件', version: '0.1.0', state: 'enabled', category: 'system' },
+        { id: '2', name: '@audebase/plugin-rbac', display_name: '权限管理', version: '0.1.0', state: 'enabled', category: 'security' },
       ],
       meta: { count: 2, page: 1, pageSize: 20, totalPages: 1 },
     },
