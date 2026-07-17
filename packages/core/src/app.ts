@@ -9,7 +9,7 @@
 import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply } from 'fastify'
 import cors from '@fastify/cors'
 import { Redis } from 'ioredis'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { mkdir } from 'node:fs/promises'
 import { EventBus } from '@audebase/event-bus'
 import { CronManager } from '@audebase/cron'
@@ -21,7 +21,7 @@ import { CollectionRegistry } from '@audebase/data-extends'
 
 import type { AppConfig } from './config.js'
 import { createDatabase, type DrizzleDB } from './db/connection.js'
-import { tenants, modules, users, roles, permissions, role_permissions, user_roles, refresh_tokens, audit_log } from './db/schema.js'
+import { tenants, modules, users, roles, permissions, role_permissions, user_roles, refresh_tokens, audit_log, attachments } from './db/schema.js'
 import { createLogger, type Logger } from './logger.js'
 import { createRequestIdMiddleware } from './middleware/request-id.js'
 import { HealthCheckService, registerHealthRoutes } from '@audebase/health-check'
@@ -116,6 +116,35 @@ function createAuthDbAdapter(db: DrizzleDB): Record<string, unknown> {
       return Promise.resolve()
     },
     delete: () => Promise.resolve(),
+  }
+}
+
+/** Convert a Drizzle DB row to AttachmentRecord. */
+function mapAttachmentRow(row: {
+  id: string
+  tenant_id: string
+  filename: string
+  content_type: string
+  size: number
+  sha256: string
+  storage_backend: string
+  storage_path: string
+  uploaded_by: string | null
+  created_at: Date
+  deleted_at: Date | null
+}): AttachmentRecord {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    filename: row.filename,
+    contentType: row.content_type,
+    size: row.size,
+    sha256: row.sha256,
+    storageBackend: row.storage_backend as 'local',
+    storagePath: row.storage_path,
+    uploadedBy: row.uploaded_by ?? '',
+    createdAt: row.created_at,
+    deletedAt: row.deleted_at,
   }
 }
 export class CoreApp {
@@ -230,28 +259,40 @@ export class CoreApp {
     this._apiVersionRouter.registerVersion(1)
     this._collectionRegistry = new CollectionRegistry()
 
-    // FileUpload - in-memory repo for Phase 1b (no DB table yet)
-    // ponytail: in-memory attachment repo, replace with Drizzle when table exists
-    const uploadStore = new Map<string, AttachmentRecord>()
-    const memRepo: AttachmentRepository = {
-      async insert(record: AttachmentRecord): Promise<void> { uploadStore.set(record.id, record) },
-      async findById(id: string, tenantId: string): Promise<AttachmentRecord | null> {
-        const r = uploadStore.get(id)
-        return r && r.tenantId === tenantId ? r : null
+    // FileUpload - DB-backed repository
+    const dbRepo: AttachmentRepository = {
+      async insert(record: AttachmentRecord): Promise<void> {
+        await db.insert(attachments).values({
+          id: record.id,
+          tenant_id: record.tenantId,
+          filename: record.filename,
+          content_type: record.contentType,
+          size: record.size,
+          sha256: record.sha256,
+          storage_backend: record.storageBackend,
+          storage_path: record.storagePath,
+          uploaded_by: record.uploadedBy,
+          created_at: record.createdAt,
+          deleted_at: record.deletedAt,
+        })
       },
-      async list(tenantId: string): Promise<{ records: AttachmentRecord[]; total: number }> {
-        const records = [...uploadStore.values()].filter(r => r.tenantId === tenantId)
-        return { records, total: records.length }
+      async findById(id: string, tenantId: string): Promise<AttachmentRecord | null> {
+        const rows = await db.select().from(attachments).where(and(eq(attachments.id, id), eq(attachments.tenant_id, tenantId))).limit(1)
+        if (rows.length === 0) return null
+        return mapAttachmentRow(rows[0]!)
+      },
+      async list(tenantId: string, _filter?: FileFilter): Promise<{ records: AttachmentRecord[]; total: number }> {
+        const rows = await db.select().from(attachments).where(eq(attachments.tenant_id, tenantId)).limit(100)
+        return { records: rows.map(mapAttachmentRow), total: rows.length }
       },
       async softDelete(id: string, tenantId: string): Promise<boolean> {
-        const r = uploadStore.get(id)
-        if (r && r.tenantId === tenantId) { uploadStore.delete(id); return true }
-        return false
+        const result = await db.update(attachments).set({ deleted_at: new Date() }).where(and(eq(attachments.id, id), eq(attachments.tenant_id, tenantId)))
+        return (result as unknown as { rowCount: number }).rowCount > 0
       },
     }
 
     await mkdir('/tmp/audebase-uploads', { recursive: true })
-    this._fileUploadService = new FileUploadService(memRepo, {
+    this._fileUploadService = new FileUploadService(dbRepo, {
       storageDir: '/tmp/audebase-uploads',
     })
     // --- Fastify ---

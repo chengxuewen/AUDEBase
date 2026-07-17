@@ -188,6 +188,21 @@ export const migration_history = pgTable('migration_history', {
   executed_at: timestamp('executed_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+// 11. attachments
+export const attachments = pgTable('attachments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenant_id: uuid('tenant_id').notNull(),
+  filename: varchar('filename', { length: 500 }).notNull(),
+  content_type: varchar('content_type', { length: 255 }).notNull(),
+  size: integer('size').notNull(),
+  sha256: varchar('sha256', { length: 64 }).notNull(),
+  storage_backend: varchar('storage_backend', { length: 20 }).notNull().default('local'),
+  storage_path: varchar('storage_path', { length: 1000 }).notNull(),
+  uploaded_by: uuid('uploaded_by'),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  deleted_at: timestamp('deleted_at', { withTimezone: true }),
+})
+
 export const schema = {
   tenants,
   modules,
@@ -200,4 +215,5 @@ export const schema = {
   refresh_tokens,
   audit_log,
   migration_history,
+  attachments,
 }

@@ -14,7 +14,7 @@ import type {
   CronManagerOptions,
 } from './types.js'
 
-const QUEUE_NAME = 'audebase:cron'
+const QUEUE_NAME = 'audebase-cron'
 const DEFAULT_MAX_RETRIES = 3
 const MAX_RETRIES_LIMIT = 10
 const BACKOFF_DELAY_MS = 1000
