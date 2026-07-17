@@ -142,7 +142,7 @@ _以下索引列出 docs/modules/ 中与 Phase 1a 编码直接相关的所有文
 | `file-storage.md` | 设计 | 文件存储隔离演进 | D4.1 | ✅ 已完成 |
 
 ## CODE MAP
-_14 包全部实现，497 单元测试 + 13 集成测试通过。以下为模块状态：_
+_20 包全部实现，694 测试通过，tsc 全包 clean。Phase 1b 6 包已接入 CoreApp。_
 
 | 模块 | 状态 | 规划路径 | SDD | TDD |
 |------|------|----------|-----|-----|
@@ -153,8 +153,13 @@ _14 包全部实现，497 单元测试 + 13 集成测试通过。以下为模块
 | 插件通信 | 🔲 Phase 1b | `packages/plugin-communication/` - D1.3 | 🔲 待生成 | 🔲 待生成 |
 | 审计日志 | ✅ Phase 1a | `packages/audit/` - D1.12 | ✅ audit-sdd.md | ✅ audit-tdd.md |
 | 迁移管理 | ✅ Phase 1a | `packages/migration/` - D1.7 | ✅ migration-engine-sdd.md | ✅ migration-engine-tdd.md |
-| 事件总线 | 🔲 Phase 1b | `packages/event-bus/` - D1.9 | 🔲 待生成 | 🔲 待生成 |
+| 事件总线 | ✅ Phase 1b | `packages/event-bus/` - D1.9 | ✅ event-bus-sdd.md | ✅ event-bus-tdd.md |
+| 文件上传 | ✅ Phase 1b | `packages/file-upload/` - FileUploadService + 内存 repo | ✅ file-upload-sdd.md | ✅ file-upload-tdd.md |
 | Schema Engine | 🔲 Phase 2 | `packages/schema-engine/` | 🔲 待生成 | 🔲 待生成 |
+| 定时任务 (Cron) | ✅ Phase 1b | `packages/cron/` - BullMQ repeatable jobs（D1.10） | ✅ cron-sdd.md | ✅ cron-tdd.md |
+| 通知系统 | ✅ Phase 1b 接口 | `packages/notification/` - NotificationProvider 抽象（D1.14） | ✅ notification-sdd.md | ✅ notification-tdd.md |
+| API 版本控制 | ✅ Phase 1b | `packages/api-versioning/` - URL 路径版本（D1.8） | ✅ api-versioning-sdd.md | ✅ api-versioning-tdd.md |
+| 插件间数据扩展 | ✅ Phase 1b | `packages/data-extends/` - extends 声明解析（D12.1） | ✅ data-extends-sdd.md | ✅ data-extends-tdd.md |
 | 插件市场 | 🔲 Phase 2 | - | 🔲 待生成 | 🔲 待生成 |
 | 工作流引擎 | 🔲 Phase 4 | `packages/workflow-engine/` | 🔲 待生成 | 🔲 待生成 |
 | shared-types | ✅ Phase 1a | `packages/shared-types/` - 公共类型定义 | ✅ shared-types-sdd.md | ✅ shared-types-tdd.md |
@@ -199,9 +204,9 @@ _14 包全部实现，497 单元测试 + 13 集成测试通过。以下为模块
 
 ## NOTES
 
-- **Phase 1a 完成** - 14 包全部实现，497 单元测试 + 13 集成测试通过，tsc 全包 clean
+- **Phase 1b 完成** - 20 包全部实现，694 测试通过，tsc 全包 clean。6 个 Phase 1b 包已接入 CoreApp（EventBus/Cron/FileUpload/Notification/ApiVersionRouter/CollectionRegistry）
 - **从 MODACS 分离** - 2026-07-08 首次提交。无 MODACS 代码共享
 - **.sisyphus/** 被 gitignore 排除 - 计划文件、审计报告暂存于此
 - **双 package.json** - 根目录用 pnpm workspace，`.opencode/` 用独立 npm 包（插件系统）
-- **test 基础设施** - vitest 3.0.5 + @testing-library/react 16.2.0 + @playwright/test 1.50.1 已安装。497 单元测试 + 13 集成测试通过
+- **test 基础设施** - vitest 3.0.5 + @testing-library/react 16.2.0 + @playwright/test 1.50.1 已安装。694 测试通过
 - **Docker Compose** - docker-compose.yml 已创建（PostgreSQL 16 + Valkey 8）
