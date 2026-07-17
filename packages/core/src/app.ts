@@ -10,6 +10,7 @@ import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply }
 import cors from '@fastify/cors'
 import { Redis } from 'ioredis'
 import { eq, and } from 'drizzle-orm'
+import { hash } from 'bcryptjs'
 import { mkdir } from 'node:fs/promises'
 import { EventBus } from '@audebase/event-bus'
 import { CronManager } from '@audebase/cron'
@@ -842,6 +843,155 @@ export class CoreApp {
         }).query.tenants.findMany()
         const tenantList = (result as Array<{ id: string; name: string }>).map((t) => ({ id: t.id, name: t.name }))
         return reply.send({ data: tenantList })
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
+
+    // --- User CRUD ---
+    app.post('/api/users', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const body = request.body as {
+        username?: string
+        password?: string
+        email?: string
+        display_name?: string
+      }
+      if (!body?.username || !body?.password) {
+        return reply.code(400).send({
+          error: { code: 'VALIDATION_ERROR', message: 'username and password required' },
+        })
+      }
+      const tenantId = (request as unknown as { tenantId: string | null }).tenantId
+      const userId = (request as unknown as { user?: { sub?: string } }).user?.sub ?? null
+      try {
+        const passwordHash = await hash(body.password, 12)
+        const [created] = await this._db!.insert(users).values({
+          tenant_id: tenantId ?? '',
+          username: body.username,
+          password_hash: passwordHash,
+          email: body.email ?? null,
+          display_name: body.display_name ?? null,
+          created_by: userId,
+          updated_by: userId,
+        }).returning()
+        const { password_hash: _ph, ...safe } = created as Record<string, unknown>
+        return reply.code(201).send({ data: safe })
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
+
+    app.put('/api/users/:id', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const { id } = request.params as { id: string }
+      const body = request.body as {
+        username?: string
+        email?: string
+        display_name?: string
+        is_active?: boolean
+      }
+      const userId = (request as unknown as { user?: { sub?: string } }).user?.sub ?? null
+      const updates: Record<string, unknown> = { updated_at: new Date(), updated_by: userId }
+      if (body.username !== undefined) updates.username = body.username
+      if (body.email !== undefined) updates.email = body.email
+      if (body.display_name !== undefined) updates.display_name = body.display_name
+      if (body.is_active !== undefined) updates.is_active = body.is_active
+      try {
+        const [updated] = await this._db!.update(users).set(updates as never).where(eq(users.id, id)).returning()
+        if (!updated) {
+          return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'User not found' } })
+        }
+        const { password_hash: _ph, ...safe } = updated as Record<string, unknown>
+        return reply.send({ data: safe })
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
+
+    app.delete('/api/users/:id', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const { id } = request.params as { id: string }
+      const userId = (request as unknown as { user?: { sub?: string } }).user?.sub ?? null
+      try {
+        await this._db!.update(users).set({
+          is_active: false,
+          updated_at: new Date(),
+          updated_by: userId,
+        } as never).where(eq(users.id, id))
+        return reply.code(204).send()
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
+
+    // --- Role update/delete ---
+    app.put('/api/roles/:id', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const { id } = request.params as { id: string }
+      const body = request.body as { name?: string; description?: string }
+      const updates: Record<string, unknown> = { updated_at: new Date() }
+      if (body.name !== undefined) updates.name = body.name
+      if (body.description !== undefined) updates.description = body.description
+      try {
+        const [updated] = await this._db!.update(roles).set(updates as never).where(eq(roles.id, id)).returning()
+        if (!updated) {
+          return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Role not found' } })
+        }
+        return reply.send({ data: updated })
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
+
+    app.delete('/api/roles/:id', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const { id } = request.params as { id: string }
+      try {
+        await this._db!.delete(roles).where(eq(roles.id, id))
+        return reply.code(204).send()
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
+
+    // --- Plugin enable/disable ---
+    app.post('/api/plugins/:id/enable', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const { id } = request.params as { id: string }
+      try {
+        const [updated] = await this._db!.update(modules).set({
+          state: 'enabled',
+          updated_at: new Date(),
+        } as never).where(eq(modules.id, id)).returning()
+        if (!updated) {
+          return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Plugin not found' } })
+        }
+        return reply.send({ data: updated })
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
+
+    app.post('/api/plugins/:id/disable', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const { id } = request.params as { id: string }
+      try {
+        const [updated] = await this._db!.update(modules).set({
+          state: 'disabled',
+          updated_at: new Date(),
+        } as never).where(eq(modules.id, id)).returning()
+        if (!updated) {
+          return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Plugin not found' } })
+        }
+        return reply.send({ data: updated })
       } catch (err) {
         return this.handleError(err, reply as ReplyLike)
       }

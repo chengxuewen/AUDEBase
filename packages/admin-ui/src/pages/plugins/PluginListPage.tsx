@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react'
-import { Button, Empty, Space, Spin, Table, Tag } from 'antd'
+import { Button, Empty, message, Space, Spin, Table, Tag } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { apiPost } from '../../api/client.js'
 import { usePlugins } from './hooks/usePlugins.js'
 
 interface PluginItem {
@@ -20,6 +22,29 @@ interface PluginsResponse {
 export function PluginListPage(): ReactNode {
   const { t } = useTranslation('client')
   const { data, isLoading, isError } = usePlugins()
+  const queryClient = useQueryClient()
+
+  const handleEnable = (record: PluginItem): void => {
+    apiPost(`/api/plugins/${record.id}/enable`)
+      .then(() => {
+        void message.success('启用成功')
+        void queryClient.invalidateQueries({ queryKey: ['@audebase/admin-ui', 'plugins'] })
+      })
+      .catch((e: unknown) => {
+        void message.error(e instanceof Error ? e.message : '启用失败')
+      })
+  }
+
+  const handleDisable = (record: PluginItem): void => {
+    apiPost(`/api/plugins/${record.id}/disable`)
+      .then(() => {
+        void message.success('禁用成功')
+        void queryClient.invalidateQueries({ queryKey: ['@audebase/admin-ui', 'plugins'] })
+      })
+      .catch((e: unknown) => {
+        void message.error(e instanceof Error ? e.message : '禁用失败')
+      })
+  }
 
   if (isLoading) {
     return <Spin />
@@ -55,10 +80,14 @@ export function PluginListPage(): ReactNode {
     {
       title: t('common.actions'),
       key: 'action',
-      render: () => (
+      render: (_: unknown, record: PluginItem) => (
         <Space>
-          <Button size="small" autoInsertSpace={false}>{t('common.enable')}</Button>
-          <Button size="small" autoInsertSpace={false}>{t('common.disable')}</Button>
+          <Button size="small" autoInsertSpace={false} onClick={() => handleEnable(record)}>
+            {t('common.enable')}
+          </Button>
+          <Button size="small" autoInsertSpace={false} onClick={() => handleDisable(record)}>
+            {t('common.disable')}
+          </Button>
         </Space>
       ),
     },

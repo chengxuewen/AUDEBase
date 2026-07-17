@@ -1,45 +1,79 @@
-// RED PHASE: imports will resolve once implementation is created
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderWithProviders } from '../../../__tests__/helpers/test-utils'
 import { PluginListPage } from '../PluginListPage'
 import { usePlugins } from '../hooks/usePlugins'
+import { apiPost } from '../../../api/client'
 
-// Mock TanStack Query hooks
-vi.mock('../hooks/usePlugins', () => {
-  const mockData = {
-    data: {
-      data: [
-        { id: '1', name: '@audebase/plugin-core', display_name: '内核插件', version: '0.1.0', state: 'enabled', category: 'system' },
-        { id: '2', name: '@audebase/plugin-rbac', display_name: '权限管理', version: '0.1.0', state: 'enabled', category: 'security' },
-      ],
-      meta: { count: 2, page: 1, pageSize: 20, totalPages: 1 },
-    },
-    isLoading: false,
-    isError: false,
-  }
-  return {
-    usePlugins: vi.fn(() => mockData),
-  }
-})
+vi.mock('../hooks/usePlugins', () => ({
+  usePlugins: vi.fn(),
+}))
+
+vi.mock('../../../api/client', () => ({
+  apiGet: vi.fn(),
+  apiPost: vi.fn(),
+  apiPut: vi.fn(),
+  apiDelete: vi.fn(),
+}))
+
+const mockPlugin = {
+  id: '1',
+  name: '@audebase/plugin-core',
+  display_name: '内核插件',
+  version: '0.1.0',
+  state: 'enabled',
+  category: 'system',
+}
 
 beforeEach(() => {
   vi.mocked(usePlugins).mockReturnValue({
-    data: {
-      data: [
-        { id: '1', name: '@audebase/plugin-core', display_name: '内核插件', version: '0.1.0', state: 'enabled', category: 'system' },
-        { id: '2', name: '@audebase/plugin-rbac', display_name: '权限管理', version: '0.1.0', state: 'enabled', category: 'security' },
-      ],
-      meta: { count: 2, page: 1, pageSize: 20, totalPages: 1 },
-    },
+    data: { data: [mockPlugin] },
     isLoading: false,
     isError: false,
   })
+  vi.mocked(apiPost).mockResolvedValue(undefined)
 })
 
 describe('PluginListPage', () => {
-  it('should show loading state when data is loading', async () => {
+  it('renders plugin table with plugin names', () => {
+    // Arrange & Act
+    renderWithProviders(<PluginListPage />)
+
+    // Assert
+    expect(screen.getByText('内核插件')).toBeInTheDocument()
+  })
+
+  it('clicks enable button calls enable API', async () => {
     // Arrange
-    vi.mocked(await import('../hooks/usePlugins')).usePlugins.mockReturnValue({
+    renderWithProviders(<PluginListPage />)
+
+    // Act
+    const enableBtn = screen.getByRole('button', { name: /启用/ })
+    fireEvent.click(enableBtn)
+
+    // Assert
+    await waitFor(() => {
+      expect(apiPost).toHaveBeenCalledWith('/api/plugins/1/enable')
+    })
+  })
+
+  it('clicks disable button calls disable API', async () => {
+    // Arrange
+    renderWithProviders(<PluginListPage />)
+
+    // Act
+    const disableBtn = screen.getByRole('button', { name: /禁用/ })
+    fireEvent.click(disableBtn)
+
+    // Assert
+    await waitFor(() => {
+      expect(apiPost).toHaveBeenCalledWith('/api/plugins/1/disable')
+    })
+  })
+
+  it('shows loading state when data is loading', () => {
+    // Arrange
+    vi.mocked(usePlugins).mockReturnValue({
       data: undefined,
       isLoading: true,
       isError: false,
@@ -48,24 +82,29 @@ describe('PluginListPage', () => {
     // Act
     const { container } = renderWithProviders(<PluginListPage />)
 
-    // Assert - ProTable loading state shows Spin
-    const spin = container.querySelector('.ant-spin') || container.textContent
-    expect(spin).toBeTruthy()
+    // Assert
+    expect(container.querySelector('.ant-spin')).not.toBeNull()
   })
 
-  it('should render plugin name and version in table rows', async () => {
-    // Arrange & Act
-    const { container } = renderWithProviders(<PluginListPage />)
+  it('shows error message when API returns error', () => {
+    // Arrange
+    vi.mocked(usePlugins).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    })
+
+    // Act
+    renderWithProviders(<PluginListPage />)
 
     // Assert
-    expect(container.textContent).toContain('内核插件')
-    expect(container.textContent).toContain('@audebase/plugin-core')
+    expect(screen.getByText(/加载失败/)).toBeInTheDocument()
   })
 
-  it('should show empty state when no plugins exist', async () => {
+  it('renders empty state when no data available', () => {
     // Arrange
-    vi.mocked(await import('../hooks/usePlugins')).usePlugins.mockReturnValue({
-      data: { data: [], meta: { count: 0, page: 1, pageSize: 20, totalPages: 0 } },
+    vi.mocked(usePlugins).mockReturnValue({
+      data: { data: [] },
       isLoading: false,
       isError: false,
     })
@@ -74,47 +113,6 @@ describe('PluginListPage', () => {
     const { container } = renderWithProviders(<PluginListPage />)
 
     // Assert
-    const empty = container.querySelector('.ant-empty')
-    const emptyText = container.textContent
-    expect(empty !== null || emptyText.includes('暂无')).toBe(true)
-  })
-
-  it('should show error message when API fails', async () => {
-    // Arrange
-    vi.mocked(await import('../hooks/usePlugins')).usePlugins.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      isError: true,
-      error: new Error('网络错误'),
-    })
-
-    // Act
-    const { container } = renderWithProviders(<PluginListPage />)
-
-    // Assert
-    const text = container.textContent || ''
-    expect(text).toMatch(/错误|失败|重试/i)
-  })
-
-  it('should show enable/disable buttons for admin user', async () => {
-    // Arrange & Act
-    const { container } = renderWithProviders(<PluginListPage />)
-
-    // Assert - admin with full permissions should see action buttons
-    const buttons = container.querySelectorAll('button')
-    const hasActionButtons = Array.from(buttons).some(
-      (btn) => /启用|禁用/.test(btn.textContent || ''),
-    )
-    expect(hasActionButtons).toBe(true)
-  })
-
-  it('should hide enable/disable buttons for member user without plugin permission', async () => {
-    // Arrange & Act
-    const { container } = renderWithProviders(<PluginListPage />)
-
-    // Assert - with default mock ACL (all permissions), buttons are visible
-    // In a restricted ACL scenario, they would be hidden
-    const buttons = container.querySelectorAll('button')
-    expect(buttons.length).toBeGreaterThanOrEqual(0)
+    expect(container.querySelector('.ant-empty')).not.toBeNull()
   })
 })

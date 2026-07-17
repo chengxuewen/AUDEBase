@@ -19,6 +19,7 @@
     "@audebase/health-check": "workspace:*",
     "@audebase/plugin-core": "workspace:*",
     "@audebase/plugin-framework": "workspace:*",
+    "bcryptjs": "^2.4.3",
     "@audebase/event-bus": "workspace:*",
     "@audebase/cron": "workspace:*",
     "@audebase/file-upload": "workspace:*",

@@ -86,3 +86,15 @@ export function apiPost<T>(path: string, body?: unknown): Promise<T> {
   }
   return request<T>(path, opts)
 }
+
+export function apiPut<T>(path: string, body?: unknown): Promise<T> {
+  const opts: RequestInit = { method: 'PUT' }
+  if (body !== undefined) {
+    opts.body = JSON.stringify(body)
+  }
+  return request<T>(path, opts)
+}
+
+export function apiDelete<T>(path: string): Promise<T> {
+  return request<T>(path, { method: 'DELETE' })
+}

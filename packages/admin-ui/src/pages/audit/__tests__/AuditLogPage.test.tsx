@@ -1,75 +1,48 @@
-// RED PHASE: imports will resolve once implementation is created
+import { screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderWithProviders } from '../../../__tests__/helpers/test-utils'
 import { AuditLogPage } from '../AuditLogPage'
 import { useAuditLogs } from '../hooks/useAuditLogs'
 
-vi.mock('../hooks/useAuditLogs', () => {
-  const mockData = {
-    data: {
-      data: [
-        {
-          id: '1',
-          tenant_id: null,
-          actor_id: 'user-1',
-          action: 'create',
-          resource_type: 'plugin',
-          resource_id: 'plugin-1',
-          old_values: null,
-          new_values: { name: '@audebase/plugin-core' },
-          ip: '127.0.0.1',
-          user_agent: 'curl/8.0',
-          created_at: '2026-07-13T10:00:00Z',
-        },
-      ],
-      meta: { count: 1, page: 1, pageSize: 20, totalPages: 1 },
-    },
-    isLoading: false,
-    isError: false,
-  }
-  return {
-    useAuditLogs: vi.fn(() => mockData),
-  }
-})
+vi.mock('../hooks/useAuditLogs', () => ({
+  useAuditLogs: vi.fn(),
+}))
+
+const mockAuditLog = {
+  id: '1',
+  tenant_id: null,
+  actor_id: 'user-1',
+  action: 'create',
+  resource_type: 'plugin',
+  resource_id: 'plugin-1',
+  old_values: null,
+  new_values: { name: '@audebase/plugin-core' },
+  ip: '127.0.0.1',
+  user_agent: 'curl/8.0',
+  created_at: '2026-07-13T10:00:00Z',
+}
 
 beforeEach(() => {
   vi.mocked(useAuditLogs).mockReturnValue({
-    data: {
-      data: [
-        {
-          id: '1',
-          tenant_id: null,
-          actor_id: 'user-1',
-          action: 'create',
-          resource_type: 'plugin',
-          resource_id: 'plugin-1',
-          old_values: null,
-          new_values: { name: '@audebase/plugin-core' },
-          ip: '127.0.0.1',
-          user_agent: 'curl/8.0',
-          created_at: '2026-07-13T10:00:00Z',
-        },
-      ],
-      meta: { count: 1, page: 1, pageSize: 20, totalPages: 1 },
-    },
+    data: { data: [mockAuditLog], meta: { count: 1, page: 1, pageSize: 20, totalPages: 1 } },
     isLoading: false,
     isError: false,
   })
 })
 
 describe('AuditLogPage', () => {
-  it('should render audit log table with entries', async () => {
+  it('renders audit log table with entries', () => {
     // Arrange & Act
-    const { container } = renderWithProviders(<AuditLogPage />)
+    renderWithProviders(<AuditLogPage />)
 
     // Assert
-    expect(container.textContent).toContain('create')
-    expect(container.textContent).toContain('plugin')
+    expect(screen.getByText('create')).toBeInTheDocument()
+    expect(screen.getByText('plugin')).toBeInTheDocument()
   })
 
-  it('should show loading state', async () => {
+  it('shows loading state when data is loading', () => {
     // Arrange
-    vi.mocked(await import('../hooks/useAuditLogs')).useAuditLogs.mockReturnValue({
+    vi.mocked(useAuditLogs).mockReturnValue({
       data: undefined,
       isLoading: true,
       isError: false,
@@ -79,29 +52,27 @@ describe('AuditLogPage', () => {
     const { container } = renderWithProviders(<AuditLogPage />)
 
     // Assert
-    const spin = container.querySelector('.ant-spin')
-    expect(spin !== null || container.textContent !== '').toBe(true)
+    expect(container.querySelector('.ant-spin')).not.toBeNull()
   })
 
-  it('should show actor information in table', async () => {
-    // Arrange & Act
-    const { container } = renderWithProviders(<AuditLogPage />)
-
-    // Assert
-    expect(container.textContent).toContain('user-1')
-  })
-
-  it('should show timestamp in table', async () => {
-    // Arrange & Act
-    const { container } = renderWithProviders(<AuditLogPage />)
-
-    // Assert
-    expect(container.textContent).toContain('2026')
-  })
-
-  it('should show empty state when no audit logs', async () => {
+  it('shows error message when API returns error', () => {
     // Arrange
-    vi.mocked(await import('../hooks/useAuditLogs')).useAuditLogs.mockReturnValue({
+    vi.mocked(useAuditLogs).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    })
+
+    // Act
+    renderWithProviders(<AuditLogPage />)
+
+    // Assert
+    expect(screen.getByText(/加载失败/)).toBeInTheDocument()
+  })
+
+  it('renders empty state when no data available', () => {
+    // Arrange
+    vi.mocked(useAuditLogs).mockReturnValue({
       data: { data: [], meta: { count: 0, page: 1, pageSize: 20, totalPages: 0 } },
       isLoading: false,
       isError: false,
@@ -111,7 +82,6 @@ describe('AuditLogPage', () => {
     const { container } = renderWithProviders(<AuditLogPage />)
 
     // Assert
-    const empty = container.querySelector('.ant-empty')
-    expect(empty !== null || (container.textContent || '').includes('暂无')).toBe(true)
+    expect(container.querySelector('.ant-empty')).not.toBeNull()
   })
 })

@@ -1,29 +1,42 @@
+import { screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderWithProviders } from '../../../__tests__/helpers/test-utils'
 import { ExtensionListPage } from '../ExtensionListPage'
 import { useExtensions } from '../hooks/useExtensions'
 
-vi.mock('../hooks/useExtensions', () => {
-  const mockData = {
-    data: [],
-    isLoading: false,
-    isError: false,
-  }
-  return {
-    useExtensions: vi.fn(() => mockData),
-  }
-})
+vi.mock('../hooks/useExtensions', () => ({
+  useExtensions: vi.fn(),
+}))
+
+const mockExtension = {
+  collection: 'order',
+  pluginName: '@audebase/plugin-erp',
+  fields: [
+    { name: 'warehouse_id', type: 'belongsTo' },
+    { name: 'priority', type: 'integer' },
+  ],
+}
 
 beforeEach(() => {
   vi.mocked(useExtensions).mockReturnValue({
-    data: [],
+    data: [mockExtension],
     isLoading: false,
     isError: false,
   })
 })
 
 describe('ExtensionListPage', () => {
-  it('should show loading state when data is loading', () => {
+  it('renders extension table with data', () => {
+    // Arrange & Act
+    renderWithProviders(<ExtensionListPage />)
+
+    // Assert
+    expect(screen.getByText('order')).toBeInTheDocument()
+    expect(screen.getByText('@audebase/plugin-erp')).toBeInTheDocument()
+    expect(screen.getByText(/warehouse_id/)).toBeInTheDocument()
+  })
+
+  it('shows loading state when data is loading', () => {
     // Arrange
     vi.mocked(useExtensions).mockReturnValue({
       data: undefined,
@@ -35,33 +48,28 @@ describe('ExtensionListPage', () => {
     const { container } = renderWithProviders(<ExtensionListPage />)
 
     // Assert
-    const spin = container.querySelector('.ant-spin') || container.textContent
-    expect(spin).toBeTruthy()
+    expect(container.querySelector('.ant-spin')).not.toBeNull()
   })
 
-  it('should render empty state when no extensions exist', () => {
-    // Arrange & Act
-    const { container } = renderWithProviders(<ExtensionListPage />)
-
-    // Assert
-    const empty = container.querySelector('.ant-empty')
-    const emptyText = container.textContent
-    expect(empty !== null || emptyText!.includes('暂无')).toBe(true)
-  })
-
-  it('should render extension data when provided', () => {
+  it('shows error message when API returns error', () => {
     // Arrange
     vi.mocked(useExtensions).mockReturnValue({
-      data: [
-        {
-          collection: 'order',
-          pluginName: '@audebase/plugin-erp',
-          fields: [
-            { name: 'warehouse_id', type: 'belongsTo' },
-            { name: 'priority', type: 'integer' },
-          ],
-        },
-      ],
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    })
+
+    // Act
+    renderWithProviders(<ExtensionListPage />)
+
+    // Assert
+    expect(screen.getByText(/加载失败/)).toBeInTheDocument()
+  })
+
+  it('renders empty state when no data available', () => {
+    // Arrange
+    vi.mocked(useExtensions).mockReturnValue({
+      data: [],
       isLoading: false,
       isError: false,
     })
@@ -70,10 +78,6 @@ describe('ExtensionListPage', () => {
     const { container } = renderWithProviders(<ExtensionListPage />)
 
     // Assert
-    const text = container.textContent || ''
-    expect(text).toContain('order')
-    expect(text).toContain('@audebase/plugin-erp')
-    expect(text).toContain('warehouse_id')
-    expect(text).toContain('belongsTo')
+    expect(container.querySelector('.ant-empty')).not.toBeNull()
   })
 })

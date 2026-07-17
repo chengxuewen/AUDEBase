@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { apiGet } from '../../../api/client.js'
 
 export interface ExtensionField {
   name: string
@@ -11,14 +12,9 @@ export interface Extension {
   fields: ExtensionField[]
 }
 
-// ponytail: mock returns empty array - backend endpoint comes in Phase 1b
-async function fetchExtensions(): Promise<Extension[]> {
-  return []
-}
-
 export function useExtensions() {
   return useQuery({
     queryKey: ['@audebase/admin-ui', 'extensions'],
-    queryFn: fetchExtensions,
+    queryFn: () => apiGet<Extension[]>('/api/extensions'),
   })
 }

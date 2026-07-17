@@ -211,6 +211,9 @@ importers:
       '@fastify/cors':
         specifier: ^11.0.0
         version: 11.3.0
+      bcryptjs:
+        specifier: ^2.4.3
+        version: 2.4.3
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
