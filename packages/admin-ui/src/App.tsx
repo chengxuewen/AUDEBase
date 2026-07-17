@@ -7,24 +7,38 @@ import { getToken, clearTokens } from './api/client.js'
 import { LoginPage } from './pages/LoginPage.js'
 import { AdminLayout } from './layout/AdminLayout.js'
 import { PluginListPage } from './pages/plugins/PluginListPage.js'
+import { UserListPage } from './pages/users/UserListPage.js'
+import { RoleListPage } from './pages/roles/RoleListPage.js'
+import { AuditLogPage } from './pages/audit/AuditLogPage.js'
+import { ExtensionListPage } from './pages/extensions/ExtensionListPage.js'
 
 
 const queryClient = new QueryClient()
 
 function AdminApp(): ReactNode {
   const { t } = useTranslation('client')
+  const [activePage, setActivePage] = useState('plugins')
+
   const handleLogout = (): void => {
     clearTokens()
     queryClient.clear()
     window.location.reload()
   }
 
+  const pages: Record<string, ReactNode> = {
+    plugins: <PluginListPage />,
+    users: <UserListPage />,
+    roles: <RoleListPage />,
+    audit: <AuditLogPage />,
+    extensions: <ExtensionListPage />,
+  }
+
   return (
-    <AdminLayout>
-      <div style={{ marginBottom: 16 }}>
+    <AdminLayout activeKey={activePage} onMenuClick={setActivePage}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
         <Button onClick={handleLogout}>{t('common.logout')}</Button>
       </div>
-      <PluginListPage />
+      {pages[activePage] ?? <PluginListPage />}
     </AdminLayout>
   )
 }

@@ -15,7 +15,7 @@
 import { RateLimiter } from '@audebase/rate-limit'
 import { ErrorCode } from '@audebase/shared-types'
 
-const loginRateLimiter = new RateLimiter({ windowMs: 60_000, max: 5 })
+const loginRateLimiter = new RateLimiter({ windowMs: 60_000, max: 10 })
 
 export interface LoginRateLimitResult {
   readonly allowed: boolean

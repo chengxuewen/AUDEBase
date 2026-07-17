@@ -35,9 +35,23 @@ test.describe('MVP Smoke Tests', () => {
   test('sidebar menu has expected items', async ({ page }) => {
     await login(page)
     const menuItems = page.locator('.ant-menu-item')
-    await expect(menuItems).toHaveCount(3, { timeout: 10_000 })
+    await expect(menuItems).toHaveCount(5, { timeout: 10_000 })
     const texts = await menuItems.allTextContents()
     expect(texts.join(',')).toContain('插件')
+    expect(texts.join(',')).toContain('审计')
+  })
+
+  test('menu navigation switches pages', async ({ page }) => {
+    await login(page)
+    // Click "用户管理" menu item
+    await page.locator('.ant-menu-item', { hasText: '用户' }).click()
+    await page.waitForTimeout(1000)
+    // User table should appear
+    await expect(page.locator('.ant-table')).toBeVisible({ timeout: 10_000 })
+    // Click back to "插件管理"
+    await page.locator('.ant-menu-item', { hasText: '插件' }).click()
+    await page.waitForTimeout(1000)
+    await expect(page.locator('.ant-table')).toBeVisible({ timeout: 10_000 })
   })
 
   test('logout returns to login page', async ({ page }) => {

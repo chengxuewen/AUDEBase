@@ -8,6 +8,8 @@ const { Sider, Header, Content } = Layout
 
 interface AdminLayoutProps {
   canRoute?: (snippet: string) => boolean
+  activeKey?: string
+  onMenuClick?: (key: string) => void
   children?: ReactNode
 }
 
@@ -20,6 +22,8 @@ interface MenuItem {
 const defaultMenuItems: MenuItem[] = [
   { key: 'plugins', labelKey: 'menu.plugins', snippet: 'plugin' },
   { key: 'users', labelKey: 'menu.users', snippet: 'user' },
+  { key: 'roles', labelKey: 'menu.roles', snippet: 'role' },
+  { key: 'audit', labelKey: 'menu.audit', snippet: 'audit_log' },
   { key: 'extensions', labelKey: 'menu.extensions', snippet: 'extension' },
 ]
 
@@ -54,7 +58,7 @@ function TenantSwitcher(): ReactNode {
   )
 }
 
-export function AdminLayout({ canRoute, children }: AdminLayoutProps): ReactNode {
+export function AdminLayout({ canRoute, activeKey, onMenuClick, children }: AdminLayoutProps): ReactNode {
   const { t } = useTranslation('client')
   const items = canRoute
     ? defaultMenuItems.filter((item) => canRoute(item.snippet))
@@ -63,7 +67,7 @@ export function AdminLayout({ canRoute, children }: AdminLayoutProps): ReactNode
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider>
-        <Menu theme="dark" mode="inline" items={items.map((i) => ({ key: i.key, label: t(i.labelKey) }))} />
+        <Menu theme="dark" mode="inline" selectedKeys={activeKey !== undefined ? [activeKey] : []} onClick={({ key }: { key: string }) => onMenuClick?.(key)} items={items.map((i: MenuItem) => ({ key: i.key, label: t(i.labelKey) }))} />
       </Sider>
       <Layout>
         <Header style={{ background: '#fff', padding: '0 16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
