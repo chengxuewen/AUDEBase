@@ -4,7 +4,7 @@
  * @audebase/admin-ui
  */
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+const API_URL = import.meta.env.VITE_API_URL ?? ''
 
 const TOKEN_KEY = 'aude_access_token'
 const REFRESH_KEY = 'aude_refresh_token'
