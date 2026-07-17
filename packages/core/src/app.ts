@@ -162,6 +162,7 @@ export class CoreApp {
   private _notificationManager: NotificationManager | null = null
   private _apiVersionRouter: ApiVersionRouter | null = null
   private _collectionRegistry: CollectionRegistry | null = null
+  private _tenantCache: Map<string, string> = new Map()
 
   constructor(config: AppConfig) {
     this.config = config
@@ -307,6 +308,13 @@ export class CoreApp {
     // --- Plugin loading (Phase 1a: register plugin-core only) ---
     await this.registerCorePlugin(db)
 
+    // --- Load tenant cache for slug -> UUID resolution ---
+    const tenantRows = await db.select({ id: tenants.id, slug: tenants.slug }).from(tenants)
+    for (const t of tenantRows) {
+      this._tenantCache.set(t.slug, t.id)
+      this._tenantCache.set(t.id, t.id) // also accept raw UUID
+    }
+
     // 1. CORS
     await app.register(cors, this.createCorsConfig())
 
@@ -327,7 +335,9 @@ export class CoreApp {
     // 3b. Multi-tenant middleware (after rate-limit, before auth)
     app.addHook('onRequest', (request: FastifyRequest, _reply: FastifyReply, done: () => void) => {
       const tenantHeader = request.headers['x-tenant-id']
-      const tenantId = typeof tenantHeader === 'string' && tenantHeader.length > 0 ? tenantHeader : null
+      const raw = typeof tenantHeader === 'string' && tenantHeader.length > 0 ? tenantHeader : null
+      // Resolve slug -> UUID via cache; fall back to raw if not found (may be UUID)
+      const tenantId = raw ? (this._tenantCache.get(raw) ?? raw) : null
       ;(request as unknown as { tenantId: string | null }).tenantId = tenantId
       done()
     })
