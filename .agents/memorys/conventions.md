@@ -1,6 +1,6 @@
 # AUDEBase 编码约定
 
-**更新日期**: 2026-07-14
+**更新日期**: 2026-07-17
 
 ## 命名约定
 
@@ -71,6 +71,74 @@
 - **Slot 注册**: 通过 `this.app.slot.add()` API 注册到预定义命名 Slot
 - **翻译调用**: React 组件使用 `useTranslation(pluginPkgName)` Hook；插件类使用 `this.t()`
 - **动态导入**: `lazy: () => import(...)` 必须为箭头函数直接返回 import()——禁止 `async` 包装和 `React.lazy()` 包装
+
+## UI 测试规范（强制）
+
+> **2026-07-17 新增** - 历史 UI 页面仅渲染不交互、测试仅验证元素存在不验证行为的反模式已识别并禁止。
+
+### 交互元素强制规则
+
+- **所有可交互 UI 元素**（按钮、链接、表单提交、菜单项）**必须**绑定 `onClick`/`onSubmit`/`onChange` 等事件处理器，对接真实业务逻辑或 API 调用
+- **禁止**渲染纯展示按钮（无 `onClick` 的 `<Button>` 等同于死代码）
+- **禁止**使用 `ponytail: mock returns empty array` 替代真实 API 调用--mock 仅限测试环境，生产代码必须调用后端 API
+
+### 单元测试强制规则（React Testing Library）
+
+对于每个 UI 页面/组件，以下测试为 **MANDATORY**（非可选）：
+
+| 测试类型 | 要求 | 工具 | 反模式（禁止） |
+|---------|------|------|---------------|
+| 渲染测试 | 页面正常渲染、数据显示正确 | `render()` + `screen.getByText()` | 仅 `toBeTruthy()` |
+| **交互测试** | **`fireEvent.click(button)` 或 `userEvent.click(button)` 验证点击触发预期行为** | RTL `fireEvent`/`userEvent` | ❌ 仅检查按钮存在不检查点击 |
+| API 调用测试 | 点击按钮后验证 mock API 被调用（`expect(mockFn).toHaveBeenCalledWith(...)`） | `vi.mock()` + `expect` | ❌ 不 mock API 导致真实网络请求 |
+| 表单提交测试 | 填写表单 + 提交 + 验证 API 调用参数 | `userEvent.type()` + `fireEvent.submit()` | ❌ 不填表单直接断言 |
+| 错误状态测试 | API 返回错误时验证错误提示展示 | mock API reject + `screen.findByText` | ❌ 仅测 happy path |
+| 空状态测试 | 无数据时验证空状态 UI | mock API return `[]` | ❌ 跳过空状态 |
+
+### E2E 测试强制规则（Playwright）
+
+对于每个 CRUD 资源（用户/角色/插件等），以下 E2E 流程为 **MANDATORY**：
+
+| 流程 | 操作 | 验证 |
+|------|------|------|
+| 列表查看 | 登录 -> 导航到列表页 | 表格渲染、数据可见 |
+| **创建** | 点击创建按钮 -> 填写表单 -> 提交 | 新记录出现在列表 |
+| **编辑** | 点击编辑按钮 -> 修改字段 -> 保存 | 列表数据更新 |
+| **删除** | 点击删除按钮 -> 确认 | 记录从列表消失 |
+
+### 测试命名约定
+
+- 交互测试: `test('clicks create button opens modal/form')`
+- API 调用测试: `test('submitting form calls create API with correct payload')`
+- 错误状态: `test('shows error message when API returns 400')`
+- 空状态: `test('renders empty state when no data available')`
+- E2E: `test('user can create and delete a role')`
+
+### 禁止的反模式
+
+```typescript
+// ❌ FORBIDDEN: 仅验证按钮存在
+const button = container.querySelector('button')
+expect(button).toBeTruthy()
+
+// ❌ FORBIDDEN: 按钮 onClick 为空或 undefined
+<Button>创建用户</Button>  // 无 onClick
+
+// ❌ FORBIDDEN: mock 数据替代真实 API
+const useExtensions = () => { return [] }  // ponytail: mock
+
+// ✅ CORRECT: 验证点击行为
+const handleClick = vi.fn()
+render(<Button onClick={handleClick}>创建</Button>)
+fireEvent.click(screen.getByRole('button', { name: /创建/ }))
+expect(handleClick).toHaveBeenCalledOnce()
+
+// ✅ CORRECT: 验证 API 调用
+const mockCreate = vi.fn().mockResolvedValue({ id: '1' })
+vi.mock('../../api/users', () => ({ createUser: mockCreate }))
+// ... render form, fill, submit ...
+expect(mockCreate).toHaveBeenCalledWith({ username: 'test', email: 'test@test.com' })
+```
 
 ## SDD/TDD 文档约定
 

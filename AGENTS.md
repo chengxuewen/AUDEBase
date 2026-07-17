@@ -200,7 +200,10 @@ _20 包全部实现，694 测试通过，tsc 全包 clean。Phase 1b 6 包已接
 - **对象突变** — 始终返回新对象，永不就地修改
 - **全局 MODACS→AUDEBase 替换** — 使用精确的手术式编辑
 - **硬编码密钥** — 使用环境变量或密钥管理器
-- **不必要的文件写入** — 文档文件仅在用户明确要求时创建
+- **不必要的文件写入** - 文档文件仅在用户明确要求时创建
+- **纯展示按钮** - 无 `onClick` 的 `<Button>` 等同于死代码，禁止渲染
+- **mock 替代真实 API** - 生产代码禁止 `ponytail: mock returns empty array`，必须调用后端 API
+- **仅验证元素存在的测试** - 禁止 `expect(button).toBeTruthy()`，必须用 `fireEvent.click()` 验证交互行为
 
 ## NOTES
 

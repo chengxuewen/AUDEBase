@@ -559,6 +559,84 @@ describe('PluginListPage — ACL', () => {
 | Mock | `vi.mock()` 隔离 API 层，不发起真实网络请求 |
 | 查询优先级 | `getByRole` > `getByLabelText` > `getByText` > `getByTestId`（遵循 RTL 最佳实践） |
 
+### 3.7 UI 交互测试强制规范（2026-07-17 新增）
+
+> **背景**: Phase 1b 发现所有 Admin UI 页面按钮无 onClick、测试仅验证元素存在不验证行为。此规范强制要求所有 UI 功能必须包含交互测试。
+
+#### 3.7.1 交互元素强制规则
+
+- **所有可交互 UI 元素**（按钮、链接、表单提交、菜单项）**必须**绑定 `onClick`/`onSubmit`/`onChange` 等事件处理器，对接真实业务逻辑或 API 调用
+- **禁止**渲染纯展示按钮（无 `onClick` 的 `<Button>` 等同于死代码）
+- **禁止**使用 `ponytail: mock returns empty array` 替代真实 API 调用--mock 仅限测试环境，生产代码必须调用后端 API
+- **AI 代理新增功能时**：每个新页面/组件必须同步编写以下全部测试类型，缺一不可
+
+#### 3.7.2 单元测试强制清单（React Testing Library）
+
+对于每个 UI 页面/组件，以下测试为 **MANDATORY**（非可选）：
+
+| 测试类型 | 要求 | 工具 | 反模式（禁止） |
+|---------|------|------|---------------|
+| 渲染测试 | 页面正常渲染、数据显示正确 | `render()` + `screen.getByText()` | 仅 `toBeTruthy()` |
+| **交互测试** | **`fireEvent.click(button)` 或 `userEvent.click(button)` 验证点击触发预期行为** | RTL `fireEvent`/`userEvent` | ❌ 仅检查按钮存在不检查点击 |
+| API 调用测试 | 点击按钮后验证 mock API 被调用（`expect(mockFn).toHaveBeenCalledWith(...)`） | `vi.mock()` + `expect` | ❌ 不 mock API 导致真实网络请求 |
+| 表单提交测试 | 填写表单 + 提交 + 验证 API 调用参数 | `userEvent.type()` + `fireEvent.submit()` | ❌ 不填表单直接断言 |
+| 错误状态测试 | API 返回错误时验证错误提示展示 | mock API reject + `screen.findByText` | ❌ 仅测 happy path |
+| 空状态测试 | 无数据时验证空状态 UI | mock API return `[]` | ❌ 跳过空状态 |
+
+#### 3.7.3 E2E 测试强制清单（Playwright）
+
+对于每个 CRUD 资源（用户/角色/插件等），以下 E2E 流程为 **MANDATORY**：
+
+| 流程 | 操作 | 验证 |
+|------|------|------|
+| 列表查看 | 登录 -> 导航到列表页 | 表格渲染、数据可见 |
+| **创建** | 点击创建按钮 -> 填写表单 -> 提交 | 新记录出现在列表 |
+| **编辑** | 点击编辑按钮 -> 修改字段 -> 保存 | 列表数据更新 |
+| **删除** | 点击删除按钮 -> 确认 | 记录从列表消失 |
+
+#### 3.7.4 测试命名约定
+
+- 交互测试: `test('clicks create button opens modal/form')`
+- API 调用测试: `test('submitting form calls create API with correct payload')`
+- 错误状态: `test('shows error message when API returns 400')`
+- 空状态: `test('renders empty state when no data available')`
+- E2E: `test('user can create and delete a role')`
+
+#### 3.7.5 禁止的反模式
+
+```typescript
+// ❌ FORBIDDEN: 仅验证按钮存在
+const button = container.querySelector('button')
+expect(button).toBeTruthy()
+
+// ❌ FORBIDDEN: 按钮 onClick 为空或 undefined
+<Button>创建用户</Button>  // 无 onClick
+
+// ❌ FORBIDDEN: mock 数据替代真实 API
+const useExtensions = () => { return [] }  // ponytail: mock
+
+// ✅ CORRECT: 验证点击行为
+const handleClick = vi.fn()
+render(<Button onClick={handleClick}>创建</Button>)
+fireEvent.click(screen.getByRole('button', { name: /创建/ }))
+expect(handleClick).toHaveBeenCalledOnce()
+
+// ✅ CORRECT: 验证 API 调用
+const mockCreate = vi.fn().mockResolvedValue({ id: '1' })
+vi.mock('../../api/users', () => ({ createUser: mockCreate }))
+// ... render form, fill, submit ...
+expect(mockCreate).toHaveBeenCalledWith({ username: 'test', email: 'test@test.com' })
+```
+
+#### 3.7.6 AI 代理工作流集成
+
+AI 代理在新增 UI 功能时必须：
+1. **编码前**: SDD 中声明所有交互元素及其预期行为
+2. **编码时**: 每个交互元素必须绑定事件处理器
+3. **测试时**: 按 §3.7.2 清单逐项编写单元测试
+4. **E2E 时**: 按 §3.7.3 清单覆盖完整 CRUD 流程
+5. **提交前**: 验证所有测试通过，覆盖率达标
+
 ---
 
 ## 4. 配置管理（Phase 1a）
