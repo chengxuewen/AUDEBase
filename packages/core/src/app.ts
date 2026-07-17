@@ -10,6 +10,14 @@ import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply }
 import cors from '@fastify/cors'
 import { Redis } from 'ioredis'
 import { eq } from 'drizzle-orm'
+import { mkdir } from 'node:fs/promises'
+import { EventBus } from '@audebase/event-bus'
+import { CronManager } from '@audebase/cron'
+import { FileUploadService } from '@audebase/file-upload'
+import type { AttachmentRepository, AttachmentRecord, FileUpload, FileFilter, DownloadResult, ListResult } from '@audebase/file-upload'
+import { NotificationManager } from '@audebase/notification'
+import { ApiVersionRouter } from '@audebase/api-versioning'
+import { CollectionRegistry } from '@audebase/data-extends'
 
 import type { AppConfig } from './config.js'
 import { createDatabase, type DrizzleDB } from './db/connection.js'
@@ -119,6 +127,12 @@ export class CoreApp {
   private _redis: Redis | null = null
   private _authService: AuthService | null = null
   private _auditService: AuditService | null = null
+  private _eventBus: EventBus | null = null
+  private _cronManager: CronManager | null = null
+  private _fileUploadService: FileUploadService | null = null
+  private _notificationManager: NotificationManager | null = null
+  private _apiVersionRouter: ApiVersionRouter | null = null
+  private _collectionRegistry: CollectionRegistry | null = null
 
   constructor(config: AppConfig) {
     this.config = config
@@ -133,6 +147,48 @@ export class CoreApp {
       throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
     }
     return this._fastify
+  }
+
+  get eventBus(): EventBus {
+    if (!this._eventBus) {
+      throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
+    }
+    return this._eventBus
+  }
+
+  get cronManager(): CronManager {
+    if (!this._cronManager) {
+      throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
+    }
+    return this._cronManager
+  }
+
+  get fileUploadService(): FileUploadService {
+    if (!this._fileUploadService) {
+      throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
+    }
+    return this._fileUploadService
+  }
+
+  get notificationManager(): NotificationManager {
+    if (!this._notificationManager) {
+      throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
+    }
+    return this._notificationManager
+  }
+
+  get apiVersionRouter(): ApiVersionRouter {
+    if (!this._apiVersionRouter) {
+      throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
+    }
+    return this._apiVersionRouter
+  }
+
+  get collectionRegistry(): CollectionRegistry {
+    if (!this._collectionRegistry) {
+      throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
+    }
+    return this._collectionRegistry
   }
 
   async bootstrap(): Promise<void> {
@@ -154,6 +210,50 @@ export class CoreApp {
     this._authService = new AuthService(authDb as never, this.config.AUDE_JWT_SECRET)
     this._auditService = new AuditService(db as never)
     // RBACService wired on-demand in routes via requireAuth
+    // --- Phase 1b Services ---
+    this._eventBus = new EventBus({
+      partition: 'SYSTEM',
+      logger: { error: (msg: string, err?: unknown) => this.logger.error({ err }, msg) },
+    })
+
+    this._cronManager = new CronManager({
+      connection: this.config.REDIS_URL ?? 'redis://localhost:6379',
+      logger: {
+        info: (msg: string) => this.logger.info({}, msg),
+        error: (msg: string, err?: unknown) => this.logger.error({ err }, msg),
+        warn: (msg: string) => this.logger.warn({}, msg),
+      },
+    })
+
+    this._notificationManager = new NotificationManager()
+    this._apiVersionRouter = new ApiVersionRouter()
+    this._apiVersionRouter.registerVersion(1)
+    this._collectionRegistry = new CollectionRegistry()
+
+    // FileUpload - in-memory repo for Phase 1b (no DB table yet)
+    // ponytail: in-memory attachment repo, replace with Drizzle when table exists
+    const uploadStore = new Map<string, AttachmentRecord>()
+    const memRepo: AttachmentRepository = {
+      async insert(record: AttachmentRecord): Promise<void> { uploadStore.set(record.id, record) },
+      async findById(id: string, tenantId: string): Promise<AttachmentRecord | null> {
+        const r = uploadStore.get(id)
+        return r && r.tenantId === tenantId ? r : null
+      },
+      async list(tenantId: string): Promise<{ records: AttachmentRecord[]; total: number }> {
+        const records = [...uploadStore.values()].filter(r => r.tenantId === tenantId)
+        return { records, total: records.length }
+      },
+      async softDelete(id: string, tenantId: string): Promise<boolean> {
+        const r = uploadStore.get(id)
+        if (r && r.tenantId === tenantId) { uploadStore.delete(id); return true }
+        return false
+      },
+    }
+
+    await mkdir('/tmp/audebase-uploads', { recursive: true })
+    this._fileUploadService = new FileUploadService(memRepo, {
+      storageDir: '/tmp/audebase-uploads',
+    })
     // --- Fastify ---
     const app = Fastify({
       logger: false,
@@ -363,6 +463,7 @@ export class CoreApp {
 
     await app.listen({ port: this.config.PORT, host: '0.0.0.0' })
     this.logger.info({ port: this.config.PORT }, 'Server listening')
+    await this._cronManager?.start()
   }
 
   async stop(): Promise<void> {
@@ -372,6 +473,7 @@ export class CoreApp {
       await this._fastify.close()
       this._fastify = null
     }
+    await this._cronManager?.stop()
     if (this._redis) {
       this._redis.quit()
       this._redis = null
@@ -695,6 +797,79 @@ export class CoreApp {
     })
     // --- Log routes ---
     registerLogRoutes(app, authHook)
+
+    // --- File upload routes ---
+    app.post('/api/files/upload', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const body = request.body as { filename?: string; mimeType?: string; data?: string }
+      if (!body?.filename || !body?.data || !body?.mimeType) {
+        return reply.code(400).send({
+          error: { code: 'VALIDATION_ERROR', message: 'filename, mimeType, and data (base64) required' },
+        })
+      }
+      const tenantId = (request as unknown as { tenantId: string | null }).tenantId ?? 'system'
+      const userId = (request as unknown as { user?: { sub?: string } }).user?.sub ?? 'unknown'
+
+      try {
+        const buffer = Buffer.from(body.data, 'base64')
+        const file: FileUpload = {
+          filename: body.filename,
+          mimeType: body.mimeType,
+          data: buffer,
+          size: buffer.length,
+        }
+        const record = await this._fileUploadService!.upload(file, tenantId, userId)
+        return reply.code(201).send({ data: record })
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
+
+    app.get('/api/files/:id', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const { id } = request.params as { id: string }
+      const tenantId = (request as unknown as { tenantId: string | null }).tenantId ?? 'system'
+      try {
+        const result: DownloadResult | null = await this._fileUploadService!.download(id, tenantId)
+        if (result === null) {
+          return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'File not found' } })
+        }
+        return reply.send({ data: { record: result.record, name: result.name, mimeType: result.mimeType, size: result.data.length } })
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
+
+    app.get('/api/files', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const tenantId = (request as unknown as { tenantId: string | null }).tenantId ?? 'system'
+      const query = request.query as { page?: string; pageSize?: string }
+      const filter: FileFilter = {}
+      if (query.page) { filter.page = parseInt(query.page, 10) }
+      if (query.pageSize) { filter.pageSize = parseInt(query.pageSize, 10) }
+      try {
+        const result: ListResult = await this._fileUploadService!.list(tenantId, filter)
+        return reply.send({ data: result.data, total: result.total, page: result.page, pageSize: result.pageSize })
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
+
+    app.delete('/api/files/:id', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const { id } = request.params as { id: string }
+      const tenantId = (request as unknown as { tenantId: string | null }).tenantId ?? 'system'
+      try {
+        await this._fileUploadService!.delete(id, tenantId)
+        return reply.code(204).send()
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
   }
 
   private handleError(err: unknown, reply: ReplyLike): void {
