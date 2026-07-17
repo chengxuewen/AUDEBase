@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
-import { Layout, Menu } from 'antd'
+import { Layout, Menu, Dropdown, Space } from 'antd'
+import { DownOutlined } from '@ant-design/icons'
+import { useTenant } from '../providers/TenantProvider.js'
+import { useTranslation } from 'react-i18next'
 
 const { Sider, Header, Content } = Layout
 
@@ -10,16 +13,49 @@ interface AdminLayoutProps {
 
 interface MenuItem {
   key: string
-  label: string
+  labelKey: string
   snippet: string
 }
 
 const defaultMenuItems: MenuItem[] = [
-  { key: 'plugins', label: '插件管理', snippet: 'plugin' },
-  { key: 'users', label: '用户管理', snippet: 'user' },
+  { key: 'plugins', labelKey: 'menu.plugins', snippet: 'plugin' },
+  { key: 'users', labelKey: 'menu.users', snippet: 'user' },
+  { key: 'extensions', labelKey: 'menu.extensions', snippet: 'extension' },
 ]
 
+
+function TenantSwitcher(): ReactNode {
+  const tenantCtx = useTenant()
+
+  if (!tenantCtx || tenantCtx.availableTenants.length === 0) {
+    return null
+  }
+
+  const current = tenantCtx.availableTenants.find((t) => t.id === tenantCtx.tenantId)
+  const currentName = current?.name ?? tenantCtx.tenantId
+
+  const items = tenantCtx.availableTenants.map((t) => ({
+    key: t.id,
+    label: t.name,
+  }))
+
+  return (
+    <Dropdown
+      menu={{
+        items,
+        onClick: ({ key }) => tenantCtx.switchTenant(key),
+      }}
+    >
+      <Space style={{ cursor: 'pointer' }} data-testid="tenant-switcher">
+        {currentName}
+        <DownOutlined />
+      </Space>
+    </Dropdown>
+  )
+}
+
 export function AdminLayout({ canRoute, children }: AdminLayoutProps): ReactNode {
+  const { t } = useTranslation('client')
   const items = canRoute
     ? defaultMenuItems.filter((item) => canRoute(item.snippet))
     : defaultMenuItems
@@ -27,10 +63,12 @@ export function AdminLayout({ canRoute, children }: AdminLayoutProps): ReactNode
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider>
-        <Menu theme="dark" mode="inline" items={items.map((i) => ({ key: i.key, label: i.label }))} />
+        <Menu theme="dark" mode="inline" items={items.map((i) => ({ key: i.key, label: t(i.labelKey) }))} />
       </Sider>
       <Layout>
-        <Header style={{ background: '#fff', padding: '0 16px' }} />
+        <Header style={{ background: '#fff', padding: '0 16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+          <TenantSwitcher />
+        </Header>
         <Content style={{ padding: '24px' }}>{children}</Content>
       </Layout>
     </Layout>

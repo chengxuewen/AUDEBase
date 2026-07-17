@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Button, Card, Form, Input, message } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { apiPost, setTokens } from '../api/client.js'
 
 interface LoginPageProps {
@@ -13,6 +14,7 @@ interface LoginResponse {
 }
 
 export function LoginPage({ onLogin }: LoginPageProps): ReactNode {
+  const { t } = useTranslation('client')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (values: { username: string; password: string }): Promise<void> => {
@@ -22,7 +24,7 @@ export function LoginPage({ onLogin }: LoginPageProps): ReactNode {
       setTokens(result.access_token, result.refresh_token)
       onLogin?.()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Login failed'
+      const msg = err instanceof Error ? err.message : t('login.failed')
       void message.error(msg)
     } finally {
       setLoading(false)
@@ -31,17 +33,17 @@ export function LoginPage({ onLogin }: LoginPageProps): ReactNode {
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-      <Card title="登录" style={{ width: 400 }}>
+      <Card title={t('login.title')} style={{ width: 400 }}>
         <Form onFinish={handleSubmit}>
-          <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
-            <Input placeholder="用户名" />
+          <Form.Item name="username" rules={[{ required: true, message: t('login.usernameRequired') }]}>
+            <Input placeholder={t('login.username')} />
           </Form.Item>
-          <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
-            <Input.Password placeholder="密码" />
+          <Form.Item name="password" rules={[{ required: true, message: t('login.passwordRequired') }]}>
+            <Input.Password placeholder={t('login.password')} />
           </Form.Item>
           <Form.Item>
             <Button type="primary" htmlType="submit" block loading={loading}>
-              登录
+              {t('login.submit')}
             </Button>
           </Form.Item>
         </Form>

@@ -1,7 +1,18 @@
 // RED PHASE: imports will resolve once implementation is created
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderWithProviders } from '../../__tests__/helpers/test-utils'
+import { waitFor } from '@testing-library/react'
 import { AdminLayout } from '../AdminLayout'
+import { TenantProvider } from '../../providers/TenantProvider'
+
+// Mock the API client for TenantProvider
+vi.mock('../../api/client', () => ({
+  apiGet: vi.fn(),
+  getTenantId: vi.fn(() => 'system'),
+  setTenantId: vi.fn(),
+}))
+
+import { apiGet } from '../../api/client'
 
 describe('AdminLayout - menu permission filtering', () => {
   it('should show all menu items for admin user', async () => {
@@ -33,5 +44,38 @@ describe('AdminLayout - menu permission filtering', () => {
     // Assert
     const layout = container.querySelector('.ant-pro-layout')
     expect(layout !== null || container.querySelector('.ant-layout') !== null).toBe(true)
+  })
+})
+
+describe('AdminLayout - tenant switcher', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should render tenant switcher when tenants are available', async () => {
+    // Arrange
+    vi.mocked(apiGet).mockResolvedValue({
+      data: [{ id: 'system', name: '系统租户' }],
+    })
+
+    // Act
+    const { container } = renderWithProviders(
+      <TenantProvider>
+        <AdminLayout />
+      </TenantProvider>,
+    )
+
+    // Assert - the tenant switcher should be rendered after query resolves
+    await waitFor(() => {
+      expect(container.querySelector('[data-testid="tenant-switcher"]')).toBeTruthy()
+    })
+  })
+
+  it('should not render tenant switcher when no TenantProvider', () => {
+    // Arrange & Act
+    const { container } = renderWithProviders(<AdminLayout />)
+
+    // Assert - no tenant switcher without provider
+    expect(container.querySelector('[data-testid="tenant-switcher"]')).toBeNull()
   })
 })

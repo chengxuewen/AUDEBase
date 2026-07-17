@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Button, Empty, Space, Spin, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
+import { useTranslation } from 'react-i18next'
 import { useRoles } from './hooks/useRoles.js'
 
 interface RoleItem {
@@ -17,6 +18,7 @@ interface PaginatedData<T> {
 }
 
 export function RoleListPage(): ReactNode {
+  const { t } = useTranslation('client')
   const { data, isLoading, isError } = useRoles()
 
   if (isLoading) {
@@ -26,8 +28,8 @@ export function RoleListPage(): ReactNode {
   if (isError) {
     return (
       <div>
-        <p>加载失败</p>
-        <Button autoInsertSpace={false}>重试</Button>
+        <p>{t('common.loadFailed')}</p>
+        <Button autoInsertSpace={false}>{t('common.retry')}</Button>
       </div>
     )
   }
@@ -36,20 +38,20 @@ export function RoleListPage(): ReactNode {
   const list = paginated?.data ?? []
 
   if (list.length === 0) {
-    return <Empty description="暂无角色" />
+    return <Empty description={t('roles.noData')} />
   }
 
   const columns: ColumnsType<RoleItem> = [
-    { title: '角色名称', dataIndex: 'name', key: 'name' },
-    { title: '显示名称', dataIndex: 'display_name', key: 'display_name' },
-    { title: '用户数', dataIndex: 'user_count', key: 'user_count' },
+    { title: t('roles.name'), dataIndex: 'name', key: 'name' },
+    { title: t('roles.displayName'), dataIndex: 'display_name', key: 'display_name' },
+    { title: t('roles.userCount'), dataIndex: 'user_count', key: 'user_count' },
     {
-      title: '操作',
+      title: t('common.actions'),
       key: 'action',
       render: () => (
         <Space>
-          <Button size="small" autoInsertSpace={false}>编辑</Button>
-          <Button size="small" autoInsertSpace={false}>删除</Button>
+          <Button size="small" autoInsertSpace={false}>{t('common.edit')}</Button>
+          <Button size="small" autoInsertSpace={false}>{t('common.delete')}</Button>
         </Space>
       ),
     },
@@ -58,7 +60,7 @@ export function RoleListPage(): ReactNode {
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <Button type="primary" autoInsertSpace={false}>新建角色</Button>
+        <Button type="primary" autoInsertSpace={false}>{t('common.createRole')}</Button>
       </div>
       <Table<RoleItem> rowKey="id" columns={columns} dataSource={list} pagination={false} />
     </div>

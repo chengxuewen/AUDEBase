@@ -392,7 +392,7 @@ export class CoreApp {
     credentials: boolean
   } {
     const methods = ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS']
-    const allowedHeaders = ['Authorization', 'Content-Type', 'X-Request-ID']
+    const allowedHeaders = ['Authorization', 'Content-Type', 'X-Request-ID', 'X-Tenant-Id']
     const exposedHeaders = [
       'X-Request-ID',
       'X-RateLimit-Limit',
@@ -674,6 +674,21 @@ export class CoreApp {
           where: eq(user_roles.user_id, id),
         })
         return reply.send({ data: result })
+      } catch (err) {
+        return this.handleError(err, reply as ReplyLike)
+      }
+    })
+
+    // --- Tenants list ---
+    app.get('/api/tenants', {
+      onRequest: [authHook],
+    }, async (_request, reply) => {
+      try {
+        const result = await (this._db as unknown as {
+          query: { tenants: { findMany: (args?: unknown) => Promise<unknown[]> } }
+        }).query.tenants.findMany()
+        const tenantList = (result as Array<{ id: string; name: string }>).map((t) => ({ id: t.id, name: t.name }))
+        return reply.send({ data: tenantList })
       } catch (err) {
         return this.handleError(err, reply as ReplyLike)
       }

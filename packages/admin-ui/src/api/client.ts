@@ -27,6 +27,15 @@ export function clearTokens(): void {
   localStorage.removeItem(REFRESH_KEY)
 }
 
+const TENANT_KEY = 'aude_tenant_id'
+
+export function getTenantId(): string {
+  return localStorage.getItem(TENANT_KEY) ?? 'system'
+}
+
+export function setTenantId(id: string): void {
+  localStorage.setItem(TENANT_KEY, id)
+}
 export interface ApiError {
   readonly code: string
   readonly message: string
@@ -40,6 +49,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
+  }
+  const tenantId = getTenantId()
+  if (tenantId) {
+    headers['X-Tenant-Id'] = tenantId
   }
 
   const res = await fetch(`${API_URL}${path}`, { ...options, headers })

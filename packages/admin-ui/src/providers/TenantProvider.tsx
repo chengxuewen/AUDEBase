@@ -1,4 +1,7 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Spin } from 'antd'
+import { apiGet, getTenantId, setTenantId } from '../api/client.js'
 
 interface TenantInfo {
   id: string
@@ -6,22 +9,40 @@ interface TenantInfo {
 }
 
 interface TenantContextValue {
-  tenantId: string | null
+  tenantId: string
   availableTenants: TenantInfo[]
-  onSwitchTenant?: (tenantId: string) => void
+  switchTenant: (tenantId: string) => void
+}
+
+interface TenantsResponse {
+  data: TenantInfo[]
 }
 
 const TenantContext = createContext<TenantContextValue | null>(null)
 
-interface TenantProviderProps {
-  tenantId: string | null
-  availableTenants?: TenantInfo[]
-  onSwitchTenant?: (tenantId: string) => void
-  children: ReactNode
-}
+export function TenantProvider({ children }: { children: ReactNode }): ReactNode {
+  const { data, isLoading } = useQuery({
+    queryKey: ['@audebase/admin-ui', 'tenants'],
+    queryFn: () => apiGet<TenantsResponse>('/api/tenants'),
+  })
 
-export function TenantProvider({ tenantId, availableTenants = [], onSwitchTenant, children }: TenantProviderProps): ReactNode {
-  const value: TenantContextValue = { tenantId, availableTenants, ...(onSwitchTenant !== undefined ? { onSwitchTenant } : {}) }
+  const tenantId = getTenantId()
+  const availableTenants = data?.data ?? []
+
+  const value = useMemo<TenantContextValue>(() => ({
+    tenantId,
+    availableTenants,
+    switchTenant: (newTenantId: string): void => {
+      setTenantId(newTenantId)
+      // D24: full page reload to clear all state
+      window.location.href = '/'
+    },
+  }), [tenantId, availableTenants])
+
+  if (isLoading && availableTenants.length === 0) {
+    return <Spin />
+  }
+
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>
 }
 

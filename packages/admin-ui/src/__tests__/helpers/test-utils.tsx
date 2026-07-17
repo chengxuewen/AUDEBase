@@ -1,6 +1,7 @@
 import { render, type RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { type ReactElement, type ReactNode } from 'react'
+import { I18nProvider } from '../../i18n/index.js'
 
 interface MockACLWrapperOptions {
   aclPermissions?: Set<string>
@@ -27,7 +28,9 @@ export function renderWithProviders(
   return render(ui, {
     wrapper: ({ children }) => (
       <QueryClientProvider client={queryClient}>
-        <MockACLWrapper permissions={aclPermissions}>{children}</MockACLWrapper>
+        <I18nProvider>
+          <MockACLWrapper permissions={aclPermissions}>{children}</MockACLWrapper>
+        </I18nProvider>
       </QueryClientProvider>
     ),
     ...renderOptions,

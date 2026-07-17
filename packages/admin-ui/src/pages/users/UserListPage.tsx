@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Button, Empty, Space, Spin, Switch, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
+import { useTranslation } from 'react-i18next'
 import { useUsers } from './hooks/useUsers.js'
 
 interface UserItem {
@@ -17,6 +18,7 @@ interface PaginatedData<T> {
 }
 
 export function UserListPage(): ReactNode {
+  const { t } = useTranslation('client')
   const { data, isLoading, isError } = useUsers()
 
   if (isLoading) {
@@ -26,8 +28,8 @@ export function UserListPage(): ReactNode {
   if (isError) {
     return (
       <div>
-        <p>加载失败</p>
-        <Button autoInsertSpace={false}>重试</Button>
+        <p>{t('common.loadFailed')}</p>
+        <Button autoInsertSpace={false}>{t('common.retry')}</Button>
       </div>
     )
   }
@@ -36,25 +38,25 @@ export function UserListPage(): ReactNode {
   const list = paginated?.data ?? []
 
   if (list.length === 0) {
-    return <Empty description="暂无用户" />
+    return <Empty description={t('users.noData')} />
   }
 
   const columns: ColumnsType<UserItem> = [
-    { title: '用户名', dataIndex: 'username', key: 'username' },
+    { title: t('users.username'), dataIndex: 'username', key: 'username' },
     {
-      title: '状态',
+      title: t('users.status'),
       dataIndex: 'is_active',
       key: 'is_active',
       render: (active: boolean) => <Switch checked={active} />,
     },
-    { title: '租户', dataIndex: 'tenant_id', key: 'tenant_id' },
+    { title: t('users.tenantId'), dataIndex: 'tenant_id', key: 'tenant_id' },
     {
-      title: '操作',
+      title: t('common.actions'),
       key: 'action',
       render: () => (
         <Space>
-          <Button size="small" autoInsertSpace={false}>编辑</Button>
-          <Button size="small" autoInsertSpace={false}>删除</Button>
+          <Button size="small" autoInsertSpace={false}>{t('common.edit')}</Button>
+          <Button size="small" autoInsertSpace={false}>{t('common.delete')}</Button>
         </Space>
       ),
     },
@@ -63,7 +65,7 @@ export function UserListPage(): ReactNode {
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <Button type="primary" autoInsertSpace={false}>新建用户</Button>
+        <Button type="primary" autoInsertSpace={false}>{t('common.createUser')}</Button>
       </div>
       <Table<UserItem> rowKey="id" columns={columns} dataSource={list} pagination={false} />
     </div>
