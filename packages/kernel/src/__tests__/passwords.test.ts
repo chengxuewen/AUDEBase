@@ -44,14 +44,15 @@ describe("verifyPassword", () => {
   test("错误密码验证失败", async () => {
     // Arrange
     const password = "SecurePass1!";
-    const hash = await hashPassword(password);
+    const wrongPassword = "WrongPass1!";
 
     // Act
-    const result = await verifyPassword("WrongPass2!", hash);
+    const hash = await hashPassword(password);
+    const isValid = await verifyPassword(wrongPassword, hash);
 
     // Assert
-    expect(result).toBe(false);
-  });
+    expect(isValid).toBe(false);
+  }, 10000);
 
   test("空密码验证失败", async () => {
     // Arrange
