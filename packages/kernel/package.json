@@ -17,7 +17,10 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@audebase/manifest-engine": "workspace:*",
+    "@audebase/migration-engine": "workspace:*",
     "@audebase/plugin-core": "workspace:*",
+    "@audebase/plugin-framework": "workspace:*",
     "@audebase/rbac": "workspace:*",
     "@audebase/audit": "workspace:*",
     "@audebase/i18n": "workspace:*",

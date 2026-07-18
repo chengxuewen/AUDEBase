@@ -4,7 +4,7 @@ import fastifyRateLimit from "@fastify/rate-limit";
 import { ErrorCode, UserError } from "@audebase/shared-types";
 import { loadConfig, type KernelConfig } from "./config";
 import { createDatabaseProvider, type DatabaseProvider } from "./db";
-import { bootstrapKernel } from "./bootstrap";
+import { startupPipeline } from "./startup";
 import { registerHealthRoutes } from "./health/routes";
 import rbacPlugin from "./plugins/rbac";
 import i18nPlugin from "./plugins/i18n";
@@ -22,7 +22,6 @@ export interface KernelApp {
 interface KernelOptions {
   /** 覆盖配置（用于测试） */
   config?: Partial<KernelConfig>;
-  /** mock DB provider（用于测试） */
   /** mock DB provider（用于测试） */
   dbProvider?: DatabaseProvider;
   /** 跳过插件注册（用于单元测试隔离） */
@@ -75,12 +74,11 @@ export async function createKernelApp(options: KernelOptions = {}): Promise<Kern
       logger,
     });
 
-  // 4.5 执行内核引导（首次运行创建系统数据）
-  try {
-    await bootstrapKernel(db, logger);
-  } catch (err: unknown) {
-    logger.error({ err }, "kernel bootstrap failed — continuing without seed data");
-  }
+  // 4.5 启动管道：清单验证 → 迁移 → 插件框架加载 → plugin-core 引导
+  const startupResult = await startupPipeline(db, logger, {
+    skipPlugins: options.skipPlugins,
+  });
+  logger.info({ startupResult }, "startup pipeline complete");
 
   // 5. 注入 X-Request-ID 到响应头
   server.addHook("onRequest", async (request, reply) => {
