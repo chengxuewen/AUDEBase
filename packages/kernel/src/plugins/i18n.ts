@@ -89,9 +89,10 @@ function i18nPlugin(fastify: FastifyInstance, options: I18nPluginOptions): void 
 
   // Decorate each request with a locale-aware t() function
   fastify.decorateRequest("t", null);
-  fastify.addHook("onRequest", (request) => {
+  fastify.addHook("onRequest", (request, _reply, done) => {
     const locale = detectLocale(request, defaultLocale);
-    request.t = engine.t(locale);
+    request.t = engine!.t(locale);
+    done();
   });
 }
 
