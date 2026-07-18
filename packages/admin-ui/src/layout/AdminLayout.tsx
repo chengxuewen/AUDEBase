@@ -7,6 +7,7 @@ import {
   DashboardOutlined,
   UserOutlined,
   AppstoreOutlined,
+  TeamOutlined,
   LogoutOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../auth/AuthContext";
@@ -21,6 +22,7 @@ const menuData: MenuItem[] = [
   { path: "/", name: "仪表盘", icon: <DashboardOutlined /> },
   { path: "/users", name: "用户管理", icon: <UserOutlined /> },
   { path: "/plugins", name: "插件管理", icon: <AppstoreOutlined /> },
+  { path: "/roles", name: "角色管理", icon: <TeamOutlined /> },
 ];
 
 function PageErrorFallback({
