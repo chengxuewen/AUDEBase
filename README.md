@@ -1,41 +1,94 @@
 # AUDEBase
 
-AUDEBase — 企业应用开发平台。微内核 + 插件热插拔架构，支持 OA、ERP、MES、PLM、WMS 等企业应用快速开发与部署。对标 Odoo、NocoBase、云表。
+**Enterprise application platform. Microkernel + hot-pluggable architecture.** Build OA, ERP, MES, PLM, WMS applications on a unified platform. Inspired by Odoo, NocoBase, and YunBiao.
 
-## 核心理念
+## Prerequisites
 
-**"插件即应用"** — 每个业务系统以独立插件套件形式运行在统一平台上，支持安装、升级、卸载、热更新。
+- **Node.js** 22+
+- **pnpm** 10+ (`corepack enable && corepack prepare pnpm@10.33.3 --activate`)
+- **Docker Desktop** (provides PostgreSQL 16 + Redis 7)
 
-## 技术栈
+## Quick Start
 
-- **语言**: TypeScript 全栈
-- **后端**: Node.js + Fastify
-- **前端**: React 19 + Ant Design 5（ProLayout + ProTable/ProForm）
-- **数据库**: PostgreSQL + Drizzle ORM
-- **缓存**: Redis
-- **包管理**: pnpm workspace monorepo
+```bash
+# 1. Clone
+git clone https://github.com/your-org/audebase.git
+cd audebase
 
-## 架构
+# 2. Configure environment
+cp .env.template .env
+# Edit .env — set AUDE_JWT_SECRET (32+ chars) and AUDE_DB_PASSWORD
+
+# 3. Start infrastructure
+docker compose up -d
+
+# 4. Install dependencies
+pnpm install
+
+# 5. Run database migrations
+pnpm db:migrate
+
+# 6. Start development
+pnpm dev
+```
+
+The kernel starts on `http://localhost:3000` and the Admin UI on `http://localhost:5173`.
+
+## Project Structure
+
+```
+audebase/
+├── packages/
+│   ├── kernel/              # Fastify server, CLI, auth, CRUD API, plugin pipeline
+│   ├── admin-ui/            # React 19 + Ant Design 5 management console
+│   ├── shared-types/        # Shared TypeScript types and Zod schemas
+│   ├── plugin-framework/    # Plugin lifecycle, host abstraction, trust groups
+│   ├── plugin-core/         # Bootstrap plugin (admin user, default roles, system tenant)
+│   ├── manifest-engine/     # manifest.yaml parsing and validation
+│   ├── migration-engine/    # Database migration scanner, resolver, executor
+│   ├── rbac/                # Role-based access control with route guards
+│   ├── audit/               # Audit log service
+│   ├── i18n/                # Internationalization engine
+│   ├── health-check/        # Health check endpoints
+│   └── logging-infra/       # Structured logging (pino)
+├── docs/                    # Architecture, SDD, TDD, plans
+├── docker-compose.yml       # PostgreSQL 16 + Redis 7
+└── .env.template            # Environment variable template
+```
+
+## Available Scripts
+
+| Command              | Description                                    |
+| -------------------- | ---------------------------------------------- |
+| `pnpm dev`           | Start all packages in development mode (watch) |
+| `pnpm build`         | Build all packages                             |
+| `pnpm test`          | Run all tests (vitest)                         |
+| `pnpm test:coverage` | Run tests with coverage report                 |
+| `pnpm lint`          | Lint all packages                              |
+| `pnpm lint:fix`      | Auto-fix lint issues                           |
+| `pnpm format`        | Format code with Prettier                      |
+| `pnpm format:check`  | Check formatting                               |
+| `pnpm type-check`    | TypeScript type checking                       |
+| `pnpm db:migrate`    | Run database migrations                        |
+| `pnpm db:up`         | Start Docker services                          |
+| `pnpm db:down`       | Stop Docker services                           |
+
+## Architecture
 
 ```
 AUDEBase
-├── 插件层    OA 插件 │ ERP 插件 │ MES 插件 │ ...
-├── 服务层    Schema Engine │ RBAC │ Workflow │ 日志
-├── 内核      Plugin Framework (加载/卸载/热更新/依赖)
-└── 基础设施  Node.js │ PostgreSQL │ Redis
+├── Plugin layer     OA │ ERP │ MES │ ... (hot-pluggable)
+├── Service layer    RBAC │ Audit │ i18n │ Migration │ Health
+├── Kernel           Plugin Framework (load/unload/dependency resolution)
+└── Infrastructure   Node.js │ PostgreSQL │ Redis
 ```
 
-详见 [docs/architecture.md](docs/architecture.md)
+Plugins run in four trust groups: SYSTEM (shared process), Domain (per business domain), Isolated (per third-party plugin), Container (sandboxed). See [docs/architecture.md](docs/architecture.md) for details.
 
-## 开发状态
+## Phase Status
 
-当前处于 Phase 0 — 架构定义完成，文档基础设施就绪（6 轮团队审核，139+ 发现全部关闭）。Phase 1 MVP 计划实现：
-- 插件框架
-- 基础 RBAC
-- 日志基础设施
-- 最小管理 UI
-- 多租户
+**Phase 1a complete** — 12 packages, 384 tests covering the full plugin lifecycle, RBAC, audit, i18n, migration, health checks, logging, and Admin UI. See [.agents/memorys/status.md](.agents/memorys/status.md) for the current state and roadmap.
 
-## 许可
+## License
 
 Apache 2.0
