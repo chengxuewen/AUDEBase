@@ -1,2 +1,10 @@
 packages:
   - "packages/*"
+allowBuilds:
+  b: true
+  bcrypt: true
+  c: true
+  p: true
+  r: true
+  t: true
+  y: true

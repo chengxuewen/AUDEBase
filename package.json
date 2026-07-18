@@ -26,6 +26,8 @@
     "@iflow-mcp/defrex-drizzle-mcp": "^1.0.0",
     "@jzone-mcp/antd-components-mcp": "^1.0.45",
     "@playwright/mcp": "^0.0.78",
+    "@types/bcrypt": "^6.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.0.0",
     "eslint": "^9.0.0",
     "husky": "^9.0.0",
@@ -44,5 +46,9 @@
     "*.{json,css,md,yaml,yml}": [
       "prettier --write"
     ]
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "jsonwebtoken": "^9.0.3"
   }
 }
