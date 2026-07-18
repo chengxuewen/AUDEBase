@@ -6,6 +6,8 @@ import { loadConfig, type KernelConfig } from "./config";
 import { createDatabaseProvider, type DatabaseProvider } from "./db";
 import { bootstrapKernel } from "./bootstrap";
 import { registerHealthRoutes } from "./health/routes";
+import rbacPlugin from "./plugins/rbac";
+import i18nPlugin from "./plugins/i18n";
 
 /**
  * 内核应用实例
@@ -21,7 +23,10 @@ interface KernelOptions {
   /** 覆盖配置（用于测试） */
   config?: Partial<KernelConfig>;
   /** mock DB provider（用于测试） */
+  /** mock DB provider（用于测试） */
   dbProvider?: DatabaseProvider;
+  /** 跳过插件注册（用于单元测试隔离） */
+  skipPlugins?: boolean;
 }
 
 /**
@@ -93,6 +98,24 @@ export async function createKernelApp(options: KernelOptions = {}): Promise<Kern
     startTime: Date.now(),
     version: "0.1.0",
   });
+
+  // 7.5 注册 RBAC 权限插件（测试可跳过）
+  if (!options.skipPlugins) {
+    try {
+      await server.register(rbacPlugin, { db: db.db });
+    } catch (err: unknown) {
+      logger.error({ err }, "rbac plugin registration failed");
+    }
+  }
+
+  // 7.6 注册 i18n 国际化插件（测试可跳过）
+  if (!options.skipPlugins) {
+    try {
+      await server.register(i18nPlugin, { config: { defaultLocale: "zh" } });
+    } catch (err: unknown) {
+      logger.error({ err }, "i18n plugin registration failed");
+    }
+  }
 
   // 8. 优雅关闭
   const shutdown = async (): Promise<void> => {

@@ -49,6 +49,7 @@ async function createTestApp(dbHealthy: boolean = true) {
       AUDE_LOG_LEVEL: "error",
     },
     dbProvider: createMockDb(dbHealthy),
+    skipPlugins: true,
   });
 }
 

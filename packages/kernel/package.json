@@ -18,10 +18,14 @@
   },
   "dependencies": {
     "@audebase/plugin-core": "workspace:*",
+    "@audebase/rbac": "workspace:*",
+    "@audebase/audit": "workspace:*",
+    "@audebase/i18n": "workspace:*",
     "@audebase/shared-types": "workspace:*",
     "@fastify/rate-limit": "^11.1.0",
     "drizzle-orm": "^0.45.0",
     "fastify": "^5.0.0",
+    "fastify-plugin": "^5.1.0",
     "pg": "^8.13.0",
     "pino": "^9.0.0",
     "zod": "^3.24.0"
