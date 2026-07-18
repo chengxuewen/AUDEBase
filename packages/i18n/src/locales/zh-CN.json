@@ -1,0 +1,10 @@
+{
+  "hello": "你好",
+  "welcome": "欢迎使用 AUDEBase",
+  "save": "保存",
+  "cancel": "取消",
+  "confirm": "确认",
+  "delete": "删除",
+  "loading": "加载中...",
+  "error.unknown": "未知错误"
+}
