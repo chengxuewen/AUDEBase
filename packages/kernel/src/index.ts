@@ -6,6 +6,8 @@ import { loadConfig, type KernelConfig } from "./config";
 import { createDatabaseProvider, type DatabaseProvider } from "./db";
 import { startupPipeline } from "./startup";
 import { registerHealthRoutes } from "./health/routes";
+import { registerUserRoutes } from "./api/users";
+import { registerRoleRoutes } from "./api/roles";
 import rbacPlugin from "./plugins/rbac";
 import i18nPlugin from "./plugins/i18n";
 
@@ -115,6 +117,25 @@ export async function createKernelApp(options: KernelOptions = {}): Promise<Kern
     }
   }
 
+  // 7.7 注册用户 CRUD 路由（测试可跳过）
+  if (!options.skipPlugins) {
+    try {
+      registerUserRoutes(server, db.db, config.AUDE_JWT_SECRET, logger);
+      logger.info("user routes registered");
+    } catch (err: unknown) {
+      logger.error({ err }, "user routes registration failed");
+    }
+  }
+
+  // 7.8 注册角色 CRUD 路由（测试可跳过）
+  if (!options.skipPlugins) {
+    try {
+      registerRoleRoutes(server, db.db, config.AUDE_JWT_SECRET, logger);
+      logger.info("role routes registered");
+    } catch (err: unknown) {
+      logger.error({ err }, "role routes registration failed");
+    }
+  }
   // 8. 优雅关闭
   const shutdown = async (): Promise<void> => {
     logger.info("shutting down kernel");
