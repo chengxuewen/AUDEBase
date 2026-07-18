@@ -4,6 +4,7 @@ import { ErrorCode, UserError } from "@audebase/shared-types";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { roles } from "../db/schema/roles";
 import { createAuthMiddleware } from "../auth/middleware";
+import { Permissions, Resources } from "../auth/permissions";
 import { rbacGuard } from "../plugins/rbac";
 
 /** Maximum page size for role listing */
@@ -67,7 +68,7 @@ export function registerRoleRoutes(
    */
   app.get(
     "/api/roles",
-    { preHandler: [requireAuth, rbacGuard("read", "role")] },
+    { preHandler: [requireAuth, rbacGuard(Permissions.ROLES_READ, Resources.ROLE)] },
     async (request): Promise<PaginatedRoles> => {
       const query = request.query as Record<string, string>;
       const limit = Math.min(
@@ -95,7 +96,7 @@ export function registerRoleRoutes(
    */
   app.get(
     "/api/roles/:id",
-    { preHandler: [requireAuth, rbacGuard("read", "role")] },
+    { preHandler: [requireAuth, rbacGuard(Permissions.ROLES_READ, Resources.ROLE)] },
     async (request): Promise<RoleResponse> => {
       const params = request.params as { id: string };
       const [foundRole] = await db.select().from(roles).where(eq(roles.id, params.id)).limit(1);
@@ -113,7 +114,7 @@ export function registerRoleRoutes(
    */
   app.post(
     "/api/roles",
-    { preHandler: [requireAuth, rbacGuard("create", "role")] },
+    { preHandler: [requireAuth, rbacGuard(Permissions.ROLES_CREATE, Resources.ROLE)] },
     async (request, reply): Promise<RoleResponse> => {
       const body = request.body as Record<string, unknown>;
 
@@ -170,7 +171,7 @@ export function registerRoleRoutes(
    */
   app.patch(
     "/api/roles/:id",
-    { preHandler: [requireAuth, rbacGuard("update", "role")] },
+    { preHandler: [requireAuth, rbacGuard(Permissions.ROLES_UPDATE, Resources.ROLE)] },
     async (request): Promise<RoleResponse> => {
       const params = request.params as { id: string };
       const body = request.body as Record<string, unknown>;
@@ -215,7 +216,7 @@ export function registerRoleRoutes(
    */
   app.delete(
     "/api/roles/:id",
-    { preHandler: [requireAuth, rbacGuard("delete", "role")] },
+    { preHandler: [requireAuth, rbacGuard(Permissions.ROLES_DELETE, Resources.ROLE)] },
     async (request): Promise<{ success: boolean }> => {
       const params = request.params as { id: string };
 

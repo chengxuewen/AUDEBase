@@ -2,7 +2,8 @@ import { useState, useCallback } from "react";
 import ProTable, { type ProColumns } from "@ant-design/pro-table";
 import { Badge, Button, Modal, Descriptions, Tag, Space } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
-import type { PluginDescriptor } from "@audebase/shared-types";
+import type { PluginDescriptor, ApiListResponse } from "@audebase/shared-types";
+import { apiClient } from "../api/client";
 
 const STATUS_CONFIG: Record<string, { color: string; text: string }> = {
   enabled: { color: "green", text: "运行中" },
@@ -12,90 +13,6 @@ const STATUS_CONFIG: Record<string, { color: string; text: string }> = {
   disabled: { color: "red", text: "已禁用" },
   migration_failed: { color: "orange", text: "迁移失败" },
 };
-
-// ponytail: static mock data — real plugin registry API not built yet
-const MOCK_PLUGINS: PluginDescriptor[] = [
-  {
-    id: "00000000-0000-0000-0000-000000000001",
-    name: "plugin-core",
-    version: "0.1.0",
-    display_name: "内核插件",
-    state: "enabled",
-    category: "SYSTEM",
-    description: "平台核心引导插件，负责首次运行时创建 admin 用户、默认角色和系统租户",
-    author: "AUDEBase",
-    license: "Apache-2.0",
-    dependencies: [],
-    runtime_mode: "inline",
-    runtime_partition: "SYSTEM",
-    auto_install: true,
-    installed_at: "2026-07-14T00:00:00Z",
-  },
-  {
-    id: "00000000-0000-0000-0000-000000000002",
-    name: "plugin-rbac",
-    version: "0.1.0",
-    display_name: "RBAC 权限引擎",
-    state: "enabled",
-    category: "SYSTEM",
-    description: "基于角色的访问控制，支持角色管理、权限分配和 Record Rules",
-    author: "AUDEBase",
-    license: "Apache-2.0",
-    dependencies: ["plugin-core"],
-    runtime_mode: "inline",
-    runtime_partition: "SYSTEM",
-    auto_install: true,
-    installed_at: "2026-07-14T00:00:00Z",
-  },
-  {
-    id: "00000000-0000-0000-0000-000000000003",
-    name: "plugin-audit",
-    version: "0.1.0",
-    display_name: "审计日志",
-    state: "loaded",
-    category: "SYSTEM",
-    description: "自动记录 API 写操作审计日志，支持按资源类型和时间范围查询",
-    author: "AUDEBase",
-    license: "Apache-2.0",
-    dependencies: ["plugin-core"],
-    runtime_mode: "inline",
-    runtime_partition: "SYSTEM",
-    auto_install: false,
-    installed_at: "2026-07-14T00:00:00Z",
-  },
-  {
-    id: "00000000-0000-0000-0000-000000000004",
-    name: "plugin-health-check",
-    version: "0.1.0",
-    display_name: "健康检查",
-    state: "enabled",
-    category: "SYSTEM",
-    description: "提供 GET /health 和 /health/ready 端点，监控数据库和 Redis 连接状态",
-    author: "AUDEBase",
-    license: "Apache-2.0",
-    dependencies: [],
-    runtime_mode: "inline",
-    runtime_partition: "SYSTEM",
-    auto_install: true,
-    installed_at: "2026-07-14T00:00:00Z",
-  },
-  {
-    id: "00000000-0000-0000-0000-000000000005",
-    name: "plugin-i18n",
-    version: "0.1.0",
-    display_name: "国际化",
-    state: "disabled",
-    category: "SYSTEM",
-    description: "多语言支持，预加载 zh-CN 和 en 翻译资源",
-    author: "AUDEBase",
-    license: "Apache-2.0",
-    dependencies: ["plugin-core"],
-    runtime_mode: "inline",
-    runtime_partition: "SYSTEM",
-    auto_install: false,
-    installed_at: null,
-  },
-];
 
 const CATEGORY_TAG_COLORS: Record<string, string> = {
   SYSTEM: "blue",
@@ -177,7 +94,18 @@ export default function PluginManagementPage() {
       <ProTable<PluginDescriptor>
         headerTitle="插件管理"
         columns={columns}
-        dataSource={MOCK_PLUGINS}
+        request={async (params) => {
+          const { current, pageSize } = params;
+          const res = await apiClient.get<ApiListResponse<PluginDescriptor>>("/plugins", {
+            page: current,
+            pageSize,
+          });
+          return {
+            data: res.data,
+            success: true,
+            total: res.meta.count,
+          };
+        }}
         rowKey="id"
         search={{ labelWidth: "auto" }}
         pagination={{ pageSize: 10 }}

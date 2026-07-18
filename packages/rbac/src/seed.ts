@@ -11,11 +11,34 @@ interface DefaultPermission {
 }
 
 const DEFAULT_PERMISSIONS: DefaultPermission[] = [
+  // Super-permissions — grant all CRUD on a resource
   { action: "manage", resource: "plugin", display_name: "插件管理" },
   { action: "manage", resource: "user", display_name: "用户管理" },
   { action: "manage", resource: "role", display_name: "角色管理" },
+
+  // Granular CRUD permissions for users
+  { action: "users:read", resource: "user", display_name: "查看用户" },
+  { action: "users:create", resource: "user", display_name: "创建用户" },
+  { action: "users:update", resource: "user", display_name: "更新用户" },
+  { action: "users:delete", resource: "user", display_name: "删除用户" },
+
+  // Granular CRUD permissions for roles
+  { action: "roles:read", resource: "role", display_name: "查看角色" },
+  { action: "roles:create", resource: "role", display_name: "创建角色" },
+  { action: "roles:update", resource: "role", display_name: "更新角色" },
+  { action: "roles:delete", resource: "role", display_name: "删除角色" },
+
+  // Granular permissions for plugins
+  { action: "plugins:read", resource: "plugin", display_name: "查看插件" },
+  { action: "plugins:install", resource: "plugin", display_name: "安装插件" },
+  { action: "plugins:update", resource: "plugin", display_name: "更新插件" },
+  { action: "plugins:uninstall", resource: "plugin", display_name: "卸载插件" },
+
+  // Read-only permissions (legacy + granular)
   { action: "read", resource: "audit_log", display_name: "查看审计日志" },
+  { action: "audit:read", resource: "audit_log", display_name: "查看审计日志" },
   { action: "read", resource: "health", display_name: "健康检查" },
+  { action: "health:read", resource: "health", display_name: "健康检查" },
 ];
 
 /**
@@ -46,6 +69,16 @@ export async function seedDefaultPermissions(
   }
 
   return permMap;
+}
+
+/**
+ * Check whether a permission action grants read access.
+ *
+ * Matches action="read", "manage", or granular "*:read" patterns.
+ */
+function isReadAction(action: string): boolean {
+  if (action === "read" || action === "manage") return true;
+  return action.endsWith(":read");
 }
 
 /**
@@ -108,9 +141,9 @@ export async function seedDefaultRoles(
       `);
     }
 
-    // member 角色 → 仅 read:user 和 read:health 权限
+    // member 角色 → 仅 read 相关权限
     for (const perm of permsResult.rows) {
-      if (perm.action === "read") {
+      if (isReadAction(perm.action)) {
         await tx.execute(sql`
           INSERT INTO role_permissions (role_id, permission_id)
           VALUES (${memberRoleId}, ${perm.id})

@@ -4,6 +4,7 @@ import { ErrorCode, UserError } from "@audebase/shared-types";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { users } from "../db/schema/users";
 import { createAuthMiddleware } from "../auth/middleware";
+import { Permissions, Resources } from "../auth/permissions";
 import { rbacGuard } from "../plugins/rbac";
 import { hashPassword } from "../auth/passwords";
 
@@ -76,7 +77,7 @@ export function registerUserRoutes(
    */
   app.get(
     "/api/users",
-    { preHandler: [requireAuth, rbacGuard("read", "user")] },
+    { preHandler: [requireAuth, rbacGuard(Permissions.USERS_READ, Resources.USER)] },
     async (request): Promise<PaginatedUsers> => {
       const query = request.query as Record<string, string>;
       const limit = Math.min(
@@ -104,7 +105,7 @@ export function registerUserRoutes(
    */
   app.get(
     "/api/users/:id",
-    { preHandler: [requireAuth, rbacGuard("read", "user")] },
+    { preHandler: [requireAuth, rbacGuard(Permissions.USERS_READ, Resources.USER)] },
     async (request): Promise<UserResponse> => {
       const params = request.params as { id: string };
       const [foundUser] = await db.select().from(users).where(eq(users.id, params.id)).limit(1);
@@ -122,7 +123,7 @@ export function registerUserRoutes(
    */
   app.post(
     "/api/users",
-    { preHandler: [requireAuth, rbacGuard("create", "user")] },
+    { preHandler: [requireAuth, rbacGuard(Permissions.USERS_CREATE, Resources.USER)] },
     async (request, reply): Promise<UserResponse> => {
       const body = request.body as Record<string, unknown>;
 
@@ -186,7 +187,7 @@ export function registerUserRoutes(
    */
   app.patch(
     "/api/users/:id",
-    { preHandler: [requireAuth, rbacGuard("update", "user")] },
+    { preHandler: [requireAuth, rbacGuard(Permissions.USERS_UPDATE, Resources.USER)] },
     async (request): Promise<UserResponse> => {
       const params = request.params as { id: string };
       const body = request.body as Record<string, unknown>;
@@ -234,7 +235,7 @@ export function registerUserRoutes(
    */
   app.delete(
     "/api/users/:id",
-    { preHandler: [requireAuth, rbacGuard("delete", "user")] },
+    { preHandler: [requireAuth, rbacGuard(Permissions.USERS_DELETE, Resources.USER)] },
     async (request): Promise<{ success: boolean }> => {
       const params = request.params as { id: string };
 

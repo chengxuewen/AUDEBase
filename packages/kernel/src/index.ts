@@ -10,6 +10,8 @@ import { registerUserRoutes } from "./api/users";
 import { registerRoleRoutes } from "./api/roles";
 import rbacPlugin from "./plugins/rbac";
 import i18nPlugin from "./plugins/i18n";
+import { registerPluginRoutes } from "./api/plugins";
+import { registerTenantMiddleware } from "./tenant";
 
 /**
  * 内核应用实例
@@ -87,6 +89,9 @@ export async function createKernelApp(options: KernelOptions = {}): Promise<Kern
     reply.header("X-Request-ID", request.id);
   });
 
+  // 5.5 注册租户中间件（请求提取 + 校验 tenant_id）
+  registerTenantMiddleware(server, db.db);
+
   // 6. 速率限制
   await server.register(fastifyRateLimit, {
     max: 100,
@@ -134,6 +139,16 @@ export async function createKernelApp(options: KernelOptions = {}): Promise<Kern
       logger.info("role routes registered");
     } catch (err: unknown) {
       logger.error({ err }, "role routes registration failed");
+    }
+  }
+
+  // 7.9 注册插件管理路由（测试可跳过）
+  if (!options.skipPlugins) {
+    try {
+      registerPluginRoutes(server, db.db, config.AUDE_JWT_SECRET, logger);
+      logger.info("plugin routes registered");
+    } catch (err: unknown) {
+      logger.error({ err }, "plugin routes registration failed");
     }
   }
   // 8. 优雅关闭
