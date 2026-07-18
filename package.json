@@ -1,8 +1,47 @@
 {
+  "name": "audebase",
+  "private": true,
+  "packageManager": "pnpm@10.33.3",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint packages/ --ext .ts,.tsx",
+    "lint:fix": "eslint packages/ --ext .ts,.tsx --fix",
+    "format": "prettier --write \"packages/**/*.{ts,tsx,json,css,md}\"",
+    "format:check": "prettier --check \"packages/**/*.{ts,tsx,json,css,md}\"",
+    "type-check": "turbo type-check",
+    "clean": "turbo clean && rm -rf node_modules",
+    "prepare": "husky",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down"
+  },
   "devDependencies": {
     "@colbymchenry/codegraph": "^1.4.1",
     "@iflow-mcp/defrex-drizzle-mcp": "^1.0.0",
     "@jzone-mcp/antd-components-mcp": "^1.0.45",
-    "@playwright/mcp": "^0.0.78"
+    "@playwright/mcp": "^0.0.78",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,md,yaml,yml}": [
+      "prettier --write"
+    ]
   }
 }
