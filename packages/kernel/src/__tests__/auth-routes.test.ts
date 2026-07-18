@@ -234,7 +234,13 @@ describe("POST /api/auth/login", () => {
 
     // Assert
     expect(res.statusCode).toBe(200);
-    const body = res.json<Record<string, unknown>>();
+    const body = res.json<{
+      user: { username: string; id: string };
+      access_token: string;
+      refresh_token: string;
+      expires_in: number;
+      token_type: string;
+    }>();
     expect(body.access_token).toBeDefined();
     expect(body.refresh_token).toBeDefined();
     expect(body.expires_in).toBe(900);
@@ -253,7 +259,9 @@ describe("POST /api/auth/login", () => {
 
     // Assert
     expect(res.statusCode).toBe(401);
-    expect(res.json<Record<string, unknown>>().error.code).toBe(ErrorCode.AUTH_INVALID_CREDENTIALS);
+    expect(res.json<{ error: { code: string } }>().error.code).toBe(
+      ErrorCode.AUTH_INVALID_CREDENTIALS,
+    );
   });
 
   test("不存在的用户 → 401", async () => {
@@ -278,7 +286,7 @@ describe("POST /api/auth/login", () => {
 
     // Assert
     expect(res.statusCode).toBe(400);
-    expect(res.json<Record<string, unknown>>().error.code).toBe(ErrorCode.VALIDATION_ERROR);
+    expect(res.json<{ error: { code: string } }>().error.code).toBe(ErrorCode.VALIDATION_ERROR);
   });
 
   test("登录成功后 refresh token 存储到 DB", async () => {

@@ -34,6 +34,18 @@ export default tseslint.config(
       "no-debugger": "error",
       "prefer-const": "error",
       "no-var": "error",
+      "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
     },
   },
-);
+  {
+      files: ["**/*.test.ts", "**/*.test.tsx", "**/__tests__/**/*.ts", "**/vitest.config.ts"],
+      rules: {
+        "@typescript-eslint/require-await": "off",
+        "@typescript-eslint/no-unsafe-assignment": "off",
+        "@typescript-eslint/no-unsafe-member-access": "off",
+        "@typescript-eslint/no-unsafe-call": "off",
+        "@typescript-eslint/no-unsafe-return": "off",
+        "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+      },
+    },
+  );
