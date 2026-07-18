@@ -74,7 +74,7 @@ describe("parseArgs", () => {
     expect(result).toEqual<ParsedArgs>({ command: "unknown", unknownName: undefined });
   });
 
-  test("extra arguments are ignored", () => {
+  test('extra arguments are ignored for "start"', () => {
     // Arrange
     const args = ["/usr/bin/node", "/path/to/cli.ts", "start", "--port", "4000"];
 
@@ -82,7 +82,51 @@ describe("parseArgs", () => {
     const result = parseArgs(args);
 
     // Assert
-    // Extra args are ignored — only first positional matters
     expect(result.command).toBe("start");
   });
+
+  test('"tenant list" is recognized', () => {
+    // Arrange
+    const args = argv("tenant", "list");
+
+    // Act
+    const result = parseArgs(args);
+
+    // Assert
+    expect(result).toEqual<ParsedArgs>({ command: "tenant", subcommand: "list" });
+  });
+
+  test('"tenant create my-org" captures tenant name', () => {
+    // Arrange
+    const args = argv("tenant", "create", "my-org");
+
+    // Act
+    const result = parseArgs(args);
+
+    // Assert
+    expect(result).toEqual<ParsedArgs>({
+      command: "tenant",
+      subcommand: "create",
+      tenantName: "my-org",
+    });
+  });
+
+  test('"tenant" without subcommand is recognized', () => {
+    // Arrange
+    const args = argv("tenant");
+
+    // Act
+    const result = parseArgs(args);
+
+    // Assert
+    expect(result).toEqual<ParsedArgs>({ command: "tenant" });
+  });
+  const args = ["/usr/bin/node", "/path/to/cli.ts", "start", "--port", "4000"];
+
+  // Act
+  const result = parseArgs(args);
+
+  // Assert
+  // Extra args are ignored — only first positional matters
+  expect(result.command).toBe("start");
 });
