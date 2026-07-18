@@ -89,8 +89,10 @@ export async function createKernelApp(options: KernelOptions = {}): Promise<Kern
     reply.header("X-Request-ID", request.id);
   });
 
-  // 5.5 注册租户中间件（请求提取 + 校验 tenant_id）
-  registerTenantMiddleware(server, db.db);
+  // 5.5 注册租户中间件（测试可跳过）
+  if (!options.skipPlugins) {
+    registerTenantMiddleware(server, db.db);
+  }
 
   // 6. 速率限制
   await server.register(fastifyRateLimit, {
