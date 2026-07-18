@@ -116,12 +116,15 @@ importers:
 
   packages/kernel:
     dependencies:
+      "@audebase/plugin-core":
+        specifier: workspace:*
+        version: link:../plugin-core
       "@audebase/shared-types":
         specifier: workspace:*
         version: link:../shared-types
       "@fastify/rate-limit":
-        specifier: ^10.2.0
-        version: 10.3.0
+        specifier: ^11.1.0
+        version: 11.1.0
       drizzle-orm:
         specifier: ^0.45.0
         version: 0.45.2(@types/pg@8.20.0)(pg@8.22.0)
@@ -1184,10 +1187,10 @@ packages:
         integrity: sha512-INS+6gh91cLUjB+PVHfu1UqcB76Sqtpyp7bnL+FYojhjygvOPA9ctiD/JDKsyD9Xgu4hUhCSJBPig/w7duNajw==,
       }
 
-  "@fastify/rate-limit@10.3.0":
+  "@fastify/rate-limit@11.1.0":
     resolution:
       {
-        integrity: sha512-eIGkG9XKQs0nyynatApA3EVrojHOuq4l6fhB4eeCk4PIOeadvOJz9/4w3vGI44Go17uaXOWEcPkaD8kuKm7g6Q==,
+        integrity: sha512-BeJ9tizLvmTXGD7deYU5G04OtHhwk5uHxbpEPVp09gKvUBIXmau/4Bshxhu9ci54MvVWfGjCEx4RzvsTntojwA==,
       }
 
   "@hono/node-server@1.19.14":
@@ -2736,6 +2739,12 @@ packages:
     resolution:
       {
         integrity: sha512-FAIDA8eovSt5qcDgcBvDuX/v0Cjz0ohGhENZ/wpc3y+oZCY2afZ9Baqql3g/lC+OHRnciQol4ww7tuthOb9idw==,
+      }
+
+  fastify-plugin@6.0.0:
+    resolution:
+      {
+        integrity: sha512-fZOty7z3O7vOliF6d8bHE3wiEh1KcNnKEQensSgTk9C1DvN6nRLS++XVd86v33Hw/8u9Un8A1zDrQ8ujcQDHEg==,
       }
 
   fastify@5.10.0:
@@ -5134,10 +5143,10 @@ snapshots:
       "@fastify/forwarded": 3.0.1
       ipaddr.js: 2.4.0
 
-  "@fastify/rate-limit@10.3.0":
+  "@fastify/rate-limit@11.1.0":
     dependencies:
       "@lukeed/ms": 2.0.2
-      fastify-plugin: 5.1.0
+      fastify-plugin: 6.0.0
       toad-cache: 3.7.4
 
   "@hono/node-server@1.19.14(hono@4.12.30)":
@@ -6101,6 +6110,8 @@ snapshots:
   fast-uri@4.1.0: {}
 
   fastify-plugin@5.1.0: {}
+
+  fastify-plugin@6.0.0: {}
 
   fastify@5.10.0:
     dependencies:

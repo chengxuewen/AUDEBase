@@ -17,8 +17,9 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@audebase/plugin-core": "workspace:*",
     "@audebase/shared-types": "workspace:*",
-    "@fastify/rate-limit": "^10.2.0",
+    "@fastify/rate-limit": "^11.1.0",
     "drizzle-orm": "^0.45.0",
     "fastify": "^5.0.0",
     "pg": "^8.13.0",

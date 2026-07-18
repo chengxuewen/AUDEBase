@@ -4,6 +4,7 @@ import fastifyRateLimit from "@fastify/rate-limit";
 import { ErrorCode, UserError } from "@audebase/shared-types";
 import { loadConfig, type KernelConfig } from "./config";
 import { createDatabaseProvider, type DatabaseProvider } from "./db";
+import { bootstrapKernel } from "./bootstrap";
 import { registerHealthRoutes } from "./health/routes";
 
 /**
@@ -68,6 +69,13 @@ export async function createKernelApp(options: KernelOptions = {}): Promise<Kern
       connectionString: config.DATABASE_URL,
       logger,
     });
+
+  // 4.5 执行内核引导（首次运行创建系统数据）
+  try {
+    await bootstrapKernel(db, logger);
+  } catch (err: unknown) {
+    logger.error({ err }, "kernel bootstrap failed — continuing without seed data");
+  }
 
   // 5. 注入 X-Request-ID 到响应头
   server.addHook("onRequest", async (request, reply) => {
