@@ -122,9 +122,18 @@ importers:
       "@audebase/i18n":
         specifier: workspace:*
         version: link:../i18n
+      "@audebase/manifest-engine":
+        specifier: workspace:*
+        version: link:../manifest-engine
+      "@audebase/migration-engine":
+        specifier: workspace:*
+        version: link:../migration-engine
       "@audebase/plugin-core":
         specifier: workspace:*
         version: link:../plugin-core
+      "@audebase/plugin-framework":
+        specifier: workspace:*
+        version: link:../plugin-framework
       "@audebase/rbac":
         specifier: workspace:*
         version: link:../rbac
