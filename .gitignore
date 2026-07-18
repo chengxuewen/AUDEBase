@@ -82,3 +82,5 @@ audebase-*.tar.zst
 # Environment files
 *.env
 .env.*
+!.env.example
+!.env.template
