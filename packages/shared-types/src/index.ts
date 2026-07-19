@@ -64,6 +64,9 @@ export { auditActionCategorySchema, paginatedAuditLogsSchema } from "./audit";
 
 // === i18n ===
 export type { LocaleMap, LocaleCode, TranslateFunction } from "./i18n";
+// === Versioning (D1.8) ===
+export type { SemVer, VersionInfo } from "./plugin";
+export { parseSemVer, semVerSchema } from "./plugin";
 
 // === Filter ===
 export type { ListQueryParams } from "./filter";
