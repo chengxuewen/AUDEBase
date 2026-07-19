@@ -30,7 +30,9 @@ describe("ExamplePlugin", () => {
 
     test("load() resolves successfully", async () => {
       // Act
-      await expect(plugin.load()).resolves.toBeUndefined();
+      await plugin.load();
+      // Assert
+      expect(plugin.isLoaded).toBe(true);
     });
   });
 
@@ -177,3 +179,4 @@ describe("manifest", () => {
     expect(manifest.lifecycle.hooks.load).toBe("load");
   });
 });
+
