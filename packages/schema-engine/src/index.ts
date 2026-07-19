@@ -8,3 +8,11 @@ export type {
   ValidationResult,
 } from "./types";
 export { FIELD_TYPES } from "./types";
+
+export {
+  fieldToColumnType,
+  generateCreateTable,
+  generateCreateIndexes,
+  generateAlterTable,
+  validateSqlIdentifiers,
+} from "./ddl";
