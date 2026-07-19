@@ -36,6 +36,9 @@ importers:
       '@types/node':
         specifier: ^22.0.0
         version: 22.20.1
+      '@vitest/coverage-v8':
+        specifier: ^3.2.7
+        version: 3.2.7(vitest@3.2.7(@types/node@22.20.1)(happy-dom@17.6.3)(jsdom@25.0.1)(tsx@4.23.1)(yaml@2.9.0))
       eslint:
         specifier: ^9.0.0
         version: 9.39.5
@@ -426,6 +429,9 @@ importers:
       '@audebase/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      drizzle-orm:
+        specifier: ^0.45.0
+        version: 0.45.2(@types/pg@8.20.0)(pg@8.22.0)
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
