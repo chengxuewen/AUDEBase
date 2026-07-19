@@ -176,4 +176,20 @@ describe("createLogger", () => {
     expect(fatalLog).toBeDefined();
     expect(fatalLog?.level).toBe(60);
   });
+
+  // 无 stream — 默认 pino 输出（非 pretty 路径）
+  test("无 stream 时使用默认 pino 输出", () => {
+    const logger = createLogger({ level: "info", name: "test" });
+    expect(logger).toBeDefined();
+    expect(logger.level).toBe("info");
+    // 不应抛错
+    logger.info("default pino");
+  });
+
+  test("pretty 模式启用 pino-pretty transport", () => {
+    const logger = createLogger({ level: "debug", pretty: true });
+    expect(logger).toBeDefined();
+    expect(logger.level).toBe("debug");
+    logger.info("pretty mode");
+  });
 });
