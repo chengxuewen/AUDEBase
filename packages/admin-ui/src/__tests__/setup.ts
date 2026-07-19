@@ -1,42 +1,12 @@
+import { Storage } from "happy-dom";
 import "@testing-library/jest-dom/vitest";
 
-// localStorage mock for Node.js test environment
-const store = new Map<string, string>();
+// happy-dom provides localStorage natively, but vitest's environment setup
+// doesn't copy it to the global scope due to a Node.js 22 compatibility
+// issue: 'localStorage' in globalThis === true, so getWindowKeys skips it.
+// Use happy-dom's Storage directly instead of reimplementing a mock.
 Object.defineProperty(globalThis, "localStorage", {
-  value: {
-    getItem: (key: string): string | null => store.get(key) ?? null,
-    setItem: (key: string, value: string): void => {
-      store.set(key, value);
-    },
-    removeItem: (key: string): void => {
-      store.delete(key);
-    },
-    clear: (): void => {
-      store.clear();
-    },
-    get length(): number {
-      return store.size;
-    },
-    key: (index: number): string | null => {
-      const keys = Array.from(store.keys());
-      return keys[index] ?? null;
-    },
-  },
+  value: new Storage(),
   writable: true,
   configurable: true,
-});
-
-// matchMedia mock for antd responsive utilities in jsdom
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: (query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  }),
 });

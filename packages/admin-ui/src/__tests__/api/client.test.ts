@@ -1,8 +1,29 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import { ApiClient } from "../../api/client";
 
 describe("ApiClient", () => {
   let client: ApiClient;
+
+  beforeAll(() => {
+    // jsdom + vitest globals may not provide localStorage
+    const s = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      getItem: (k: string) => s.get(k) ?? null,
+      setItem: (k: string, v: string) => {
+        s.set(k, v);
+      },
+      removeItem: (k: string) => {
+        s.delete(k);
+      },
+      clear: () => {
+        s.clear();
+      },
+      get length() {
+        return s.size;
+      },
+      key: (i: number) => Array.from(s.keys())[i] ?? null,
+    });
+  });
 
   beforeEach(() => {
     client = new ApiClient();
