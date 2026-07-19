@@ -1,5 +1,5 @@
 name: "@audebase/plugin-example-todo"
-version: "0.1.0"
+version: "0.2.0"
 display_name: "Example Todo"
 description: "Example plugin demonstrating the AUDEBase plugin framework with a simple todo model"
 category: "oa"
