@@ -18,6 +18,7 @@ import { registerPluginRoutes } from "./api/plugins";
 import { registerTenantMiddleware } from "./tenant";
 import { registerVersionedRoutes } from "./api/versioning";
 import cronPlugin from "./plugins/cron";
+import wsPlugin from "./plugins/ws";
 
 /**
  * 内核应用实例
@@ -167,6 +168,16 @@ export async function createKernelApp(options: KernelOptions = {}): Promise<Kern
       logger.info("cron plugin registered");
     } catch (err: unknown) {
       logger.error({ err }, "cron plugin registration failed");
+    }
+  }
+
+  // 8.5 注册 WebSocket 插件 (Phase 2 shim)（测试可跳过）
+  if (!options.skipPlugins) {
+    try {
+      await server.register(wsPlugin);
+      logger.info("websocket plugin registered");
+    } catch (err: unknown) {
+      logger.error({ err }, "websocket plugin registration failed");
     }
   }
 

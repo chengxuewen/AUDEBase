@@ -257,6 +257,9 @@ importers:
       "@audebase/shared-types":
         specifier: workspace:*
         version: link:../shared-types
+      "@audebase/websocket":
+        specifier: workspace:*
+        version: link:../websocket
       "@fastify/rate-limit":
         specifier: ^11.1.0
         version: 11.1.0
@@ -347,6 +350,18 @@ importers:
       "@audebase/shared-types":
         specifier: workspace:*
         version: link:../shared-types
+    devDependencies:
+      "@types/node":
+        specifier: ^22.0.0
+        version: 22.20.1
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jsdom@25.0.1)(tsx@4.23.1)(yaml@2.9.0)
+
+  packages/notification:
     devDependencies:
       "@types/node":
         specifier: ^22.0.0
@@ -449,6 +464,22 @@ importers:
         specifier: ^3.24.0
         version: 3.25.76
 
+  packages/schema-engine:
+    dependencies:
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
+    devDependencies:
+      "@types/node":
+        specifier: ^22.0.0
+        version: 22.20.1
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jsdom@25.0.1)(tsx@4.23.1)(yaml@2.9.0)
+
   packages/shared-types:
     devDependencies:
       typescript:
@@ -457,6 +488,25 @@ importers:
       zod:
         specifier: ^3.24.0
         version: 3.25.76
+
+  packages/websocket:
+    dependencies:
+      "@audebase/shared-types":
+        specifier: workspace:*
+        version: link:../shared-types
+    devDependencies:
+      "@types/node":
+        specifier: ^22.0.0
+        version: 22.20.1
+      "@vitest/coverage-v8":
+        specifier: ^3.0.0
+        version: 3.2.7(vitest@3.2.7(@types/node@22.20.1)(jsdom@25.0.1)(tsx@4.23.1)(yaml@2.9.0))
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jsdom@25.0.1)(tsx@4.23.1)(yaml@2.9.0)
 
 packages:
   "@adobe/css-tools@4.5.0":
