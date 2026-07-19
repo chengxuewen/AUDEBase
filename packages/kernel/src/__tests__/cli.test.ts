@@ -121,12 +121,132 @@ describe("parseArgs", () => {
     // Assert
     expect(result).toEqual<ParsedArgs>({ command: "tenant" });
   });
-  const args = ["/usr/bin/node", "/path/to/cli.ts", "start", "--port", "4000"];
 
-  // Act
-  const result = parseArgs(args);
+  // ── Plugin commands ────────────────────────────────────────
 
-  // Assert
-  // Extra args are ignored — only first positional matters
-  expect(result.command).toBe("start");
+  test('"doctor" is recognized', () => {
+    // Arrange
+    const args = argv("doctor");
+
+    // Act
+    const result = parseArgs(args);
+
+    // Assert
+    expect(result).toEqual<ParsedArgs>({ command: "doctor" });
+  });
+
+  test('"plugin list" is recognized', () => {
+    // Arrange
+    const args = argv("plugin", "list");
+
+    // Act
+    const result = parseArgs(args);
+
+    // Assert
+    expect(result).toEqual<ParsedArgs>({ command: "plugin", subcommand: "list" });
+  });
+
+  test('"plugin info my-plugin" captures name', () => {
+    // Arrange
+    const args = argv("plugin", "info", "my-plugin");
+
+    // Act
+    const result = parseArgs(args);
+
+    // Assert
+    expect(result).toEqual<ParsedArgs>({
+      command: "plugin",
+      subcommand: "info",
+      pluginName: "my-plugin",
+    });
+  });
+
+  test('"plugin enable my-plugin" captures name', () => {
+    // Arrange
+    const args = argv("plugin", "enable", "my-plugin");
+
+    // Act
+    const result = parseArgs(args);
+
+    // Assert
+    expect(result).toEqual<ParsedArgs>({
+      command: "plugin",
+      subcommand: "enable",
+      pluginName: "my-plugin",
+    });
+  });
+
+  test('"plugin disable my-plugin" captures name', () => {
+    // Arrange
+    const args = argv("plugin", "disable", "my-plugin");
+
+    // Act
+    const result = parseArgs(args);
+
+    // Assert
+    expect(result).toEqual<ParsedArgs>({
+      command: "plugin",
+      subcommand: "disable",
+      pluginName: "my-plugin",
+    });
+  });
+
+  test('"plugin scaffold my-plugin" with defaults', () => {
+    // Arrange
+    const args = argv("plugin", "scaffold", "my-plugin");
+
+    // Act
+    const result = parseArgs(args);
+
+    // Assert
+    expect(result).toEqual<ParsedArgs>({
+      command: "plugin",
+      subcommand: "scaffold",
+      pluginName: "my-plugin",
+      pluginOptions: {},
+    });
+  });
+
+  test('"plugin scaffold my-plugin --partition erp --with-models" captures options', () => {
+    // Arrange
+    const args = argv("plugin", "scaffold", "my-plugin", "--partition", "erp", "--with-models");
+
+    // Act
+    const result = parseArgs(args);
+
+    // Assert
+    expect(result).toEqual<ParsedArgs>({
+      command: "plugin",
+      subcommand: "scaffold",
+      pluginName: "my-plugin",
+      pluginOptions: { partition: "erp", withModels: true },
+    });
+  });
+
+  test('"plugin scaffold test --mode process --partition mes" captures options', () => {
+    // Arrange
+    const args = argv("plugin", "scaffold", "test", "--mode", "process", "--partition", "mes");
+
+    // Act
+    const result = parseArgs(args);
+
+    // Assert
+    expect(result).toEqual<ParsedArgs>({
+      command: "plugin",
+      subcommand: "scaffold",
+      pluginName: "test",
+      pluginOptions: { mode: "process", partition: "mes" },
+    });
+  });
+
+  test('"plugin" without subcommand is recognized', () => {
+    // Arrange
+    const args = argv("plugin");
+
+    // Act
+    const result = parseArgs(args);
+
+    // Assert
+    expect(result).toEqual<ParsedArgs>({ command: "plugin" });
+  });
 });
