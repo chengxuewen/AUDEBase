@@ -7,6 +7,7 @@ import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import PluginManagementPage from "./pages/PluginManagementPage";
 import RoleManagementPage from "./pages/RoleManagementPage";
+import SchemaPage from "./pages/SchemaPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem("aude_access_token");
@@ -65,6 +66,7 @@ export default function App() {
               <Route path="users" element={<div>用户管理（待实现）</div>} />
               <Route path="plugins" element={<PluginManagementPage />} />
               <Route path="roles" element={<RoleManagementPage />} />
+              <Route path="schema/:collectionName" element={<SchemaPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Routes>

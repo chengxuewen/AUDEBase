@@ -16,3 +16,11 @@ export {
   generateAlterTable,
   validateSqlIdentifiers,
 } from "./ddl";
+
+export {
+  fieldToColumn,
+  fieldToFormField,
+  collectionToColumns,
+  collectionToFormFields,
+} from "./ui-mapping";
+export type { AntdComponent, ColumnConfig, FormFieldConfig } from "./ui-mapping";
