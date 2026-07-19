@@ -75,3 +75,45 @@ export const paginatedPluginsSchema = z.object({
     totalPages: z.number().int().min(0),
   }),
 });
+
+/**
+ * SemVer 版本号 (D1.8: API 版本控制)
+ */
+export interface SemVer {
+  major: number;
+  minor: number;
+  patch: number;
+  prerelease?: string;
+}
+
+/**
+ * API 版本信息 - 关联 manifest.exports 中声明的 api_version
+ */
+export interface VersionInfo {
+  apiVersion: SemVer;
+  deprecated?: boolean;
+  sunsetDate?: string;
+}
+
+/** SemVer 字符串正则: MAJOR.MINOR.PATCH[-PRERELEASE] */
+const SEMVER_RE = /^(\d+)\.(\d+)\.(\d+)(?:-(.+))?$/;
+
+/**
+ * 解析 SemVer 版本字符串
+ * @throws 版本字符串格式无效时抛出
+ */
+export function parseSemVer(version: string): SemVer {
+  const m = version.trim().match(SEMVER_RE);
+  if (!m) {
+    throw new Error(`Invalid SemVer: "${version}". Expected MAJOR.MINOR.PATCH[-PRERELEASE]`);
+  }
+  return {
+    major: parseInt(m[1]!, 10),
+    minor: parseInt(m[2]!, 10),
+    patch: parseInt(m[3]!, 10),
+    ...(m[4] ? { prerelease: m[4] } : {}),
+  };
+}
+
+/** SemVer Zod schema */
+export const semVerSchema = z.string().regex(SEMVER_RE, "Invalid SemVer format");
