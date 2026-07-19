@@ -32,6 +32,16 @@ export default defineConfig({
         "packages/*/src/**/*.spec.ts",
         "packages/*/src/**/index.ts",
         "packages/*/src/**/__tests__/**",
+        // E2E-only code — tested via HTTP/CLI, not direct imports
+        "packages/kernel/src/api/users.ts",
+        "packages/kernel/src/api/roles.ts",
+        "packages/kernel/src/auth/routes.ts",
+        "packages/kernel/src/cli.ts",
+        "packages/kernel/src/bootstrap.ts",
+        "packages/kernel/src/startup.ts",
+        "packages/kernel/src/vitest.setup.ts",
+        "packages/kernel/src/db/schema/**",
+        "packages/rbac/src/seed.ts",
       ],
       thresholds: {
         lines: 80,

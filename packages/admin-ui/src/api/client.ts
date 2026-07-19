@@ -28,7 +28,8 @@ class ApiClient {
   private token: string | null = null;
 
   constructor() {
-    this.token = localStorage.getItem(TOKEN_KEY);
+    // ponytail: guard for non-browser envs (SSR, happy-dom import race)
+    this.token = typeof localStorage !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
   }
 
   setToken(token: string | null): void {
@@ -83,7 +84,7 @@ class ApiClient {
     // 401 → clear token, redirect to login
     if (response.status === 401) {
       this.setToken(null);
-      if (window.location.pathname !== "/login") {
+      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
         window.location.href = "/login";
       }
       throw new Error("登录已过期，请重新登录");
