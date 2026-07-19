@@ -10,6 +10,10 @@ import { registerUserRoutes } from "./api/users";
 import { registerRoleRoutes } from "./api/roles";
 import rbacPlugin from "./plugins/rbac";
 import i18nPlugin from "./plugins/i18n";
+import eventBusPlugin from "./plugins/eventbus";
+import commsPlugin from "./plugins/comms";
+import auditPlugin from "./plugins/audit";
+import type { AuditDatabase } from "@audebase/audit";
 import { registerPluginRoutes } from "./api/plugins";
 import { registerTenantMiddleware } from "./tenant";
 import { registerVersionedRoutes } from "./api/versioning";
@@ -117,12 +121,42 @@ export async function createKernelApp(options: KernelOptions = {}): Promise<Kern
     }
   }
 
+  // 7.55 注册 EventBus 插件（测试可跳过）
+  if (!options.skipPlugins) {
+    try {
+      await server.register(eventBusPlugin, {});
+      logger.info("eventbus plugin registered");
+    } catch (err: unknown) {
+      logger.error({ err }, "eventbus plugin registration failed");
+    }
+  }
+
+  // 7.56 注册 Plugin Communication 插件（测试可跳过）
+  if (!options.skipPlugins) {
+    try {
+      await server.register(commsPlugin);
+      logger.info("comms plugin registered");
+    } catch (err: unknown) {
+      logger.error({ err }, "comms plugin registration failed");
+    }
+  }
+
   // 7.6 注册 i18n 国际化插件（测试可跳过）
   if (!options.skipPlugins) {
     try {
       await server.register(i18nPlugin, { config: { defaultLocale: "zh" } });
     } catch (err: unknown) {
       logger.error({ err }, "i18n plugin registration failed");
+    }
+  }
+
+  // 7.65 注册审计日志插件（测试可跳过）
+  if (!options.skipPlugins) {
+    try {
+      await server.register(auditPlugin, { db: db.db as unknown as AuditDatabase });
+      logger.info("audit plugin registered");
+    } catch (err: unknown) {
+      logger.error({ err }, "audit plugin registration failed");
     }
   }
 

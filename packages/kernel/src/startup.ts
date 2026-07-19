@@ -24,6 +24,10 @@ import {
 import type { DatabaseProvider } from "./db";
 import { bootstrapKernel } from "./bootstrap";
 import { scanManifests, initAndLoadPlugins } from "./plugins/loader";
+import { InMemoryEventBus } from "@audebase/event-bus";
+import { ServiceRegistry } from "@audebase/plugin-communication";
+import type { EventBus } from "@audebase/event-bus";
+import type { IServiceRegistry } from "@audebase/plugin-communication";
 // ── Types ────────────────────────────────────────────────────
 
 export interface StartupOptions {
@@ -42,6 +46,10 @@ export interface StartupResult {
   pluginCount: number;
   /** Loaded plugin names in dependency order */
   pluginNames: string[];
+  /** Phase 1b: in-memory event bus instance */
+  eventBus: EventBus;
+  /** Phase 1b: in-memory service registry instance */
+  serviceRegistry: IServiceRegistry;
 }
 // ── Known plugin manifests (Phase 1a hardcoded) ──────────────
 
@@ -72,7 +80,14 @@ export async function startupPipeline(
 ): Promise<StartupResult> {
   if (options?.skipPlugins) {
     logger.info({ phase: "startup" }, "startup pipeline skipped (skipPlugins=true)");
-    return { manifestCount: 0, migrationCount: 0, pluginCount: 0, pluginNames: [] };
+    return {
+      manifestCount: 0,
+      migrationCount: 0,
+      pluginCount: 0,
+      pluginNames: [],
+      eventBus: new InMemoryEventBus(),
+      serviceRegistry: new ServiceRegistry(),
+    };
   }
 
   logger.info({ phase: "startup" }, "startup pipeline started");
@@ -128,6 +143,12 @@ export async function startupPipeline(
     );
   }
 
+  // d.5 Init Phase 1b services: EventBus + ServiceRegistry (after bootstrap, before plugin load)
+  const eventBus: EventBus = new InMemoryEventBus();
+  const serviceRegistry: IServiceRegistry = new ServiceRegistry();
+
+  logger.info({ phase: "startup" }, "Phase 1b services initialized (event-bus, service-registry)");
+
   // e. Init plugin framework and load all plugins
   const { loadedCount: pluginCount, loadedNames: pluginNames } = await initAndLoadPlugins(
     manifests,
@@ -135,7 +156,7 @@ export async function startupPipeline(
   );
 
   // f. Return
-  return { manifestCount, migrationCount, pluginCount, pluginNames };
+  return { manifestCount, migrationCount, pluginCount, pluginNames, eventBus, serviceRegistry };
 }
 
 function pluginPackageDir(pluginName: string): string {

@@ -1,5 +1,8 @@
 // Barrel exports for @audebase/manifest-engine
 export { ManifestLoader } from "./loader.js";
+export { ExtendsResolver } from "./extends.js";
+export type { ExtendsDeclaration, FieldAddition, MergeResult } from "./extends.js";
+export { ExtendsError } from "./extends.js";
 export { validateManifest, validateManifestSafe, manifestSchema } from "./validator.js";
 export type { ManifestSchema } from "./validator.js";
 export type {
