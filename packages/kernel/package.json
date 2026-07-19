@@ -27,6 +27,7 @@
     "@audebase/rbac": "workspace:*",
     "@audebase/audit": "workspace:*",
     "@audebase/i18n": "workspace:*",
+    "@audebase/cron": "workspace:*",
     "@audebase/shared-types": "workspace:*",
     "@fastify/rate-limit": "^11.1.0",
     "drizzle-orm": "^0.45.0",

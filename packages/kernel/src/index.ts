@@ -12,6 +12,8 @@ import rbacPlugin from "./plugins/rbac";
 import i18nPlugin from "./plugins/i18n";
 import { registerPluginRoutes } from "./api/plugins";
 import { registerTenantMiddleware } from "./tenant";
+import { registerVersionedRoutes } from "./api/versioning";
+import cronPlugin from "./plugins/cron";
 
 /**
  * 内核应用实例
@@ -124,6 +126,16 @@ export async function createKernelApp(options: KernelOptions = {}): Promise<Kern
     }
   }
 
+  // 8. 注册 Cron 定时任务插件（测试可跳过）
+  if (!options.skipPlugins) {
+    try {
+      await server.register(cronPlugin, { redisUrl: config.REDIS_URL });
+      logger.info("cron plugin registered");
+    } catch (err: unknown) {
+      logger.error({ err }, "cron plugin registration failed");
+    }
+  }
+
   // 7.7 注册用户 CRUD 路由（测试可跳过）
   if (!options.skipPlugins) {
     try {
@@ -144,16 +156,18 @@ export async function createKernelApp(options: KernelOptions = {}): Promise<Kern
     }
   }
 
-  // 7.9 注册插件管理路由（测试可跳过）
+  // 7.9 注册插件管理路由（版本化 + 旧平铺共存）
   if (!options.skipPlugins) {
     try {
-      registerPluginRoutes(server, db.db, config.AUDE_JWT_SECRET, logger);
-      logger.info("plugin routes registered");
+      // 版本化路由: /api/v1/plugins
+      registerVersionedRoutes(server, "plugins", "1.0.0", { keepFlat: true }, (scoped) => {
+        registerPluginRoutes(scoped, db.db, config.AUDE_JWT_SECRET, logger);
+      });
+      logger.info("plugin routes registered (v1 + flat)");
     } catch (err: unknown) {
       logger.error({ err }, "plugin routes registration failed");
     }
   }
-  // 8. 优雅关闭
   const shutdown = async (): Promise<void> => {
     logger.info("shutting down kernel");
     await server.close();

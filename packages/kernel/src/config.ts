@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ErrorCode, UserError } from "@audebase/shared-types";
+
 /**
  * 内核配置 — 环境变量 Zod 校验
  *
@@ -36,6 +37,15 @@ export const kernelConfigSchema = z.object({
 
   /** 慢查询阈值（毫秒） */
   AUDE_SLOW_QUERY_THRESHOLD: z.coerce.number().int().min(1).default(100),
+
+  /** Redis 连接字符串（用于缓存、BullMQ、Pub/Sub） */
+  REDIS_URL: z
+    .string()
+    .url()
+    .startsWith("redis", {
+      message: "REDIS_URL must be a valid redis:// connection string",
+    })
+    .default("redis://localhost:6379"),
 });
 
 export type KernelConfig = z.infer<typeof kernelConfigSchema>;
