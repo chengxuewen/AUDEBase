@@ -1,4 +1,4 @@
-import type { WorkflowDef, WorkflowInstance, WorkflowNode, WorkflowStatus } from './types.js';
+import type { WorkflowDef, WorkflowInstance, WorkflowNode, WorkflowStatus } from "./types.js";
 
 // ponytail: simple in-memory state machine; add persistence layer when needed
 
@@ -20,7 +20,7 @@ export class WorkflowStateMachine {
   /** Check if a node is a valid terminal node (type === 'end'). */
   private isEndNode(def: WorkflowDef, nodeId: string): boolean {
     const node = this.findNode(def, nodeId);
-    return node.type === 'end';
+    return node.type === "end";
   }
 
   /**
@@ -28,15 +28,9 @@ export class WorkflowStateMachine {
    * Validates: terminal statuses block transitions, destination must exist,
    * transition must be defined.
    */
-  transition(
-    def: WorkflowDef,
-    instance: WorkflowInstance,
-    targetNodeId: string,
-  ): WorkflowInstance {
-    if (instance.status === 'completed' || instance.status === 'cancelled') {
-      throw new Error(
-        `Cannot transition from terminal status "${instance.status}"`,
-      );
+  transition(def: WorkflowDef, instance: WorkflowInstance, targetNodeId: string): WorkflowInstance {
+    if (instance.status === "completed" || instance.status === "cancelled") {
+      throw new Error(`Cannot transition from terminal status "${instance.status}"`);
     }
 
     this.findNode(def, targetNodeId);
@@ -50,7 +44,7 @@ export class WorkflowStateMachine {
     return {
       ...instance,
       currentNodeId: targetNodeId,
-      status: 'active',
+      status: "active",
     };
   }
 
@@ -58,10 +52,8 @@ export class WorkflowStateMachine {
    * Complete the workflow. Only valid when current node is an 'end' node.
    */
   complete(def: WorkflowDef, instance: WorkflowInstance): WorkflowInstance {
-    if (instance.status === 'completed' || instance.status === 'cancelled') {
-      throw new Error(
-        `Cannot complete workflow with terminal status "${instance.status}"`,
-      );
+    if (instance.status === "completed" || instance.status === "cancelled") {
+      throw new Error(`Cannot complete workflow with terminal status "${instance.status}"`);
     }
 
     if (!this.isEndNode(def, instance.currentNodeId)) {
@@ -72,13 +64,13 @@ export class WorkflowStateMachine {
 
     return {
       ...instance,
-      status: 'completed',
+      status: "completed",
     };
   }
 
   /** Suspend an active workflow. */
   suspend(instance: WorkflowInstance): WorkflowInstance {
-    if (instance.status !== 'active') {
+    if (instance.status !== "active") {
       throw new Error(
         `Cannot suspend workflow with status "${instance.status}". Only active workflows can be suspended.`,
       );
@@ -86,13 +78,13 @@ export class WorkflowStateMachine {
 
     return {
       ...instance,
-      status: 'suspended',
+      status: "suspended",
     };
   }
 
   /** Resume a suspended workflow. */
   resume(instance: WorkflowInstance): WorkflowInstance {
-    if (instance.status !== 'suspended') {
+    if (instance.status !== "suspended") {
       throw new Error(
         `Cannot resume workflow with status "${instance.status}". Only suspended workflows can be resumed.`,
       );
@@ -100,21 +92,19 @@ export class WorkflowStateMachine {
 
     return {
       ...instance,
-      status: 'active',
+      status: "active",
     };
   }
 
   /** Cancel a workflow. Valid for active, suspended, or draft statuses. */
   cancel(instance: WorkflowInstance): WorkflowInstance {
-    if (instance.status === 'completed' || instance.status === 'cancelled') {
-      throw new Error(
-        `Cannot cancel workflow with terminal status "${instance.status}"`,
-      );
+    if (instance.status === "completed" || instance.status === "cancelled") {
+      throw new Error(`Cannot cancel workflow with terminal status "${instance.status}"`);
     }
 
     return {
       ...instance,
-      status: 'cancelled',
+      status: "cancelled",
     };
   }
 }

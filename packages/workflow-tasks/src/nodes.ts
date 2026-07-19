@@ -78,8 +78,7 @@ export function createNotificationNode(
 ): NodeHandler {
   return {
     async execute(context: WorkflowContext): Promise<NodeResult> {
-      const recipient =
-        config.recipient ?? (context.variables.userId as string) ?? "system";
+      const recipient = config.recipient ?? (context.variables.userId as string) ?? "system";
 
       await provider.send(recipient, config.template, {
         ...context.data,
@@ -162,10 +161,7 @@ function parseLiteral(raw: string): unknown {
   }
 
   // Quoted string
-  if (
-    (raw.startsWith('"') && raw.endsWith('"')) ||
-    (raw.startsWith("'") && raw.endsWith("'"))
-  ) {
+  if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
     return raw.slice(1, -1);
   }
 

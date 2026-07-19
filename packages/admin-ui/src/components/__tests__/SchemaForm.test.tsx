@@ -135,7 +135,7 @@ describe("SchemaForm", () => {
       expect(screen.getByText("产品名称")).toBeDefined();
     });
     // Fill required field to pass validation
-    const nameInput = document.querySelector("#name") ;
+    const nameInput = document.querySelector("#name");
     if (nameInput) {
       fireEvent.change(nameInput, { target: { value: "测试产品" } });
     }

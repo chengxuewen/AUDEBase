@@ -19,9 +19,7 @@ export class WorkflowEngine {
   async start(context: Record<string, unknown>): Promise<WorkflowInstance> {
     const startNode = this.workflow.nodes.find((n) => n.type === "start");
     if (!startNode) {
-      throw new Error(
-        `Workflow "${this.workflow.id}" has no start node`,
-      );
+      throw new Error(`Workflow "${this.workflow.id}" has no start node`);
     }
 
     const instance: WorkflowInstance = {
@@ -73,10 +71,7 @@ export class WorkflowEngine {
     return instance;
   }
 
-  async executeNode(
-    instance: WorkflowInstance,
-    node: WorkflowNode,
-  ): Promise<void> {
+  async executeNode(instance: WorkflowInstance, node: WorkflowNode): Promise<void> {
     switch (node.type) {
       case "start":
       case "script":
@@ -106,9 +101,7 @@ export class WorkflowEngine {
               (t) => t.id === condition.transitionId,
             );
             if (!transition) {
-              throw new Error(
-                `Condition transition "${condition.transitionId}" not found`,
-              );
+              throw new Error(`Condition transition "${condition.transitionId}" not found`);
             }
             this.applyTransition(instance, transition);
             matched = true;
@@ -122,13 +115,9 @@ export class WorkflowEngine {
       }
 
       case "parallel": {
-        const outgoing = this.workflow.transitions.filter(
-          (t) => t.from === node.id,
-        );
+        const outgoing = this.workflow.transitions.filter((t) => t.from === node.id);
         for (const transition of outgoing) {
-          const nextNode = this.workflow.nodes.find(
-            (n) => n.id === transition.to,
-          );
+          const nextNode = this.workflow.nodes.find((n) => n.id === transition.to);
           if (nextNode && nextNode.type !== "end") {
             await this.taskManager.createTask(instance, nextNode);
           }
@@ -155,10 +144,7 @@ export class WorkflowEngine {
     return this.advance(instance.id);
   }
 
-  async onTaskRejected(
-    taskId: string,
-    reason?: string,
-  ): Promise<WorkflowInstance> {
+  async onTaskRejected(taskId: string, reason?: string): Promise<WorkflowInstance> {
     await this.taskManager.rejectTask(taskId, reason);
     const task = await this.taskManager.getTask(taskId);
     if (!task) {
@@ -185,10 +171,7 @@ export class WorkflowEngine {
     return this.workflow.nodes.find((n) => n.id === nodeId);
   }
 
-  private moveToNextNode(
-    instance: WorkflowInstance,
-    currentNode: WorkflowNode,
-  ): void {
+  private moveToNextNode(instance: WorkflowInstance, currentNode: WorkflowNode): void {
     const transition = this.findDefaultTransition(currentNode);
     if (transition) {
       this.applyTransition(instance, transition);
@@ -205,13 +188,9 @@ export class WorkflowEngine {
     instance: WorkflowInstance,
     transition: WorkflowDef["transitions"][number],
   ): void {
-    const nextNode = this.workflow.nodes.find(
-      (n) => n.id === transition.to,
-    );
+    const nextNode = this.workflow.nodes.find((n) => n.id === transition.to);
     if (!nextNode) {
-      throw new Error(
-        `Transition target "${transition.to}" not found in workflow`,
-      );
+      throw new Error(`Transition target "${transition.to}" not found in workflow`);
     }
 
     instance.currentNodeId = nextNode.id;
@@ -222,33 +201,22 @@ export class WorkflowEngine {
     }
   }
 
-  private applyDefaultTransition(
-    instance: WorkflowInstance,
-    node: WorkflowNode,
-  ): void {
+  private applyDefaultTransition(instance: WorkflowInstance, node: WorkflowNode): void {
     const transition = this.findDefaultTransition(node);
     if (!transition) {
-      throw new Error(
-        `No default transition found from node "${node.id}"`,
-      );
+      throw new Error(`No default transition found from node "${node.id}"`);
     }
     this.applyTransition(instance, transition);
   }
 
-  private updateTaskInInstance(
-    instance: WorkflowInstance,
-    task: TaskInstance,
-  ): void {
+  private updateTaskInInstance(instance: WorkflowInstance, task: TaskInstance): void {
     const idx = instance.taskInstances.findIndex((t) => t.id === task.id);
     if (idx !== -1) {
       instance.taskInstances[idx] = task;
     }
   }
 
-  private evaluateCondition(
-    expression: string,
-    context: Record<string, unknown>,
-  ): boolean {
+  private evaluateCondition(expression: string, context: Record<string, unknown>): boolean {
     const [key, value] = expression.split("=").map((s) => s.trim());
     if (!key || value === undefined) return false;
     return String(context[key]) === value;

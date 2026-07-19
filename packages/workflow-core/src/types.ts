@@ -1,14 +1,7 @@
-export type WorkflowStatus = 'draft' | 'active' | 'suspended' | 'completed' | 'cancelled';
+export type WorkflowStatus = "draft" | "active" | "suspended" | "completed" | "cancelled";
 export type NodeType =
-  | 'start'
-  | 'end'
-  | 'task'
-  | 'approval'
-  | 'condition'
-  | 'parallel'
-  | 'script'
-  | 'notification';
-export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'rejected' | 'cancelled';
+  "start" | "end" | "task" | "approval" | "condition" | "parallel" | "script" | "notification";
+export type TaskStatus = "pending" | "in_progress" | "completed" | "rejected" | "cancelled";
 
 export interface WorkflowDef {
   readonly id: string;

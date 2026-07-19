@@ -54,7 +54,7 @@ permissions:
 
 ```bash
 # 1. 克隆
-git clone https://github.com/your-org/audebase.git
+git clone https://gitee.com/chengxuewen/AUDEBase.git
 cd audebase
 
 # 2. 配置环境变量

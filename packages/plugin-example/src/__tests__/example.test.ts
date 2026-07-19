@@ -179,4 +179,3 @@ describe("manifest", () => {
     expect(manifest.lifecycle.hooks.load).toBe("load");
   });
 });
-

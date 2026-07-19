@@ -1,14 +1,7 @@
 // ponytail: types defined locally until @audebase/workflow-core is ready
 
 export type WorkflowNodeType =
-  | "start"
-  | "end"
-  | "task"
-  | "approval"
-  | "condition"
-  | "parallel"
-  | "script"
-  | "notification";
+  "start" | "end" | "task" | "approval" | "condition" | "parallel" | "script" | "notification";
 
 export interface WorkflowTransition {
   id: string;
@@ -66,24 +59,13 @@ export interface WorkflowInstance {
 
 export interface WorkflowStateMachine {
   getCurrentNode(instance: WorkflowInstance): WorkflowNode | undefined;
-  transition(
-    instance: WorkflowInstance,
-    transitionId: string,
-  ): WorkflowInstance;
-  getAvailableTransitions(
-    instance: WorkflowInstance,
-  ): WorkflowTransition[];
+  transition(instance: WorkflowInstance, transitionId: string): WorkflowInstance;
+  getAvailableTransitions(instance: WorkflowInstance): WorkflowTransition[];
 }
 
 export interface TaskManager {
-  createTask(
-    instance: WorkflowInstance,
-    node: WorkflowNode,
-  ): Promise<TaskInstance>;
-  completeTask(
-    taskId: string,
-    result?: Record<string, unknown>,
-  ): Promise<TaskInstance>;
+  createTask(instance: WorkflowInstance, node: WorkflowNode): Promise<TaskInstance>;
+  completeTask(taskId: string, result?: Record<string, unknown>): Promise<TaskInstance>;
   rejectTask(taskId: string, reason?: string): Promise<TaskInstance>;
   getTask(taskId: string): Promise<TaskInstance | undefined>;
 }

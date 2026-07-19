@@ -111,7 +111,9 @@ export default function SchemaTable({ collection, apiPrefix }: SchemaTableProps)
               apiPrefix={apiPrefix}
               mode="edit"
               record={record}
-              onFinish={() => { void actionRef.current?.reload(); }}
+              onFinish={() => {
+                void actionRef.current?.reload();
+              }}
             />
           ) : null,
           canDelete ? (
@@ -121,12 +123,17 @@ export default function SchemaTable({ collection, apiPrefix }: SchemaTableProps)
                   try {
                     const res = await fetch(
                       `${apiPrefix}/${collection.name}/${record.id as string}`,
-                      { method: "DELETE", headers: { Authorization: `Bearer ${localStorage.getItem("aude_access_token") ?? ""}` } },
+                      {
+                        method: "DELETE",
+                        headers: {
+                          Authorization: `Bearer ${localStorage.getItem("aude_access_token") ?? ""}`,
+                        },
+                      },
                     );
                     if (!res.ok) {
-                    const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
-                    void message.error(err.message ?? "删除失败");
+                      const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
+                      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
+                      void message.error(err.message ?? "删除失败");
                       return;
                     }
                     void message.success("删除成功");
@@ -159,7 +166,9 @@ export default function SchemaTable({ collection, apiPrefix }: SchemaTableProps)
             collection={collection}
             apiPrefix={apiPrefix}
             mode="create"
-            onFinish={() => { void actionRef.current?.reload(); }}
+            onFinish={() => {
+              void actionRef.current?.reload();
+            }}
           >
             <Button type="primary" icon={<PlusOutlined />}>
               新建

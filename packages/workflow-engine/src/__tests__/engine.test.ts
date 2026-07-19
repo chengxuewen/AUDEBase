@@ -35,7 +35,12 @@ function makeApprovalWorkflow(): WorkflowDef {
     version: "1.0.0",
     nodes: [
       { id: "start", type: "start", label: "Start" },
-      { id: "approve", type: "approval", label: "Manager Approval", config: { approver: "manager" } },
+      {
+        id: "approve",
+        type: "approval",
+        label: "Manager Approval",
+        config: { approver: "manager" },
+      },
       { id: "end", type: "end", label: "End" },
     ],
     transitions: [
@@ -104,10 +109,7 @@ function makeStateMachine(workflow: WorkflowDef): WorkflowStateMachine {
     getCurrentNode(instance: WorkflowInstance): WorkflowNode | undefined {
       return workflow.nodes.find((n) => n.id === instance.currentNodeId);
     },
-    transition(
-      instance: WorkflowInstance,
-      _transitionId: string,
-    ): WorkflowInstance {
+    transition(instance: WorkflowInstance, _transitionId: string): WorkflowInstance {
       return { ...instance, updatedAt: new Date() };
     },
     getAvailableTransitions(_instance: WorkflowInstance) {
@@ -120,10 +122,7 @@ function makeTaskManager(): TaskManager {
   const tasks = new Map<string, TaskInstance>();
 
   return {
-    async createTask(
-      instance: WorkflowInstance,
-      node: WorkflowNode,
-    ): Promise<TaskInstance> {
+    async createTask(instance: WorkflowInstance, node: WorkflowNode): Promise<TaskInstance> {
       const task: TaskInstance = {
         id: `task-${tasks.size + 1}`,
         workflowInstanceId: instance.id,
@@ -135,10 +134,7 @@ function makeTaskManager(): TaskManager {
       tasks.set(task.id, task);
       return task;
     },
-    async completeTask(
-      taskId: string,
-      result?: Record<string, unknown>,
-    ): Promise<TaskInstance> {
+    async completeTask(taskId: string, result?: Record<string, unknown>): Promise<TaskInstance> {
       const task = tasks.get(taskId);
       if (!task) throw new Error(`Task "${taskId}" not found`);
       task.status = "completed";
@@ -146,10 +142,7 @@ function makeTaskManager(): TaskManager {
       task.completedAt = new Date();
       return task;
     },
-    async rejectTask(
-      taskId: string,
-      _reason?: string,
-    ): Promise<TaskInstance> {
+    async rejectTask(taskId: string, _reason?: string): Promise<TaskInstance> {
       const task = tasks.get(taskId);
       if (!task) throw new Error(`Task "${taskId}" not found`);
       task.status = "rejected";
@@ -367,7 +360,10 @@ describe("WorkflowEngine", () => {
         id: "no-start",
         name: "No Start",
         version: "1.0.0",
-        nodes: [{ id: "task1", type: "task" }, { id: "end", type: "end" }],
+        nodes: [
+          { id: "task1", type: "task" },
+          { id: "end", type: "end" },
+        ],
         transitions: [{ id: "t1", from: "task1", to: "end" }],
       };
       const eng = new WorkflowEngine(noStartWf, makeStateMachine(noStartWf), makeTaskManager());
@@ -393,9 +389,7 @@ describe("WorkflowEngine", () => {
           { id: "start", type: "start" },
           { id: "task1", type: "task" },
         ],
-        transitions: [
-          { id: "t1", from: "start", to: "missing" },
-        ],
+        transitions: [{ id: "t1", from: "start", to: "missing" }],
       };
       const sm = makeStateMachine(badWf);
       const eng = new WorkflowEngine(badWf, sm, makeTaskManager());

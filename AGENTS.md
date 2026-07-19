@@ -1,11 +1,11 @@
 # AGENTS.md — AUDEBase Project Knowledge Base
 
-**Generated:** 2026-07-13
-**Commit:** `a024b10`
+**Generated:** 2026-07-19
+**Commit:** `57627ce`
 **Branch:** `main`
 
 ## OVERVIEW
-AUDEBase — 企业应用开发平台。微内核 + 插件热插拔架构，对标 Odoo、NocoBase、云表。当前 Phase 0 完成 — 34+29=63 项审计发现全部落实到文档，可进入 Phase 1a 编码。
+AUDEBase — 企业应用开发平台。微内核 + 插件热插拔架构，对标 Odoo、NocoBase、云表。当前 Phase 4 完成 — 22 packages + Admin UI，752 tests，全部 Phase 完成。
 
 ## STRUCTURE
 ```
@@ -13,17 +13,17 @@ AUDEBase/
 ├── .opencode/          # OpenCode 配置（插件、MCP、LSP、instructions）
 │   ├── opencode.json   # 主配置：模型、插件、instructions、MCP、LSP
 │   ├── agent-guide.md  # AI 代理使用指南（5 层模型体系、OMO 编排）
-│   └── init-mcp-*.mjs  # 7 个 MCP 自动安装脚本（codegraph/playwright/shadcn/tailwind/lucide/postgres）
+│   └── init-mcp-*.mjs  # 6 个 MCP 自动安装脚本（codegraph/playwright/antd/drizzle/postgres/openspace）
 ├── .agents/
 │   ├── rules/          # 84 个编码规则文件（12 语言+common+中文副本）
-│   ├── skills/         # 6 个技能（design-system + 5 openspec-*）
+│   ├── skills/         # 9 个技能（design-system + doc-audit + test-harness + book-to-skill + 5 openspec-*）
 │   └── memorys/        # 4 个项目记忆文件（status/conventions/decisions/pitfalls）
 ├── docs/
-│   ├── architecture.md # 架构文档（10 章节，含 MVP 验收标准、Phase 1a/1b 路线图）
+│   ├── architecture.md # 架构文档（10 章节，Phase 1a-4 路线图，MVP 验收标准）
 │   ├── phase-planning.md # Phase 划分单一真实来源（含 4 人并行分工 + 依赖图）
 │   ├── competitive-landscape.md # 39+ 产品竞品调研报告
 │   ├── plugin-architecture-analysis.md # 四层信任分组深度分析
-│   ├── modules/        # 15 份模块设计/SDD 文档
+│   ├── modules/        # 33 份模块设计/SDD/TDD 文档
 │   │   ├── tech-stack.md
 │   │   ├── plugin-framework.md
 │   │   ├── plugin-framework-sdd.md  # SDD: PluginManager API + 生命周期 + mock 约束
@@ -57,7 +57,7 @@ AUDEBase/
 | Agent 配置 | `.opencode/opencode.json` | instructions、MCP、LSP |
 | Agent 使用指南 | `.opencode/agent-guide.md` | OMO 编排体系、5 层模型路由 |
 | 技能注册表 | `SKILL.md` | superpowers + 项目专属技能清单 |
-│ 架构文档 | `docs/architecture.md` | 含 MVP 验收标准、Phase 1a/1b 五阶段路线图
+│ 架构文档 | `docs/architecture.md` | 含 MVP 验收标准、Phase 1a-4 路线图
 | Phase 划分 | `docs/phase-planning.md` | 单一真实来源，4 人并行分工 + 依赖图 |
 │ 插件架构分析 | `docs/plugin-architecture-analysis.md` | 四层信任分组 + 通信 + 安全 + 生命周期
 │ 竞品调研 | `docs/competitive-landscape.md` | 39+ 产品，五大分类
@@ -129,32 +129,35 @@ _以下索引列出 docs/modules/ 中与 Phase 1a 编码直接相关的所有文
 | `file-storage.md` | 设计 | 文件存储隔离演进 | D4.1 | ✅ 已完成 |
 
 ## CODE MAP
-_当前无源代码。以下为架构文档中规划的模块：_
 
-| 模块 | 状态 | 规划路径 | SDD | TDD |
-|------|------|----------|-----|-----|
-| 插件框架 | 🔲 Phase 1a | `packages/plugin-framework/` — D1.1-D1.4 | ✅ plugin-framework-sdd.md | ✅ plugin-framework-tdd.md |
-| plugin-core (Bootstrap) | 🔲 Phase 1a | `packages/plugin-core/` — 内核插件，零依赖（D1.6） | ✅ plugin-core-sdd.md | ✅ plugin-core-tdd.md |
-| manifest.yaml 系统 | 🔲 Phase 1a | `packages/manifest-engine/` — D1.5 | ✅ manifest-engine-sdd.md | ✅ manifest-engine-tdd.md |
-| RBAC 权限引擎 | 🔲 Phase 1a | `packages/rbac/` — 基础 tenant_id + 角色权限（D10） | ✅ rbac-sdd.md | ✅ rbac-tdd.md |
-| 插件通信 | 🔲 Phase 1b | `packages/plugin-communication/` — D1.3 | 🔲 待生成 | 🔲 待生成 |
-| 审计日志 | 🔲 Phase 1a | `packages/audit/` — D1.12 | ✅ audit-sdd.md | ✅ audit-tdd.md |
-| 迁移管理 | 🔲 Phase 1a | `packages/migration/` — D1.7 | ✅ migration-engine-sdd.md | ✅ migration-engine-tdd.md |
-| 事件总线 | 🔲 Phase 1b | `packages/event-bus/` — D1.9 | 🔲 待生成 | 🔲 待生成 |
-| Schema Engine | 🔲 Phase 2 | `packages/schema-engine/` | 🔲 待生成 | 🔲 待生成 |
-| 插件市场 | 🔲 Phase 2 | — | 🔲 待生成 | 🔲 待生成 |
-| 工作流引擎 | 🔲 Phase 4 | `packages/workflow-engine/` | 🔲 待生成 | 🔲 待生成 |
-| shared-types | 🔲 Phase 1a (Week 0) | `packages/shared-types/` — 公共类型定义 | ✅ shared-types-sdd.md | ✅ shared-types-tdd.md |
-| 国际化 (i18n) | 🔲 Phase 1a→1b | `packages/i18n/` — D14 | ✅ i18n-sdd.md | ✅ i18n-tdd.md |
-| 健康检查 | 🔲 Phase 1a | `packages/health-check/` — D1.13 | ✅ health-check-sdd.md | ✅ health-check-tdd.md |
-| 日志/调试基础设施 | 🔲 Phase 1a | `packages/logging-infra/` — 结构化日志 + Core 聚合 | ✅ logging-infra-sdd.md | ✅ logging-tdd.md |
+| 模块 | 状态 | 路径 | SDD | TDD |
+|------|------|------|-----|-----|
+| 插件框架 | ✅ Phase 1a | `packages/plugin-framework/` | ✅ plugin-framework-sdd.md | ✅ plugin-framework-tdd.md |
+| plugin-core (Bootstrap) | ✅ Phase 1a | `packages/plugin-core/` | ✅ plugin-core-sdd.md | ✅ plugin-core-tdd.md |
+| manifest.yaml 系统 | ✅ Phase 1a | `packages/manifest-engine/` | ✅ manifest-engine-sdd.md | ✅ manifest-engine-tdd.md |
+| RBAC 权限引擎 | ✅ Phase 1a | `packages/rbac/` | ✅ rbac-sdd.md | ✅ rbac-tdd.md |
+| 插件通信 | ✅ Phase 1b | `packages/plugin-communication/` | ✅ plugin-framework-sdd.md | ✅ plugin-framework-tdd.md |
+| 审计日志 | ✅ Phase 1a | `packages/audit/` | ✅ audit-sdd.md | ✅ audit-tdd.md |
+| 迁移管理 | ✅ Phase 1a | `packages/migration-engine/` | ✅ migration-engine-sdd.md | ✅ migration-engine-tdd.md |
+| 事件总线 | ✅ Phase 1b | `packages/event-bus/` | ✅ plugin-framework-sdd.md | ✅ plugin-framework-tdd.md |
+| Schema Engine | ✅ Phase 2 | `packages/schema-engine/` | ✅ schema-engine-sdd.md | ✅ schema-engine-tdd.md |
+| 工作流引擎 | ✅ Phase 4 | `packages/workflow-engine/` | ✅ workflow-engine-sdd.md | ✅ workflow-engine-tdd.md |
+| shared-types | ✅ Phase 1a | `packages/shared-types/` | ✅ shared-types-sdd.md | ✅ shared-types-tdd.md |
+| 国际化 (i18n) | ✅ Phase 1a | `packages/i18n/` | ✅ i18n-sdd.md | ✅ i18n-tdd.md |
+| 健康检查 | ✅ Phase 1a | `packages/health-check/` | ✅ health-check-sdd.md | ✅ health-check-tdd.md |
+| 日志/调试基础设施 | ✅ Phase 1a | `packages/logging-infra/` | ✅ logging-infra-sdd.md | ✅ logging-tdd.md |
+| 定时任务 (Cron) | ✅ Phase 1b | `packages/cron/` | ✅ plugin-framework-sdd.md | ✅ plugin-framework-tdd.md |
+| 通知系统 | ✅ Phase 1b | `packages/notification/` | ✅ notification-sdd.md | ✅ notification-tdd.md |
+| WebSocket | ✅ Phase 2 | `packages/websocket/` | ✅ websocket-sdd.md | ✅ websocket-tdd.md |
+| 工作流核心 | ✅ Phase 4 | `packages/workflow-core/` | ✅ workflow-engine-sdd.md | ✅ workflow-engine-tdd.md |
+| 工作流任务 | ✅ Phase 4 | `packages/workflow-tasks/` | ✅ workflow-engine-sdd.md | ✅ workflow-engine-tdd.md |
 
 ## CONVENTIONS
 ### AUDEBase 独有
 ### npm scope
 - **去 MODACS 化**: 保持零 MODACS 残留，每次修改后运行 `grep -ri modacs . --exclude-dir=.git --exclude-dir=.sisyphus`
 - **精确编辑**: 不全局 MODACS→AUDEBase 替换，使用手术式编辑
-- **架构骨架**: `docs/architecture.md` 中内容不足 50% 的章节使用 `TODO: 为 AUDEBase 重写此节` 占位
+- **架构骨架**: `docs/architecture.md` 14 章 975 行，全部章节已展开，无 TODO 占位
 - **@modacs/* 移除**: 移除所有 `@modacs/*` 引用，不自动替换为 `@AUDEBase/*`
 
 ### TypeScript
@@ -181,9 +184,9 @@ _当前无源代码。以下为架构文档中规划的模块：_
 
 ## NOTES
 
-- **文档基础设施就绪** — 架构定义完成。8 轮团队审核（R1-R8，累计 185+ 发现全部关闭），2 轮文档交叉审计通过，2 轮交互审计（34+29=63 项全部落实到文档），可进入 Phase 1a 编码
+- **Phase 1a-4 全部完成** — 22 packages + Admin UI，752 tests，pnpm + Turborepo monorepo
 - **从 MODACS 分离** — 2026-07-08 首次提交。无 MODACS 代码共享
 - **.sisyphus/** 被 gitignore 排除 — 计划文件、审计报告暂存于此
-- **双 package.json** — 根目录用 npm，`.opencode/` 用独立包（插件系统）
-- **Agent 超配** — 对于零代码项目，基础设施配置较重。规则（84 个文件）和 MCP 服务器（7 个活动）是为未来开发准备的
-- **test 基础设施** — 框架尚未安装。测试计划文档已就绪（11 份 TDD），vitest + @testing-library/react + Playwright 框架安装待 Phase 1a Week 0
+- **pnpm workspaces** — 根目录 + 22 个子包（根目录用 pnpm）
+- **Agent 超配** — 规则（84 个文件）和 MCP 服务器（6 个活动）是为 AI-driven SDD/TDD 工作流准备的
+- **test 基础设施** — vitest + @testing-library/react + Playwright，752 tests，80%+ 覆盖率目标（详见 dev-workflow.md）

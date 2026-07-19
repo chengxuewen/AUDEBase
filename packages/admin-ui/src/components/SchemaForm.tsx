@@ -163,7 +163,9 @@ export default function SchemaForm({
       });
 
       if (!res.ok) {
-        const err: { message?: string } = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
+        const err: { message?: string } = await res
+          .json()
+          .catch(() => ({ message: `HTTP ${res.status}` }));
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
         void message.error(err.message ?? "操作失败");
         return false;

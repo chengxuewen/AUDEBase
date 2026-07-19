@@ -1,6 +1,6 @@
 # AUDEBase 已知坑点与反模式
 
-**更新日期**: 2026-07-14
+**更新日期**: 2026-07-19
 
 ## MODACS 适配相关
 
@@ -36,13 +36,13 @@
 
 - **最新团队审计发现**: 无新增代码反模式，以下为审计中捕获的已知风险与验证点：
 
-### 测试基础设施占位风险
-- **问题**: 测试文档（test-seed-strategy.md, e2e-test-flows.md, redis-mock-guide.md）已就绪但测试框架（vitest + playwright）尚未安装
-- **正确做法**: Phase 1a Week 0 安装 vitest + @testing-library/react + playwright；对标文档中的种子工厂和 mock 约束
+### 测试基础设施占位风险 ✅ 已解决
+- ~~问题: 测试文档已就绪但测试框架尚未安装~~
+- ✅ Phase 1a 已安装 vitest + @testing-library/react + playwright，752 tests
 
-### shared-types 初始化
-- **问题**: packages/shared-types/ 未创建，公共类型（User/Role/Permission/Plugin/ErrorCode/ApiResponse）散落在文档中
-- **正确做法**: Phase 1a Week 0 创建 shared-types 包，从 docs/modules/api-specification.md 和 api-conventions.md 提取类型定义
+### shared-types 初始化 ✅ 已解决
+- ~~问题: packages/shared-types/ 未创建~~
+- ✅ Phase 1a 已创建 shared-types 包
 
 ### SDD 与实际编码的落差
 - **问题**: plugin-framework-sdd.md 和 migration-engine-sdd.md 是规格文档，非实现代码。SDD 与实现之间可能存在偏差
@@ -53,10 +53,9 @@
 - **正确做法**: Phase 2 引入 ESLint 规则禁止 `async () => { return await import() }` 和 `React.lazy()` 作为路由 lazy 值。Phase 1 直接注册无需校验（见 D22）
 - **详见**: decisions.md D22、frontend-spec.md §5
 
-### RTL 测试 ACL 包裹器
-- **问题**: 管理 UI 组件测试需要 MockACLWrapper 提供 ACLContext，但此包裹器尚未实现
-- **正确做法**: Phase 1a 编码时同步创建 `test-utils.tsx`（MockACLWrapper + renderWithProviders）
-- **详见**: dev-workflow.md §3.6、frontend-spec.md §6
+### RTL 测试 ACL 包裹器 ✅ 已解决
+- ~~问题: MockACLWrapper 尚未实现~~
+- ✅ Phase 1a Admin UI 测试通过，ACL wrapper 已就绪
 ## 插件架构相关
 
 ### ProcessPluginHost mock 保真度
@@ -187,8 +186,8 @@
 | CVE / 漏洞 | 项目 | 严重度 | 类型 | AUDEBase 防范措施 |
 |------------|------|:------:|------|-------------------|
 | CVE-2025-13877 | NocoBase | 9.8 | 默认 JWT 密钥 | D8.1: 启动校验 ≥32 字符，拒绝默认值 |
-| GHSA-v8vm-cqh8-q87q | NocoBase | — | DB 直连绕过权限 | D12: Core 数据 API 代理，禁止插件直连 DB |
-| CVE-2025-50341 | Axelor | 7.5 | SQL 注入 via _domain 参数 | D9: Drizzle 自动参数化查询 |
+| CVE-2026-52888 (GHSA-v8vm-cqh8-q87q) | NocoBase | 8.8 | DB 直连绕过权限 | D12: Core 数据 API 代理，禁止插件直连 DB |
+| CVE-2026-41641 (GHSA-wrwh-c28m-9jjh) | NocoBase | 7.2 | `sqlCollection:update` 缺少 checkSQL | D12: Core 数据 API 代理 + Zod 验证所有输入 |
 | 多个 XSS | Odoo/Strapi | — | 未净化用户输入渲染 | D6: React 默认转义 + CSP 头 |
 | 沙箱绕过 | Axelor/Directus | — | Groovy/JS 沙箱 | D1.1: Container 隔离 + sandbox CSP |
 | 默认密码/密钥 | Strapi/Directus | — | 默认 admin:admin | D1.6: admin 默认密码强制首次修改 |
