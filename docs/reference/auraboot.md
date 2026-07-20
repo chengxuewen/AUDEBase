@@ -650,7 +650,7 @@ AuraBoot 是一个理念先进但极不成熟的项目。其"六大声明概念 
 > - AuraBoot GitHub: github.com/AuraBootTeam/auraboot
 > - AuraBoot README: raw.githubusercontent.com/AuraBootTeam/auraboot/main/README.md
 > - AuraBoot 文档: docs.auraboot.com
-> - AUDEBase 竞争格局分析: docs/competitive-landscape.md §3.3, §9.4
+> - AUDEBase 竞争格局分析: docs/analysis/competitive-landscape.md §3.3, §9.4
 > - AUDEBase 架构决策: .agents/memorys/decisions.md
 >
 > **文档维护**: 建议随 AuraBoot 版本发布和 AUDEBase Phase 推进每季度更新。

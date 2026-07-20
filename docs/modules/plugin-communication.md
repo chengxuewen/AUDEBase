@@ -1,6 +1,6 @@
 # 插件通信与权限
 
-> 从 `docs/plugin-architecture-analysis.md` 提取。父文档索引见 `docs/architecture.md`。
+> 从 `docs/analysis/plugin-architecture-analysis.md` 提取。父文档索引见 `docs/architecture.md`。
 > 插件框架分组模型与生命周期见 `docs/modules/plugin-framework.md`，多租户见 `docs/modules/multi-tenant.md`。
 
 ## 一、通信架构
