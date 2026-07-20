@@ -6,7 +6,7 @@
 
 ## OVERVIEW
 
-AUDEBase — 企业应用开发平台。微内核 + 插件热插拔架构，对标 Odoo、NocoBase、云表。当前 Phase 4 完成 — 22 packages + Admin UI，752 tests，全部 Phase 完成。
+AUDEBase — 企业应用开发平台。微内核 + 插件热插拔架构，对标 Odoo、NocoBase、云表。Phase 2 完成 + 工作流引擎 (Phase 4) 完成 — 28 packages，102 test files。
 
 ## STRUCTURE
 
@@ -144,7 +144,7 @@ _以下索引列出 docs/modules/ 中与 Phase 1a 编码直接相关的所有文
 | `file-storage.md`         | 设计   | 文件存储隔离演进                         | D4.1      | ✅ 已完成 |
 
 ## CODE MAP
-_28 包全部实现，95 测试文件，tsc 全包 clean。Phase 1b 6 包 + Phase 2/4 6 包已接入 CoreApp。_
+_28 包全部实现，102 测试文件，tsc 全包 clean。Phase 1b 6 包 + Phase 2/4 6 包已接入 CoreApp。_
 
 | 模块 | 状态 | 规划路径 | SDD | TDD |
 |------|------|----------|-----|-----|
@@ -152,7 +152,7 @@ _28 包全部实现，95 测试文件，tsc 全包 clean。Phase 1b 6 包 + Phas
 | plugin-core (Bootstrap) | ✅ Phase 1a | `packages/plugin-core/` - 内核插件，零依赖（D1.6） | ✅ plugin-core-sdd.md | ✅ plugin-core-tdd.md |
 | manifest.yaml 系统 | ✅ Phase 1a | `packages/manifest-engine/` - D1.5 | ✅ manifest-engine-sdd.md | ✅ manifest-engine-tdd.md |
 | RBAC 权限引擎 | ✅ Phase 1a | `packages/rbac/` - 基础 tenant_id + 角色权限（D10） | ✅ rbac-sdd.md | ✅ rbac-tdd.md |
-| 插件通信 | ✅ Phase 1b | `packages/plugin-communication/` - D1.3 | ✅ plugin-communication-sdd.md | ✅ plugin-communication-tdd.md |
+| 插件通信 | ✅ Phase 1b | `packages/plugin-communication/` - D1.3 | ❌ 待生成 | ❌ 待生成 |
 | 审计日志 | ✅ Phase 1a | `packages/audit/` - D1.12 | ✅ audit-sdd.md | ✅ audit-tdd.md |
 | 迁移管理 | ✅ Phase 1a | `packages/migration/` - D1.7 | ✅ migration-engine-sdd.md | ✅ migration-engine-tdd.md |
 | 事件总线 | ✅ Phase 1b | `packages/event-bus/` - D1.9 | ✅ event-bus-sdd.md | ✅ event-bus-tdd.md |
@@ -219,9 +219,9 @@ _28 包全部实现，95 测试文件，tsc 全包 clean。Phase 1b 6 包 + Phas
 
 ## NOTES
 
-- **Phase 1b 完成** - 20 包全部实现，694 测试通过，tsc 全包 clean。6 个 Phase 1b 包已接入 CoreApp（EventBus/Cron/FileUpload/Notification/ApiVersionRouter/CollectionRegistry）
+- **Phase 2 完成** — 28 包全部实现, 102 测试文件, tsc 全包 clean。工作流引擎 (Phase 4) 完成
 - **从 MODACS 分离** - 2026-07-08 首次提交。无 MODACS 代码共享
 - **.sisyphus/** 被 gitignore 排除 - 计划文件、审计报告暂存于此
 - **双 package.json** - 根目录用 pnpm workspace，`.opencode/` 用独立 npm 包（插件系统）
-- **test 基础设施** - vitest 3.0.5 + @testing-library/react 16.2.0 + @playwright/test 1.50.1 已安装。694 测试通过
+- **test 基础设施** - vitest 3.0.5 + @testing-library/react 16.2.0 + @playwright/test 1.50.1 已安装。102 测试文件
 - **Docker Compose** - docker-compose.yml 已创建（PostgreSQL 16 + Valkey 8）
