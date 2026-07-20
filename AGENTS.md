@@ -154,8 +154,8 @@ _28 包全部实现，102 测试文件，tsc 全包 clean。Phase 1b 6 包 + Pha
 | 迁移管理 | ✅ Phase 1a | `packages/migration/` - D1.7 | ✅ migration-engine-sdd.md | ✅ migration-engine-tdd.md |
 | 事件总线 | ✅ Phase 1b | `packages/event-bus/` - D1.9 | ✅ event-bus-sdd.md | ✅ event-bus-tdd.md |
 | 文件上传 | ✅ Phase 1b | `packages/file-upload/` - FileUploadService + 内存 repo | ✅ file-upload-sdd.md | ✅ file-upload-tdd.md |
-| Schema Engine | ✅ Phase 2 | `packages/schema-engine/` - D3/D7 | 🔲 待生成 | 🔲 待生成 |
-| WebSocket | ✅ Phase 2 | `packages/websocket/` - D1.11 | 🔲 待生成 | 🔲 待生成 |
+| Schema Engine | ✅ Phase 2 | `packages/schema-engine/` - D3/D7 | ✅ schema-engine-sdd.md | ✅ schema-engine-tdd.md |
+| WebSocket | ✅ Phase 2 | `packages/websocket/` - D1.11 | ✅ websocket-sdd.md | ✅ websocket-tdd.md |
 | 定时任务 (Cron) | ✅ Phase 1b | `packages/cron/` - BullMQ repeatable jobs（D1.10） | ✅ cron-sdd.md | ✅ cron-tdd.md |
 | 通知系统 | ✅ Phase 1b 接口 | `packages/notification/` - NotificationProvider 抽象（D1.14） | ✅ notification-sdd.md | ✅ notification-tdd.md |
 | API 版本控制 | ✅ Phase 1b | `packages/api-versioning/` - URL 路径版本（D1.8） | ✅ api-versioning-sdd.md | ✅ api-versioning-tdd.md |
