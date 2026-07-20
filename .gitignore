@@ -27,6 +27,9 @@ Thumbs.db
 *.dll
 *.exe
 
+# Redis/Valkey dump
+dump.rdb
+
 # IDE files
 # --------
 .vs
