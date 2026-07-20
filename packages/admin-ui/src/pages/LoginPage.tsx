@@ -36,13 +36,13 @@ export function LoginPage({ onLogin }: LoginPageProps): ReactNode {
       <Card title={t('login.title')} style={{ width: 400 }}>
         <Form onFinish={handleSubmit}>
           <Form.Item name="username" rules={[{ required: true, message: t('login.usernameRequired') }]}>
-            <Input placeholder={t('login.username')} />
+            <Input placeholder={t('login.username')} data-testid="login-username-input" />
           </Form.Item>
           <Form.Item name="password" rules={[{ required: true, message: t('login.passwordRequired') }]}>
-            <Input.Password placeholder={t('login.password')} />
+            <Input.Password placeholder={t('login.password')} data-testid="login-password-input" />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" block loading={loading}>
+            <Button type="primary" htmlType="submit" block loading={loading} data-testid="login-submit-btn">
               {t('login.submit')}
             </Button>
           </Form.Item>

@@ -85,9 +85,9 @@ export default function DashboardPage() {
   const isLoading = usersQuery.isLoading || healthQuery.isLoading;
 
   return (
-    <div>
-      <Typography.Title level={4}>系统概览</Typography.Title>
-      <Row gutter={[16, 16]}>
+    <div data-testid="dashboard-sidebar-menu">
+      <Typography.Title level={4} data-testid="dashboard-welcome-text">系统概览</Typography.Title>
+      <Row gutter={[16, 16]} data-testid="dashboard-stats-cards">
         <Col xs={24} sm={12} md={6}>
           <Card>
             {usersQuery.isLoading ? (
