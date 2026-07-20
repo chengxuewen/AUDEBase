@@ -249,7 +249,7 @@
 - **决策**: 借鉴 Odoo domain filter 表达式，manifest.permissions 中声明 record_rule
 - **实现**: Core ORM 层自动注入 WHERE 条件（tenant_id + record_rule）
 - **参考**: Odoo ACL + Record Rules
-- **状态**: 已决策，Phase 1a 实现基础 tenant_id 过滤，Phase 2 实现完整 Record Rules（domain filter 表达式）
+- **状态**: ✅ 已实现 — `parseDomainFilter()` 解析 Poland-notation 条件树 + `evaluateCondition()` 内存评估 + `generateWhereClause()` 生成 Drizzle SQL WHERE 子句，108 测试用例。见 `packages/rbac/src/record-rules.ts`
 
 **Domain Filter 语法规范**：
 
