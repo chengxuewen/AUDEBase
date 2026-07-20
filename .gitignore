@@ -85,3 +85,8 @@ audebase-*.tar.zst
 .env.*
 !.env.example
 !.env.template
+
+# E2E test artifacts
+packages/admin-ui/__e2e__/.auth/
+playwright-report/
+test-results/
