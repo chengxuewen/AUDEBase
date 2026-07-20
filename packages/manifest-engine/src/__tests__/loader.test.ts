@@ -5,28 +5,21 @@ import { tmpdir } from "node:os";
 import { ManifestLoader } from "../loader.js";
 
 const minimalYaml = `
-name: plugin-test
+name: "@audebase/plugin-test"
 version: 1.0.0
 display_name: Test Plugin
 `.trim();
 
 const fullYaml = `
-name: plugin-core
+name: "@audebase/plugin-core"
 version: 1.0.0
 display_name: Core Plugin
 description: Core plugin description
 category: SYSTEM
 license: Apache-2.0
-application: true
-entry:
-  server: ./src/server.ts
-  worker: ./src/worker.ts
-author:
-  name: Team
-  email: team@example.com
 dependencies:
-  - plugin-rbac
-  - plugin-audit
+  - "@audebase/plugin-rbac"
+  - "@audebase/plugin-audit"
 runtime:
   mode: inline
   partition: SYSTEM
@@ -47,7 +40,7 @@ lifecycle:
 `.trim();
 
 const badYamlMissingVersion = `
-name: plugin-only
+name: "@audebase/plugin-only"
 display_name: Only Plugin
 `.trim();
 
@@ -67,12 +60,7 @@ describe("ManifestLoader", () => {
   });
 
   afterEach(async () => {
-    // Clean up temp file
-    try {
-      await unlink(tempFilePath);
-    } catch {
-      // Ignore if file doesn't exist
-    }
+    try { await unlink(tempFilePath); } catch { /* ignore */ }
   });
 
   // ── loadFromString ──────────────────────────────────────
@@ -80,24 +68,19 @@ describe("ManifestLoader", () => {
   describe("loadFromString", () => {
     test("parses valid minimal YAML", () => {
       const manifest = loader.loadFromString(minimalYaml);
-      expect(manifest.name).toBe("plugin-test");
+      expect(manifest.name).toBe("@audebase/plugin-test");
       expect(manifest.version).toBe("1.0.0");
       expect(manifest.display_name).toBe("Test Plugin");
     });
 
     test("parses full YAML with all fields", () => {
       const manifest = loader.loadFromString(fullYaml);
-      expect(manifest.name).toBe("plugin-core");
+      expect(manifest.name).toBe("@audebase/plugin-core");
       expect(manifest.version).toBe("1.0.0");
       expect(manifest.description).toBe("Core plugin description");
       expect(manifest.category).toBe("SYSTEM");
       expect(manifest.license).toBe("Apache-2.0");
-      expect(manifest.application).toBe(true);
-      expect(manifest.entry?.server).toBe("./src/server.ts");
-      expect(manifest.entry?.worker).toBe("./src/worker.ts");
-      expect(manifest.author?.name).toBe("Team");
-      expect(manifest.author?.email).toBe("team@example.com");
-      expect(manifest.dependencies).toEqual(["plugin-rbac", "plugin-audit"]);
+      expect(manifest.dependencies).toEqual(["@audebase/plugin-rbac", "@audebase/plugin-audit"]);
       expect(manifest.runtime?.mode).toBe("inline");
       expect(manifest.runtime?.partition).toBe("SYSTEM");
       expect(manifest.runtime?.crash_policy).toBe("restart");
@@ -134,40 +117,36 @@ describe("ManifestLoader", () => {
     test("parses YAML with comments", () => {
       const yaml = `
 # This is a comment
-name: plugin-comment # inline comment
+name: "@audebase/plugin-comment"
 version: 1.0.0
 display_name: Comment Plugin
 `.trim();
       const manifest = loader.loadFromString(yaml);
-      expect(manifest.name).toBe("plugin-comment");
+      expect(manifest.name).toBe("@audebase/plugin-comment");
       expect(manifest.version).toBe("1.0.0");
     });
 
     test("parses boolean values", () => {
       const yaml = `
-name: plugin-bool
+name: "@audebase/plugin-bool"
 version: 1.0.0
 display_name: Bool Plugin
-application: true
 lifecycle:
   auto_install: false
 `.trim();
       const manifest = loader.loadFromString(yaml);
-      expect(manifest.application).toBe(true);
       expect(manifest.lifecycle?.auto_install).toBe(false);
     });
 
     test("parses empty arrays", () => {
       const yaml = `
-name: plugin-empty
+name: "@audebase/plugin-empty"
 version: 1.0.0
 display_name: Empty Arrays
 dependencies:
 permissions:
 models:
 `.trim();
-      // Empty arrays as `key:` with no items — YAML parser returns empty string
-      // The Zod schema will validate this
       expect(() => loader.loadFromString(yaml)).toThrow();
     });
   });
@@ -178,7 +157,7 @@ models:
     test("loads from file", async () => {
       await writeFile(tempFilePath, minimalYaml, "utf-8");
       const manifest = await loader.loadFromFile(tempFilePath);
-      expect(manifest.name).toBe("plugin-test");
+      expect(manifest.name).toBe("@audebase/plugin-test");
       expect(manifest.version).toBe("1.0.0");
     });
 
@@ -189,8 +168,8 @@ models:
     test("loads full manifest from file", async () => {
       await writeFile(tempFilePath, fullYaml, "utf-8");
       const manifest = await loader.loadFromFile(tempFilePath);
-      expect(manifest.name).toBe("plugin-core");
-      expect(manifest.dependencies).toEqual(["plugin-rbac", "plugin-audit"]);
+      expect(manifest.name).toBe("@audebase/plugin-core");
+      expect(manifest.dependencies).toEqual(["@audebase/plugin-rbac", "@audebase/plugin-audit"]);
       expect(manifest.runtime?.mode).toBe("inline");
     });
   });
@@ -201,17 +180,15 @@ models:
     test("second loadFromString returns cached value", () => {
       loader.loadFromString(minimalYaml);
       const m2 = loader.loadFromString(minimalYaml);
-      // Same reference because second call re-validates and re-caches
-      // (but we verify the behavior is correct)
-      expect(m2.name).toBe("plugin-test");
+      expect(m2.name).toBe("@audebase/plugin-test");
       expect(m2.version).toBe("1.0.0");
     });
 
     test("getCached returns manifest after loading", () => {
       loader.loadFromString(minimalYaml);
-      const cached = loader.getCached("plugin-test");
+      const cached = loader.getCached("@audebase/plugin-test");
       expect(cached).toBeDefined();
-      expect(cached?.name).toBe("plugin-test");
+      expect(cached?.name).toBe("@audebase/plugin-test");
     });
 
     test("getCached returns undefined for unknown plugin", () => {
@@ -220,16 +197,15 @@ models:
 
     test("clearCache removes all entries", () => {
       loader.loadFromString(minimalYaml);
-      expect(loader.getCached("plugin-test")).toBeDefined();
-
+      expect(loader.getCached("@audebase/plugin-test")).toBeDefined();
       loader.clearCache();
-      expect(loader.getCached("plugin-test")).toBeUndefined();
+      expect(loader.getCached("@audebase/plugin-test")).toBeUndefined();
     });
 
     test("cache is overwritten on second load of same name", () => {
       loader.loadFromString(minimalYaml);
       const updatedYaml = `
-name: plugin-test
+name: "@audebase/plugin-test"
 version: 2.0.0
 display_name: Updated Plugin
 `.trim();
@@ -237,22 +213,22 @@ display_name: Updated Plugin
       expect(m2.version).toBe("2.0.0");
       expect(m2.display_name).toBe("Updated Plugin");
 
-      const cached = loader.getCached("plugin-test");
+      const cached = loader.getCached("@audebase/plugin-test");
       expect(cached?.version).toBe("2.0.0");
     });
 
     test("loadFromFile also caches", async () => {
       await writeFile(tempFilePath, minimalYaml, "utf-8");
       await loader.loadFromFile(tempFilePath);
-      const cached = loader.getCached("plugin-test");
+      const cached = loader.getCached("@audebase/plugin-test");
       expect(cached).toBeDefined();
-      expect(cached?.name).toBe("plugin-test");
+      expect(cached?.name).toBe("@audebase/plugin-test");
     });
 
     test("cache is independent per loader instance", () => {
       const loader2 = new ManifestLoader();
       loader.loadFromString(minimalYaml);
-      expect(loader2.getCached("plugin-test")).toBeUndefined();
+      expect(loader2.getCached("@audebase/plugin-test")).toBeUndefined();
     });
   });
 
@@ -261,7 +237,7 @@ display_name: Updated Plugin
   describe("validate", () => {
     test("returns valid=true for good data", () => {
       const result = loader.validate({
-        name: "plugin-v",
+        name: "@audebase/plugin-v",
         version: "1.0.0",
         display_name: "Validated",
       });
@@ -276,8 +252,8 @@ display_name: Updated Plugin
     });
 
     test("does not cache validation results", () => {
-      loader.validate({ name: "plugin-v", version: "1.0.0", display_name: "X" });
-      expect(loader.getCached("plugin-v")).toBeUndefined();
+      loader.validate({ name: "@audebase/plugin-v", version: "1.0.0", display_name: "X" });
+      expect(loader.getCached("@audebase/plugin-v")).toBeUndefined();
     });
   });
 });

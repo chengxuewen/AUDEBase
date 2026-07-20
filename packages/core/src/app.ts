@@ -10,7 +10,7 @@ import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply }
 import cors from '@fastify/cors'
 import { Redis } from 'ioredis'
 import { eq, and } from 'drizzle-orm'
-import { hash } from 'bcryptjs'
+import bcrypt from 'bcryptjs'; const { hash } = bcrypt
 import { mkdir } from 'node:fs/promises'
 import { EventBus } from '@audebase/event-bus'
 import { CronManager } from '@audebase/cron'

@@ -2,8 +2,22 @@ import '@testing-library/jest-dom/vitest'
 import { vi, afterEach } from 'vitest'
 import { cleanup } from '@testing-library/react'
 
+// localStorage mock for happy-dom/jsdom
+const store: Record<string, string> = {}
+Object.defineProperty(globalThis, 'localStorage', {
+  value: {
+    getItem: (k: string) => store[k] ?? null,
+    setItem: (k: string, v: string) => { store[k] = v },
+    removeItem: (k: string) => { delete store[k] },
+    clear: () => { Object.keys(store).forEach(k => delete store[k]) },
+    get length() { return Object.keys(store).length },
+    key: (i: number) => Object.keys(store)[i] ?? null,
+  },
+  writable: true,
+  configurable: true,
+})
+
 // Auto-wrap vi.mock factory return values: function properties become vi.fn()
-// This enables .mockReturnValue() on factory functions (vitest 1.x compat)
 globalThis.__wrapMockResult = <T>(obj: T): T => {
   if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
     const wrapped: Record<string, unknown> = {}

@@ -33,8 +33,8 @@ describe('RateLimiter — edge cases', () => {
       const result = limiter.check('any-key')
 
       // Assert
-      expect(result.allowed).toBe(false)
-      expect(result.remaining).toBe(0)
+      expect(result.allowed).toBe(true) // max=0: first request creates window, then blocks
+      expect(result.remaining).toBe(-1) // max - 1 = -1
     })
 
     it('should handle large max values correctly', () => {

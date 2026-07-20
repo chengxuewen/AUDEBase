@@ -1,36 +1,24 @@
 import { describe, test, expect } from "vitest";
-import { validateManifest, validateManifestSafe, manifestSchema } from "../validator.js";
+import { validateManifest, validateManifestSafe } from "../validator.js";
+import { manifestSchema } from "../schema.js";
 
 // ── Valid minimal manifest ──────────────────────────────────
 
 const minimalManifest = {
-  name: "plugin-test",
+  name: "@audebase/plugin-test",
   version: "1.0.0",
   display_name: "Test Plugin",
 };
 
 const fullManifest = {
-  name: "plugin-core",
+  name: "@audebase/plugin-core",
   version: "1.0.0",
   display_name: "Core Plugin",
   description: "The core plugin with bootstrap data",
   category: "SYSTEM",
   license: "Apache-2.0",
-  application: true,
-  entry: {
-    server: "./src/server.ts",
-    worker: "./src/worker.ts",
-  },
-  author: {
-    name: "AUDEBase Team",
-    email: "dev@audebase.dev",
-    url: "https://audebase.dev",
-  },
-  dependencies: ["plugin-rbac", "plugin-audit"],
-  assets: {
-    admin: "./admin/index.html",
-    public: ["./public/logo.png"],
-  },
+  dependencies: ["@audebase/plugin-rbac", "@audebase/plugin-audit"],
+  assets: ["./public/logo.png"],
   lifecycle: {
     hooks: {
       afterAdd: "./hooks/afterAdd.ts",
@@ -60,19 +48,19 @@ const fullManifest = {
 describe("validateManifest", () => {
   test("valid minimal manifest passes", () => {
     const result = validateManifest(minimalManifest);
-    expect(result.name).toBe("plugin-test");
+    expect(result.name).toBe("@audebase/plugin-test");
     expect(result.version).toBe("1.0.0");
     expect(result.display_name).toBe("Test Plugin");
   });
 
   test("valid full manifest passes", () => {
     const result = validateManifest(fullManifest);
-    expect(result.name).toBe("plugin-core");
+    expect(result.name).toBe("@audebase/plugin-core");
     expect(result.description).toBe("The core plugin with bootstrap data");
     expect(result.runtime?.mode).toBe("inline");
     expect(result.permissions).toHaveLength(1);
     expect(result.models).toHaveLength(1);
-    expect(result.dependencies).toEqual(["plugin-rbac", "plugin-audit"]);
+    expect(result.dependencies).toEqual(["@audebase/plugin-rbac", "@audebase/plugin-audit"]);
     expect(result.locale?.path).toBe("./locale");
     expect(result.lifecycle?.auto_install).toBe(true);
   });
@@ -82,11 +70,13 @@ describe("validateManifest", () => {
   });
 
   test("missing version throws", () => {
-    expect(() => validateManifest({ name: "plugin-x", display_name: "X" })).toThrow();
+    expect(() => validateManifest({ name: "@audebase/plugin-x", display_name: "X" })).toThrow();
   });
 
-  test("missing display_name throws", () => {
-    expect(() => validateManifest({ name: "plugin-x", version: "1.0.0" })).toThrow();
+  test("missing display_name is OK (optional)", () => {
+    const result = validateManifest({ name: "@audebase/plugin-x", version: "1.0.0" });
+    expect(result.name).toBe("@audebase/plugin-x");
+    expect(result.version).toBe("1.0.0");
   });
 
   test("invalid name format throws", () => {
@@ -95,21 +85,21 @@ describe("validateManifest", () => {
     ).toThrow();
   });
 
-  test("name must be kebab-case (lowercase only)", () => {
+  test("name must match @scope/plugin-* format (underscore not allowed)", () => {
     expect(() =>
-      validateManifest({ name: "plugin_core", version: "1.0.0", display_name: "X" }),
+      validateManifest({ name: "@audebase/plugin_core", version: "1.0.0", display_name: "X" }),
     ).toThrow();
   });
 
   test("invalid version (v1) throws", () => {
     expect(() =>
-      validateManifest({ name: "plugin-x", version: "v1", display_name: "X" }),
+      validateManifest({ name: "@audebase/plugin-x", version: "v1", display_name: "X" }),
     ).toThrow();
   });
 
   test("invalid version (not semver) throws", () => {
     expect(() =>
-      validateManifest({ name: "plugin-x", version: "not-a-version", display_name: "X" }),
+      validateManifest({ name: "@audebase/plugin-x", version: "not-a-version", display_name: "X" }),
     ).toThrow();
   });
 
@@ -117,7 +107,7 @@ describe("validateManifest", () => {
     const versions = ["0.0.0", "1.0.0", "999.999.999", "1.0.0-alpha.1", "1.0.0+build.123"];
     for (const v of versions) {
       expect(() =>
-        validateManifest({ name: "plugin-x", version: v, display_name: "X" }),
+        validateManifest({ name: "@audebase/plugin-x", version: v, display_name: "X" }),
       ).not.toThrow();
     }
   });
@@ -126,20 +116,18 @@ describe("validateManifest", () => {
     expect(() =>
       validateManifest({
         ...minimalManifest,
-        runtime: { mode: "bad", partition: "SYSTEM" },
+        runtime: { mode: "bad" as const, partition: "SYSTEM" },
       }),
     ).toThrow();
   });
 
   test("runtime.mode=process should fail in Phase 1a", () => {
-    // Note: Our schema allows all three modes as valid enum values;
-    // the Phase 1a restriction is a runtime check, not a Zod constraint
-    const result = validateManifest({
-      ...minimalManifest,
-      runtime: { mode: "process", partition: "SYSTEM" },
-    });
-    // All three modes are valid Zod enum values
-    expect(result.runtime?.mode).toBe("process");
+    expect(() =>
+      validateManifest({
+        ...minimalManifest,
+        runtime: { mode: "process" as const, partition: "SYSTEM" },
+      }),
+    ).toThrow();
   });
 
   test("empty permissions list passes", () => {
@@ -218,7 +206,7 @@ describe("validateManifestSafe", () => {
 describe("manifestSchema", () => {
   test("parse returns parsed manifest", () => {
     const parsed = manifestSchema.parse(minimalManifest);
-    expect(parsed.name).toBe("plugin-test");
+    expect(parsed.name).toBe("@audebase/plugin-test");
     expect(parsed.version).toBe("1.0.0");
   });
 

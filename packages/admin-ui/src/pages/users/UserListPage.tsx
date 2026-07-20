@@ -22,6 +22,7 @@ interface PaginatedData<T> {
 interface FormValues {
   username: string
   email: string
+  password: string
   display_name: string
 }
 
@@ -150,6 +151,9 @@ export function UserListPage(): ReactNode {
           </Form.Item>
           <Form.Item name="email" label="Email" rules={[{ required: true }]}>
             <Input />
+          </Form.Item>
+          <Form.Item name="password" label="Password" rules={[{ required: true, message: 'Password is required (min 6 chars)' }]}>
+            <Input.Password />
           </Form.Item>
           <Form.Item name="display_name" label="Display Name">
             <Input />

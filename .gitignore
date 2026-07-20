@@ -70,9 +70,7 @@ coverage/
 *.tsbuildinfo
 *.log
 # Pixi environments
-.pixi
-.pixi-pack
-.pixi-cache
+.pixi*
 # Deployment outputs
 deploy/
 audebase-*.tar

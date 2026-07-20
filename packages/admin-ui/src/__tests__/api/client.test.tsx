@@ -1,95 +1,152 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { apiPost, getToken, setTokens, clearTokens, getTenantId, setTenantId } from '../../api/client.js'
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { ApiClient } from "../../api/client";
 
-describe('API client', () => {
+describe("ApiClient", () => {
+  let client: ApiClient;
+
+  beforeAll(() => {
+    // jsdom + vitest globals may not provide localStorage
+    const s = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      getItem: (k: string) => s.get(k) ?? null,
+      setItem: (k: string, v: string) => {
+        s.set(k, v);
+      },
+      removeItem: (k: string) => {
+        s.delete(k);
+      },
+      clear: () => {
+        s.clear();
+      },
+      get length() {
+        return s.size;
+      },
+      key: (i: number) => Array.from(s.keys())[i] ?? null,
+    });
+  });
+
   beforeEach(() => {
-    localStorage.clear()
-  })
+    client = new ApiClient();
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
 
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
+  describe("setToken / getToken", () => {
+    it("stores token in localStorage", () => {
+      // Arrange
+      const token = "test-jwt-token";
 
-  it('should use relative URL (not hardcoded localhost) so Vite proxy works in remote access', async () => {
-    // Arrange
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ access_token: 'tok', refresh_token: 'ref' }), {
+      // Act
+      client.setToken(token);
+
+      // Assert
+      expect(client.getToken()).toBe(token);
+      expect(localStorage.getItem("aude_access_token")).toBe(token);
+    });
+
+    it("clears token with null", () => {
+      // Arrange
+      client.setToken("some-token");
+
+      // Act
+      client.setToken(null);
+
+      // Assert
+      expect(client.getToken()).toBeNull();
+      expect(localStorage.getItem("aude_access_token")).toBeNull();
+    });
+  });
+
+  describe("get", () => {
+    it("returns JSON on success", async () => {
+      // Arrange
+      const data = { id: "1", name: "test" };
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+        ok: true,
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    )
+        json: async () => data,
+      } as Response);
 
-    // Act
-    await apiPost('/api/auth/login', { username: 'admin', password: 'pass' })
+      // Act
+      const result = await client.get<typeof data>("/test");
 
-    // Assert - URL must be relative (empty base), NOT http://localhost:3000
-    const calledUrl = fetchSpy.mock.calls[0]?.[0] as string
-    expect(calledUrl).toBe('/api/auth/login')
-    expect(calledUrl).not.toContain('localhost')
-    expect(calledUrl).not.toContain('http://')
-  })
+      // Assert
+      expect(result).toEqual(data);
+    });
 
-  it('should include X-Tenant-Id header from localStorage', async () => {
-    // Arrange
-    setTenantId('my-tenant')
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ ok: true }), {
+    it("redirects to /login on 401", async () => {
+      // Arrange
+      client.setToken("expired-token");
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({}),
+      } as Response);
+
+      // Act & Assert
+      await expect(client.get("/secure")).rejects.toThrow('Unauthorized');
+      expect(client.getToken()).toBeNull();
+    });
+
+    it("throws with error message from API", async () => {
+      // Arrange
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          error: { code: "VALIDATION_ERROR", message: "name is required" },
+        }),
+      } as Response);
+
+      // Act & Assert
+      await expect(client.get("/test")).rejects.toThrow('name is required');
+    });
+  });
+
+  describe("post", () => {
+    it("sends JSON body with auth header", async () => {
+      // Arrange
+      client.setToken("my-token");
+      const mockFetch = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+        ok: true,
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    )
+        json: async () => ({ success: true }),
+      } as Response);
 
-    // Act
-    await apiPost('/api/test')
+      // Act
+      await client.post("/auth/login", { username: "admin", password: "pass" });
 
-    // Assert
-    const opts = fetchSpy.mock.calls[0]?.[1] as RequestInit
-    const headers = opts.headers as Record<string, string>
-    expect(headers['X-Tenant-Id']).toBe('my-tenant')
-  })
+      // Assert
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/auth/login',
+        expect.objectContaining({
+          method: "POST",
+          headers: expect.objectContaining({
+            Authorization: "Bearer my-token",
+          }) as HeadersInit,
+          body: JSON.stringify({ username: "admin", password: "pass" }),
+        }),
+      );
+    });
+  });
 
-  it('should default tenant to "system" when not set', () => {
-    // Arrange - localStorage is cleared in beforeEach
-    // Act
-    const tenant = getTenantId()
-    // Assert
-    expect(tenant).toBe('system')
-  })
-
-  it('should store and retrieve tokens in localStorage', () => {
-    // Act
-    setTokens('access123', 'refresh456')
-    // Assert
-    expect(getToken()).toBe('access123')
-    expect(localStorage.getItem('aude_refresh_token')).toBe('refresh456')
-  })
-
-  it('should clear tokens from localStorage', () => {
-    // Arrange
-    setTokens('access123', 'refresh456')
-    // Act
-    clearTokens()
-    // Assert
-    expect(getToken()).toBeNull()
-    expect(localStorage.getItem('aude_refresh_token')).toBeNull()
-  })
-
-  it('should send Authorization header when token is present', async () => {
-    // Arrange
-    setTokens('my-jwt-token', 'refresh')
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ ok: true }), {
+  describe("delete", () => {
+    it("sends DELETE request", async () => {
+      // Arrange
+      const mockFetch = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+        ok: true,
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    )
+        json: async () => ({ success: true }),
+      } as Response);
 
-    // Act
-    await apiPost('/api/test')
+      // Act
+      await client.delete("/users/123");
 
-    // Assert
-    const opts = fetchSpy.mock.calls[0]?.[1] as RequestInit
-    const headers = opts.headers as Record<string, string>
-    expect(headers['Authorization']).toBe('Bearer my-jwt-token')
-  })
-})
+      // Assert
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/users/123',
+        expect.objectContaining({ method: "DELETE" }),
+      );
+    });
+  });
+});

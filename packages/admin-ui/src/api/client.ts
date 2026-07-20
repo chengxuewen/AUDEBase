@@ -98,3 +98,60 @@ export function apiPut<T>(path: string, body?: unknown): Promise<T> {
 export function apiDelete<T>(path: string): Promise<T> {
   return request<T>(path, { method: 'DELETE' })
 }
+export class ApiClient {
+  private baseUrl: string;
+
+  constructor(baseUrl?: string) {
+    this.baseUrl = baseUrl ?? (typeof import.meta !== 'undefined' ? (import.meta as Record<string,unknown>).env?.VITE_API_URL as string ?? '' : '');
+  }
+
+  getToken(): string | null {
+    return localStorage.getItem(TOKEN_KEY);
+  }
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem(REFRESH_KEY);
+  }
+
+  setToken(token: string | null, refreshToken?: string): void {
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+    if (refreshToken !== undefined) {
+      if (refreshToken) {
+        localStorage.setItem(REFRESH_KEY, refreshToken);
+      } else {
+        localStorage.removeItem(REFRESH_KEY);
+      }
+    }
+  }
+
+  getTenantId(): string {
+    return localStorage.getItem(TENANT_KEY) ?? 'system';
+  }
+
+  setTenantId(id: string): void {
+    localStorage.setItem(TENANT_KEY, id);
+  }
+
+  async get<T>(path: string): Promise<T> {
+    return apiGet<T>(path);
+  }
+
+  async post<T>(path: string, body?: unknown): Promise<T> {
+    return apiPost<T>(path, body);
+  }
+
+  async put<T>(path: string, body?: unknown): Promise<T> {
+    return apiPut<T>(path, body);
+  }
+
+  async delete<T>(path: string): Promise<T> {
+    return apiDelete<T>(path);
+  }
+}
+
+export const apiClient = new ApiClient();
+

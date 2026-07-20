@@ -1,4 +1,7 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+
+vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
 import { createProgram } from '../index.js'
 
 describe('aude db:migrate', () => {

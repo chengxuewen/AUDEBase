@@ -7,8 +7,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['packages/admin-ui/src/**/*.test.tsx'],
-    setupFiles: ['packages/admin-ui/src/__tests__/setup.ts'],
+    include: ['src/**/*.test.tsx'],
+    setupFiles: ['src/__tests__/setup.ts'],
     restoreMocks: true,
     clearMocks: true,
   },

@@ -1,4 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+
+vi.mock('bcryptjs', () => {
+  const actual = {};
+  const hashSync = (p: string, r: number) => `$2a$${r}$mockedhash${p.length}`;
+  const compare = async (p: string, h: string) => h.includes(String(p.length));
+  return { default: { hashSync, compare, hash: hashSync } };
+});
+
 import bcrypt from 'bcryptjs'
 import { AuthService } from '../index.js'
 import { signToken, generateRefreshToken, hashToken } from '../index.js'

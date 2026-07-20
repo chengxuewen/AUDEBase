@@ -15,8 +15,7 @@ const configSchema = z.object({
 
   DATABASE_URL: z
     .string()
-    .url()
-    .startsWith('postgres://', 'DATABASE_URL must be a postgres:// URL'),
+    .refine((url) => url.startsWith('postgres://') || url.startsWith('postgresql://'), 'DATABASE_URL must be a postgres:// or postgresql:// URL'),
 
   REDIS_URL: z.string().url().optional(),
 

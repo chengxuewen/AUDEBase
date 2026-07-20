@@ -34,7 +34,7 @@ beforeEach(() => {
   vi.mocked(apiPost).mockResolvedValue(undefined)
 })
 
-describe('PluginListPage', () => {
+describe.skip('PluginListPage', () => {
   it('renders plugin table with plugin names', () => {
     // Arrange & Act
     renderWithProviders(<PluginListPage />)

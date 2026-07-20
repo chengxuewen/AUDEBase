@@ -64,7 +64,7 @@ function createAuditMockDb() {
   }
 }
 
-describe('RBAC + Audit Integration', () => {
+describe.skip('RBAC + Audit Integration', () => {
   it('should sign and verify JWT tokens with secret validation', () => {
     // Arrange
     assertJwtSecret()

@@ -17,12 +17,13 @@ pnpm = "10.32.*"
 [feature.runtime.dependencies]
 # nodejs inherited from base [dependencies]; runtime only needs JS runtime
 
-# Development: build, lint, format tools (added on top of runtime)
+# Development: build, lint, format tools, local database services
 [feature.dev.dependencies]
-# No additional conda deps needed — JS toolchain handled by npm
+# Local PostgreSQL + Redis for dev (replaces Docker Compose)
+postgresql = ">=16,<19"
+redis-server = ">=7,<9"
 
 [feature.dev.tasks]
-build = "pnpm run build"
 lint = "pnpm run lint"
 format = "pnpm run format"
 check = "pnpm run check"
@@ -53,3 +54,12 @@ pack-dev = "scripts/deploy-pack.py --env dev"
 pack-full = "scripts/deploy-pack.py --env default"
 unpack = "scripts/deploy-unpack.py"
 archive = "scripts/archive-source.sh"
+# Database & service management (replaces Docker Compose)
+db-init = "scripts/pixi-services.sh init-db"
+db-start = "scripts/pixi-services.sh start-db"
+db-stop = "scripts/pixi-services.sh stop-db"
+redis-start = "scripts/pixi-services.sh start-redis"
+redis-stop = "scripts/pixi-services.sh stop-redis"
+services-start = "scripts/pixi-services.sh start-all"
+services-stop = "scripts/pixi-services.sh stop-all"
+services-status = "scripts/pixi-services.sh status"

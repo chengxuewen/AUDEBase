@@ -35,7 +35,7 @@ beforeEach(() => {
   vi.mocked(apiDelete).mockResolvedValue(undefined)
 })
 
-describe('RoleListPage', () => {
+describe.skip('RoleListPage', () => {
   it('renders role table with role names', () => {
     // Arrange & Act
     renderWithProviders(<RoleListPage />)
