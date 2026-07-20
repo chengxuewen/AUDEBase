@@ -856,9 +856,9 @@ Drizzle ORM 查询通过 D9.1 决策定义了监控策略：
 
 - **阈值**：>100ms 的查询记录为 WARN 级别日志
 - **信息**：SQL 文本、参数、执行时间、调用位置（文件:行号）
-- **Phase 2+**：集成 pg_stat_statements 扩展获取数据库端查询统计
+- **Phase 3**：集成 pg_stat_statements 扩展获取数据库端查询统计（OpenTelemetry）
 
-### 12.4 指标采集（Phase 2+）
+### 12.4 指标采集（Phase 3 — OpenTelemetry）
 
 | 指标类别     | 采集点                                                 | 工具                                   |
 | ------------ | ------------------------------------------------------ | -------------------------------------- |
@@ -985,9 +985,9 @@ services:
 - **降级**：升级前自动创建数据库快照（pg_dump），失败时管理员手动恢复
 - **零停机原则**：迁移仅添加列/表（不执行 `DROP COLUMN`/`RENAME`），破坏性操作通过应用层兼容两阶段部署处理
 
-### 14.5 CI/CD（Phase 2+）
+### 14.5 CI/CD（Phase 2 — CI 已部分实现）
 
-Phase 2+ 规划 GitHub Actions 流水线：
+Phase 2 已实现 GitHub Actions 流水线：
 
 ```
 PR → lint + type-check → npm audit → test (vitest --run) → db:migrate --dry-run
