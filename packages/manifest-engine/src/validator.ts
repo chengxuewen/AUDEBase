@@ -63,6 +63,58 @@ export function validateManifest(manifest: unknown): Manifest {
   return result.data
 }
 
+/**
+ * Non-throwing validation. Returns ValidationResult with errors array.
+ */
+export function validateManifestSafe(manifest: unknown): import('./types.js').ValidationResult {
+  const errors: import('./types.js').ValidationError[] = []
+
+  if (manifest === null || typeof manifest !== 'object') {
+    errors.push({
+      path: '',
+      message: 'input is not an object',
+      code: 'INVALID_FORMAT',
+    })
+    return { valid: false, errors }
+  }
+
+  const obj = manifest as Record<string, unknown>
+
+  if (obj['name'] === undefined) {
+    errors.push({ path: 'name', message: 'name is required', code: 'MISSING_FIELD' })
+  } else if (typeof obj['name'] === 'string' && !PLUGIN_NAME_REGEX.test(obj['name'])) {
+    errors.push({ path: 'name', message: 'name does not match @scope/plugin-* format', code: 'INVALID_FORMAT' })
+  }
+
+  if (obj['version'] === undefined) {
+    errors.push({ path: 'version', message: 'version is required', code: 'MISSING_FIELD' })
+  } else if (typeof obj['version'] === 'string' && !SEMVER_REGEX.test(obj['version'])) {
+    errors.push({ path: 'version', message: 'invalid SemVer format', code: 'INVALID_FORMAT' })
+  }
+
+  if (obj['display_name'] === undefined) {
+    errors.push({ path: 'display_name', message: 'display_name is required', code: 'MISSING_FIELD' })
+  }
+
+  if (errors.length > 0) {
+    return { valid: false, errors }
+  }
+
+  const result = manifestSchema.safeParse(manifest)
+  if (!result.success) {
+    for (const issue of result.error.issues) {
+      errors.push({
+        path: issue.path.join('.'),
+        message: issue.message,
+        code: 'INVALID_FORMAT',
+      })
+    }
+    return { valid: false, errors }
+  }
+
+  return { valid: true, errors: [] }
+}
+
 export function parseManifestYaml(yamlContent: string): Manifest {
   // Handle empty file
   if (yamlContent.trim() === '') {
