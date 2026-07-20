@@ -173,35 +173,78 @@ describe('插件生命周期钩子执行顺序', () => {
   })
 })
 
-describe('PluginManager 错误码覆盖', () => {
-  it('NOT_FOUND - 获取不存在的插件应抛出 NOT_FOUND', () => {
-    // Arrange & Act & Assert - 纯类型引用，实际测试需 createTestApp
-    // 此测试验证 PluginManager 抛出包含 NOT_FOUND 的错误
-    expect(true).toBe(true) // placeholder - integration test covers this
+describe('InlinePluginHost 方法测试', () => {
+  it('enable() 返回 Promise', async () => {
+    // Arrange
+    const host = new InlinePluginHost(createMockManifest(), { mockDelay: 0 })
+
+    // Act
+    const result = host.enable()
+
+    // Assert
+    expect(result).toBeInstanceOf(Promise)
+    await expect(result).resolves.toBeUndefined()
   })
 
-  it('DEPENDENCY_MISSING - 依赖缺失的插件安装应抛出 DEPENDENCY_MISSING', () => {
-    // Arrange & Act & Assert - integration test covers this
-    expect(true).toBe(true) // placeholder
+  it('disable() 返回 Promise', async () => {
+    // Arrange
+    const host = new InlinePluginHost(createMockManifest(), { mockDelay: 0 })
+
+    // Act
+    const result = host.disable()
+
+    // Assert
+    expect(result).toBeInstanceOf(Promise)
+    await expect(result).resolves.toBeUndefined()
   })
 
-  it('CIRCULAR_DEPENDENCY - 循环依赖应抛出 CIRCULAR_DEPENDENCY', () => {
-    // Arrange & Act & Assert - integration test covers this
-    expect(true).toBe(true) // placeholder
+  it('installPlugin() 返回 Promise', async () => {
+    // Arrange
+    const host = new InlinePluginHost(createMockManifest(), { mockDelay: 0 })
+
+    // Act
+    const result = host.installPlugin()
+
+    // Assert
+    expect(result).toBeInstanceOf(Promise)
+    await expect(result).resolves.toBeUndefined()
   })
 
-  it('LIFECYCLE_ERROR - enable 钩子抛异常应记录 LIFECYCLE_ERROR', () => {
-    // Arrange & Act & Assert - integration test covers this
-    expect(true).toBe(true) // placeholder
+  it('uninstallPlugin() 返回 Promise', async () => {
+    // Arrange
+    const host = new InlinePluginHost(createMockManifest(), { mockDelay: 0 })
+
+    // Act
+    const result = host.uninstallPlugin()
+
+    // Assert
+    expect(result).toBeInstanceOf(Promise)
+    await expect(result).resolves.toBeUndefined()
   })
 
-  it('MIGRATION_FAILED - 迁移失败插件应标记为 MIGRATION_FAILED 状态', () => {
-    // Arrange & Act & Assert - integration test covers this
-    expect(true).toBe(true) // placeholder
+  it('mockDelay 注入延迟到 enable()', async () => {
+    // Arrange
+    const host = new InlinePluginHost(createMockManifest(), { mockDelay: 10 })
+
+    // Act
+    const start = performance.now()
+    await host.enable()
+    const elapsed = performance.now() - start
+
+    // Assert
+    expect(elapsed).toBeGreaterThanOrEqual(8)
   })
 
-  it('MANIFEST_INVALID - 无效 manifest 应抛出 MANIFEST_INVALID', () => {
-    // Arrange & Act & Assert - integration test covers this
-    expect(true).toBe(true) // placeholder
+  it('disable() 包含延迟注入', async () => {
+    // Arrange
+    const host = new InlinePluginHost(createMockManifest(), { mockDelay: 5 })
+
+    // Act
+    const start = performance.now()
+    await host.disable()
+    const elapsed = performance.now() - start
+
+    // Assert
+    expect(elapsed).toBeGreaterThanOrEqual(3)
   })
 })
