@@ -249,4 +249,20 @@ describe("parseArgs", () => {
     // Assert
     expect(result).toEqual<ParsedArgs>({ command: "plugin" });
   });
+
+  test('"plugin upgrade my-plugin" captures name', () => {
+    // Arrange
+    const args = argv("plugin", "upgrade", "my-plugin");
+
+    // Act
+    const result = parseArgs(args);
+
+    // Assert
+    expect(result).toEqual<ParsedArgs>({
+      command: "plugin",
+      subcommand: "upgrade",
+      pluginName: "my-plugin",
+    });
+});
+
 });

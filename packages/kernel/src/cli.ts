@@ -12,6 +12,9 @@ import { eq, isNull } from "drizzle-orm";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
+import { ManifestLoader } from "@audebase/manifest-engine";
+import { MigrationRunner, type SqlExecutor } from "@audebase/migration-engine";
+import { parseSemVer } from "@audebase/shared-types";
 
 const HELP_TEXT = `Usage: aude <command>
 
@@ -25,6 +28,7 @@ Commands:
   plugin info <name>          Show detailed plugin info
   plugin enable <name>        Enable a plugin (set state to loaded)
   plugin disable <name>       Disable a plugin (set state to disabled)
+  plugin upgrade <name>       Upgrade a plugin (run migrations + update version)
   doctor                      Run health checks (manifest, TS, tests, i18n)
   --help, -h                  Show this help message
 
@@ -38,6 +42,7 @@ Examples:
   aude plugin info my-plugin
   aude plugin enable my-plugin
   aude doctor
+  aude plugin upgrade my-plugin
   DATABASE_URL=postgres://... AUDE_JWT_SECRET=... aude start
 `;
 
@@ -45,7 +50,7 @@ Examples:
 
 export interface ParsedArgs {
   command: "start" | "db:migrate" | "tenant" | "plugin" | "doctor" | "help" | "unknown";
-  subcommand?: "create" | "list" | "info" | "enable" | "disable" | "scaffold";
+  subcommand?: "create" | "list" | "info" | "enable" | "disable" | "scaffold" | "upgrade";
   tenantName?: string;
   pluginName?: string;
   unknownName?: string;
@@ -100,6 +105,7 @@ export function parseArgs(args: readonly string[]): ParsedArgs {
     if (sub === "info") return { command: "plugin", subcommand: "info", pluginName: args[4] };
     if (sub === "enable") return { command: "plugin", subcommand: "enable", pluginName: args[4] };
     if (sub === "disable") return { command: "plugin", subcommand: "disable", pluginName: args[4] };
+    if (sub === "upgrade") return { command: "plugin", subcommand: "upgrade", pluginName: args[4] };
     return { command: "plugin" };
   }
 
@@ -465,6 +471,94 @@ async function pluginSetState(
   }
 }
 
+
+async function pluginUpgrade(
+  provider: ReturnType<typeof createDatabaseProvider>,
+  logger: pino.Logger,
+  name: string | undefined,
+): Promise<void> {
+  if (!name) {
+    process.stderr.write("Usage: aude plugin upgrade <name>\n");
+    process.exit(1);
+  }
+  const { db, pool } = provider;
+  try {
+    const [row] = await db.select().from(modules).where(eq(modules.name, name));
+    if (!row) {
+      process.stdout.write(`Plugin not found: ${name}\n`);
+      process.exit(1);
+    }
+
+    const currentVersion = row.version;
+
+    // Map package name to filesystem path: strip @audebase/ prefix
+    const shortName = name.replace("@audebase/", "");
+    const manifestPath = path.join(process.cwd(), "packages", shortName, "manifest.yaml");
+
+    if (!fs.existsSync(manifestPath)) {
+      process.stdout.write(`Manifest not found: ${manifestPath}\n`);
+      process.exit(1);
+    }
+
+    const loader = new ManifestLoader();
+    const manifest = await loader.loadFromFile(manifestPath);
+    const newVersion = manifest.version;
+
+    // Compare versions
+    const currentSemver = parseSemVer(currentVersion);
+    const newSemver = parseSemVer(newVersion);
+    const isNewer =
+      newSemver.major > currentSemver.major ||
+      (newSemver.major === currentSemver.major && newSemver.minor > currentSemver.minor) ||
+      (newSemver.major === currentSemver.major &&
+        newSemver.minor === currentSemver.minor &&
+        newSemver.patch > currentSemver.patch);
+
+    if (!isNewer) {
+      process.stdout.write(`Plugin ${name} is already up to date (${currentVersion})\n`);
+      return;
+    }
+
+    // Run migrations for this plugin
+    const pluginDir = path.join(process.cwd(), "packages", shortName);
+    const runner = new MigrationRunner();
+    const executeSql: SqlExecutor = async (sql: string) => {
+      await pool.query(sql);
+    };
+
+    const migrationResult = await runner.run(
+      pluginDir,
+      name,
+      newVersion,
+      [],
+      executeSql,
+    );
+
+    if (migrationResult.failed && migrationResult.failed.length > 0) {
+      logger.error(
+        { plugin: name, failed: migrationResult.failed.length },
+        "plugin upgrade migrations failed",
+      );
+      process.stdout.write(`Plugin ${name} upgrade failed: ${migrationResult.failed.length} migration(s) failed\n`);
+      process.exit(1);
+    }
+
+    // Update modules table with new version
+    await db
+      .update(modules)
+      .set({ version: newVersion, updated_at: new Date() })
+      .where(eq(modules.name, name));
+
+    const migrationCount = migrationResult.executed.length;
+    process.stdout.write(
+      `Plugin ${name} upgraded from ${currentVersion} to ${newVersion} (${migrationCount} migration${migrationCount !== 1 ? "s" : ""} run)\n`,
+    );
+  } catch (err: unknown) {
+    logger.error({ err }, "plugin upgrade failed");
+    process.exit(1);
+  }
+}
+
 async function handlePluginCommand(
   parsed: ParsedArgs,
   provider: ReturnType<typeof createDatabaseProvider>,
@@ -478,8 +572,10 @@ async function handlePluginCommand(
     await pluginSetState(provider, logger, parsed.pluginName, "loaded", "enable");
   } else if (parsed.subcommand === "disable") {
     await pluginSetState(provider, logger, parsed.pluginName, "disabled", "disable");
+  } else if (parsed.subcommand === "upgrade") {
+    await pluginUpgrade(provider, logger, parsed.pluginName);
   } else {
-    process.stdout.write("Usage: aude plugin <scaffold|list|info|enable|disable>\n");
+    process.stdout.write("Usage: aude plugin <scaffold|list|info|enable|disable|upgrade>\n");
     process.exit(1);
   }
 }
