@@ -18,3 +18,22 @@ export type { AuthenticatedUser } from "./middleware";
 
 // Seed data
 export { seedDefaultPermissions, seedDefaultRoles, seedAdminUserRole } from "./seed";
+
+// Record Rules (D10)
+export {
+  parseDomainFilter,
+  evaluateCondition,
+  generateWhereClause,
+  DomainFilterError,
+} from "./record-rules";
+export type {
+  ComparisonOperator,
+  LeafCondition,
+  AndCondition,
+  OrCondition,
+  NotCondition,
+  TypedCondition,
+  DomainFilterTuple,
+  WhereClauseResult,
+  WhereClauseOptions,
+} from "./record-rules";
