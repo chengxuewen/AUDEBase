@@ -4,7 +4,7 @@
 
 ## 一、架构总览
 
-AUDEBase 是一个面向企业的应用开发平台，对标 Odoo、NocoBase、云表。采用微内核 + 插件热插拔架构，支持 OA、ERP、MES、PLM、WMS 等企业应用的快速开发与部署。项目目前处于 Phase 0 完成阶段，可进入 Phase 1a 编码。
+AUDEBase 是一个面向企业的应用开发平台，对标 Odoo、NocoBase、云表。采用微内核 + 插件热插拔架构，支持 OA、ERP、MES、PLM、WMS 等企业应用的快速开发与部署。项目当前处于 Phase 2 完成阶段 — 28 包全部实现，工作流引擎 (Phase 4) 已完成。
 
 本指南说明 AI agent 如何与 AUDEBase 开发环境交互，以及 OpenCode 工具链的配置使用方法。
 
@@ -327,9 +327,7 @@ AUDEBase 配置的 MCP 服务器：
 
 ### 6.1 开发工作流概述
 
-AUDEBase 项目目前处于早期阶段，尚无源代码。具体的工作流将在代码库搭建后确定。
-
-以下为 OpenCode 通用的开发流程参考：
+AUDEBase 项目当前处于 Phase 2 完成阶段 — 28 包全部实现，102 测试文件覆盖。工作流引擎 (Phase 4) 已完成。以下为 OpenCode 通用开发流程参考：
 
 | # | 阶段 | 关键组件 | 说明 |
 |---|------|----------|------|
@@ -434,7 +432,7 @@ AUDEBase 技术栈已全栈决策（TypeScript + Node.js + Fastify + React 19 + 
 4. **禁止**: AI 自动 git commit 或修改 `pixi.toml`
 5. **提交前**: 须征得用户同意
 
-> **项目状态**: AUDEBase 已完成 Phase 0 架构设计，多轮团队审核通过，可进入 Phase 1a 编码。
+> **项目状态**: Phase 2 完成, Phase 3 (OpenTelemetry + 插件市场 + Database-per-tenant) 待定, 工作流引擎 (Phase 4) 已完成。
 
 ### 8.6 文档编写风格
 
