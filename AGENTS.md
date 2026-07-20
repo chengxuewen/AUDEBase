@@ -144,7 +144,7 @@ _以下索引列出 docs/modules/ 中与 Phase 1a 编码直接相关的所有文
 | `file-storage.md`         | 设计   | 文件存储隔离演进                         | D4.1      | ✅ 已完成 |
 
 ## CODE MAP
-_20 包全部实现，694 测试通过，tsc 全包 clean。Phase 1b 6 包已接入 CoreApp。_
+_28 包全部实现，95 测试文件，tsc 全包 clean。Phase 1b 6 包 + Phase 2/4 6 包已接入 CoreApp。_
 
 | 模块 | 状态 | 规划路径 | SDD | TDD |
 |------|------|----------|-----|-----|
@@ -152,27 +152,31 @@ _20 包全部实现，694 测试通过，tsc 全包 clean。Phase 1b 6 包已接
 | plugin-core (Bootstrap) | ✅ Phase 1a | `packages/plugin-core/` - 内核插件，零依赖（D1.6） | ✅ plugin-core-sdd.md | ✅ plugin-core-tdd.md |
 | manifest.yaml 系统 | ✅ Phase 1a | `packages/manifest-engine/` - D1.5 | ✅ manifest-engine-sdd.md | ✅ manifest-engine-tdd.md |
 | RBAC 权限引擎 | ✅ Phase 1a | `packages/rbac/` - 基础 tenant_id + 角色权限（D10） | ✅ rbac-sdd.md | ✅ rbac-tdd.md |
-| 插件通信 | 🔲 Phase 1b | `packages/plugin-communication/` - D1.3 | 🔲 待生成 | 🔲 待生成 |
+| 插件通信 | ✅ Phase 1b | `packages/plugin-communication/` - D1.3 | ✅ plugin-communication-sdd.md | ✅ plugin-communication-tdd.md |
 | 审计日志 | ✅ Phase 1a | `packages/audit/` - D1.12 | ✅ audit-sdd.md | ✅ audit-tdd.md |
 | 迁移管理 | ✅ Phase 1a | `packages/migration/` - D1.7 | ✅ migration-engine-sdd.md | ✅ migration-engine-tdd.md |
 | 事件总线 | ✅ Phase 1b | `packages/event-bus/` - D1.9 | ✅ event-bus-sdd.md | ✅ event-bus-tdd.md |
 | 文件上传 | ✅ Phase 1b | `packages/file-upload/` - FileUploadService + 内存 repo | ✅ file-upload-sdd.md | ✅ file-upload-tdd.md |
-| Schema Engine | 🔲 Phase 2 | `packages/schema-engine/` | 🔲 待生成 | 🔲 待生成 |
+| Schema Engine | ✅ Phase 2 | `packages/schema-engine/` - D3/D7 | 🔲 待生成 | 🔲 待生成 |
+| WebSocket | ✅ Phase 2 | `packages/websocket/` - D1.11 | 🔲 待生成 | 🔲 待生成 |
 | 定时任务 (Cron) | ✅ Phase 1b | `packages/cron/` - BullMQ repeatable jobs（D1.10） | ✅ cron-sdd.md | ✅ cron-tdd.md |
 | 通知系统 | ✅ Phase 1b 接口 | `packages/notification/` - NotificationProvider 抽象（D1.14） | ✅ notification-sdd.md | ✅ notification-tdd.md |
 | API 版本控制 | ✅ Phase 1b | `packages/api-versioning/` - URL 路径版本（D1.8） | ✅ api-versioning-sdd.md | ✅ api-versioning-tdd.md |
 | 插件间数据扩展 | ✅ Phase 1b | `packages/data-extends/` - extends 声明解析（D12.1） | ✅ data-extends-sdd.md | ✅ data-extends-tdd.md |
 | 插件市场 | 🔲 Phase 2 | - | 🔲 待生成 | 🔲 待生成 |
-| 工作流引擎 | 🔲 Phase 4 | `packages/workflow-engine/` | 🔲 待生成 | 🔲 待生成 |
+| 工作流引擎 | ✅ Phase 4 | `packages/workflow-engine/` - D13 | 🔲 待生成 | 🔲 待生成 |
+| 工作流核心 | ✅ Phase 4 | `packages/workflow-core/` - D13 | 🔲 待生成 | 🔲 待生成 |
+| 工作流任务 | ✅ Phase 4 | `packages/workflow-tasks/` - D13 | 🔲 待生成 | 🔲 待生成 |
 | shared-types | ✅ Phase 1a | `packages/shared-types/` - 公共类型定义 | ✅ shared-types-sdd.md | ✅ shared-types-tdd.md |
 | 国际化 (i18n) | ✅ Phase 1a | `packages/i18n/` - D14 | ✅ i18n-sdd.md | ✅ i18n-tdd.md |
 | 管理 UI | ✅ Phase 1a | `packages/admin-ui/` - 管理后台 React 19 + Ant Design 5（D6-D24） | ✅ admin-ui-sdd.md | ✅ admin-ui-tdd.md |
 | 健康检查 | ✅ Phase 1a | `packages/health-check/` - D1.13 | ✅ health-check-sdd.md | ✅ health-check-tdd.md |
 | 日志/调试基础设施 | ✅ Phase 1a | `packages/logging-infra/` - 结构化日志 + Core 聚合 | ✅ logging-infra-sdd.md | ✅ logging-infra-tdd.md |
-| Core 内核骨架 | ✅ Phase 1a | `packages/core/` - Fastify bootstrap + 中间件 + 配置（GO-021） | ✅ core-sdd.md | 🔲 待生成 |
-| CLI 工具 | ✅ Phase 1a | `packages/cli/` - aude dev/db:migrate/plugin:create（GO-023） | ✅ cli-sdd.md | 🔲 待生成 |
-| JWT 认证 | ✅ Phase 1a | `packages/auth/` - JWT 签发/验证 + token_version（GO-022） | ✅ auth-sdd.md | 🔲 待生成 |
-| 速率限制 | ✅ Phase 1a | `packages/rate-limit/` - 固定窗口计数器限流（GO-024） | ✅ rate-limit-sdd.md | 🔲 待生成 |
+| Core 内核骨架 | ✅ Phase 1a | `packages/core/` - Fastify bootstrap + 中间件 + 配置（GO-021） | ✅ core-sdd.md | ✅ core-tdd.md |
+| CLI 工具 | ✅ Phase 1a | `packages/cli/` - aude dev/db:migrate/plugin:create（GO-023） | ✅ cli-sdd.md | ✅ cli-tdd.md |
+| JWT 认证 | ✅ Phase 1a | `packages/auth/` - JWT 签发/验证 + token_version（GO-022） | ✅ auth-sdd.md | ✅ auth-tdd.md |
+| 速率限制 | ✅ Phase 1a | `packages/rate-limit/` - 固定窗口计数器限流（GO-024） | ✅ rate-limit-sdd.md | ✅ rate-limit-tdd.md |
+| 插件示例 | ✅ Phase 1a | `packages/plugin-example/` - 开发参考模板 | 🔲 待生成 | 🔲 待生成 |
 
 ## CONVENTIONS
 
