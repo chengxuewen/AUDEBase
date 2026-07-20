@@ -196,7 +196,7 @@
 | CVE / 漏洞 | 项目 | 严重度 | 类型 | AUDEBase 防范措施 |
 |------------|------|:------:|------|-------------------|
 | CVE-2025-13877 | NocoBase | 9.8 | 默认 JWT 密钥 | D8.1: 启动校验 ≥32 字符，拒绝默认值 |
-| GHSA-v8vm-cqh8-q87q | NocoBase | - | DB 直连绕过权限 | D12: Core 数据 API 代理，禁止插件直连 DB |
+| GHSA-v8vm-cqh8-q87q (CVE-2026-52888) | NocoBase | 7.2 | SQL Collection 黑名单绕过 | D12: Core 数据 API 代理白名单模式 |
 | CVE-2026-41641 | NocoBase | 7.2 | SQL 注入 via sqlCollection:update | D9: Drizzle 参数化查询 + D12: Core 数据 API 代理 |
 | CVE-2026-34825 | NocoBase | - | 工作流 SQL 节点模板变量注入 | D9: Drizzle 参数化查询（Phase 1b+ 工作流引擎） |
 | CVE-2025-50341 | Axelor | 7.5 | SQL 注入 via _domain 参数 | D9: Drizzle 自动参数化查询 |

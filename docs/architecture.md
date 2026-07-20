@@ -1,6 +1,6 @@
 # AUDEBase 架构文档
 
-> **版本**: 2.0 | **更新日期**: 2026-07-19 | **状态**: Phase 4 完成 — 22 packages, 752 tests
+> **版本**: 2.0 | **更新日期**: 2026-07-20 | **状态**: Phase 2 完成 — 28 packages, 95 测试文件
 
 ---
 
@@ -242,21 +242,27 @@ BullMQ repeatable jobs。插件通过 `this.app.cron.add(schedule, handler)` API
 
 | 模块         | Phase | 包名                             |
 | ------------ | :---: | -------------------------------- |
-| 内核         |  1a   | `@audebase/kernel`               |
+| 内核         |  1a   | `@audebase/core`               |
 | 插件框架     |  1a   | `@audebase/plugin-framework`     |
 | 内核插件     |  1a   | `@audebase/plugin-core`          |
 | 声明系统     |  1a   | `@audebase/manifest-engine`      |
-| 迁移管理     |  1a   | `@audebase/migration-engine`     |
+| 迁移管理     |  1a   | `@audebase/migration`          |
 | RBAC 权限    |  1a   | `@audebase/rbac`                 |
 | 审计日志     |  1a   | `@audebase/audit`                |
 | 国际化       |  1a   | `@audebase/i18n`                 |
 | 健康检查     |  1a   | `@audebase/health-check`         |
 | 日志基础设施 |  1a   | `@audebase/logging-infra`        |
 | 共享类型     |  1a   | `@audebase/shared-types`         |
+| JWT 认证     |  1a   | `@audebase/auth`                |
+| CLI 工具     |  1a   | `@audebase/cli`                 |
+| 速率限制     |  1a   | `@audebase/rate-limit`          |
 | 插件通信     |  1b   | `@audebase/plugin-communication` |
 | 事件总线     |  1b   | `@audebase/event-bus`            |
 | 定时任务     |  1b   | `@audebase/cron`                 |
 | 通知系统     |  1b   | `@audebase/notification`         |
+| API 版本化   |  1b   | `@audebase/api-versioning`      |
+| 数据扩展     |  1b   | `@audebase/data-extends`        |
+| 文件上传     |  1b   | `@audebase/file-upload`         |
 | Schema 引擎  |   2   | `@audebase/schema-engine`        |
 | WebSocket    |   2   | `@audebase/websocket`            |
 | 工作流核心   |   4   | `@audebase/workflow-core`        |
@@ -264,7 +270,7 @@ BullMQ repeatable jobs。插件通过 `this.app.cron.add(schedule, handler)` API
 | 工作流任务   |   4   | `@audebase/workflow-tasks`       |
 | Admin UI     |  1a   | `@audebase/admin-ui`             |
 | 示例插件     |  1a   | `@audebase/plugin-example`       |
-| **总计**     |   —   | **22 packages · 752 tests**      |
+| **总计**     |   —   | **28 packages**                |
 
 ---
 
@@ -936,7 +942,7 @@ Docker Compose 一键启动（`docker compose up`）：
 ```yaml
 services:
   postgres: # PostgreSQL 16，端口 5432
-  redis: # Redis 7，端口 6379
+  redis: # Valkey 8，端口 6379
   audebase: # Node.js 应用，端口 3000
     depends_on: [postgres, redis]
     environment:
