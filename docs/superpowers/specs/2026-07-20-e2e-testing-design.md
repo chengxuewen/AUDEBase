@@ -20,9 +20,9 @@ AUDEBase 管理后台 9 个页面仅通过 React Testing Library mock 测试（2
 本地: docker compose up -d (PostgreSQL 16 + Valkey 8)
 CI:   GitHub service containers (postgres:16-alpine + valkey/valkey:8-alpine)
         ↓
-pnpm dev (Fastify :3000 + Vite :5173)
+pnpm dev (Fastify :5110 + Vite :5173)
         ↓
-pnpm test:e2e (Playwright → 浏览器 → localhost:5173 → API localhost:3000)
+pnpm test:e2e (Playwright → 浏览器 → localhost:5173 → API localhost:5110)
         ↓
 报告输出 (screenshots, traces, HTML report)
 ```
@@ -31,7 +31,7 @@ pnpm test:e2e (Playwright → 浏览器 → localhost:5173 → API localhost:300
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
-| Fastify 后端 | 3000 | Core + 所有插件 (AUDE_PORT 环境变量, 默认 3000) |
+| Fastify 后端 | 5110 | Core + 所有插件 (AUDE_PORT=5110) |
 | Vite 前端 | 5173 | Admin UI dev server |
 | PostgreSQL | 5432 | Docker |
 | Valkey | 6379 | Docker |
@@ -64,8 +64,8 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'AUDE_PORT=3000 npx aude dev',
-      port: 3000,
+      command: 'AUDE_PORT=5110 npx aude dev',
+      port: 5110,
       reuseExistingServer: !process.env.CI,
     },
     {
@@ -257,7 +257,7 @@ jobs:
           DATABASE_URL: postgresql://audebase:audebase_test@localhost:5432/audebase_test
           REDIS_URL: redis://localhost:6379
           AUDE_JWT_SECRET: ci-e2e-test-jwt-secret-at-least-32-chars-long
-          AUDE_PORT: "3000"
+          AUDE_PORT: "5110"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -282,7 +282,7 @@ jobs:
 ## 9. 实施步骤
 
 ### Phase 1 — MVP (~22 场景, 5 文件)
-1. 更新根目录 `playwright.config.ts` (端口 3000/5173, setup 项目, storageState)
+1. 更新根目录 `playwright.config.ts` (端口 5110/5173, setup 项目, storageState)
 2. 创建 `__e2e__/global-setup.ts` (DB 重置 + 种子数据脚本)
 3. 创建 `__e2e__/auth.setup.ts` (登录 → 写入 storageState)
 4. 编写 5 个 Phase 1 e2e 文件: login, dashboard, users, roles, plugins
