@@ -49,7 +49,7 @@
 ### D1.5: manifest.yaml 规范
 - **决策**: Phase 1a 包含字段：name/version/display_name/description/category/license/application/entry/author/dependencies/assets/runtime(mode+partition)/lifecycle(crash_policy+migration_version)/security(db_namespace)/exports/provides/permissions/models/locale/data/auto_install
 - **Phase 2 增加**: external_dependencies/demo/sequence
-- **状态**: 已决策
+- **状态**: ✅ Phase 1a 已实现
 
 ### D1.6: 内核插件与 Bootstrap 流程
 
@@ -96,23 +96,14 @@
 - **参考**: Odoo `env['bus.bus'].sendone()`、NocoBase `app.on()/app.emit()`、Axelor `@EventListener`
 - **状态**: ✅ Phase 1b 已实现
 
-### D1.12: 审计日志
+### D1.10: 定时任务调度
 
-- **决策**: Phase 1a 定义 `audit_log` 表（tenant_id, actor_id, action, resource_type, resource_id, old_values, new_values, ip, user_agent, created_at）。Core 中间件在 API 写操作时自动记录审计日志
-- **索引**: `(tenant_id, resource_type, resource_id)` 复合索引支持按资源查询审计历史
-- **清理**: Phase 1 不自动清理，Phase 2 支持按保留期限（如 90 天）自动归档
-- **参考**: Odoo `mail.tracking.value`、Corteza Data Privacy Console
-- **状态**: ✅ Phase 1a 已实现
-
-### D1.13: 健康检查
-- **决策**: Fastify 应用骨架内置 `GET /health`（无 API 前缀，Kubernetes probe 用）和 `GET /api/health`（有 API 前缀，API 一致性用），均返回 JSON `{ status: 'ok', db: true, redis: true, uptime: N }`。另提供 `GET /health/ready`（Kubernetes readiness probe，DB 连接成功后返回 200）
-- **状态**: 已决策，Phase 1a 实现
-
-### D1.14: 通知系统接口
-
-- **决策**: Phase 1b 定义 `NotificationProvider` 抽象接口（`send(recipient, template, data)`），不实现具体渠道。Phase 2 实现 Email（nodemailer）、InApp（数据库存储 + UI 展示）、Webhook 三种 Provider
-- **理由**: 通知是连接所有模块的横切关注点，Phase 1b 定义接口可让插件预先声明通知需求而不依赖具体实现
-- **参考**: Odoo mail 模块、NocoBase notification plugin、Strapi email plugin
+- **决策**: 使用 BullMQ repeatable jobs 实现定时任务。插件通过 `this.app.cron.add(schedule, handler)` API 注册定时任务
+- **声明**: manifest.yaml 中 `cron: [{ name, schedule, handler }]`，schedule 为 cron 表达式（兼容 node-cron），handler 为插件内函数名
+- **实现**: Core 将 manifest cron 声明转换为 BullMQ repeatable jobs，集成到已有 BullMQ + Redis 基础设施
+- **限制**: Phase 1 仅支持同进程执行（任务在 Core 进程中运行），Phase 2 支持独立 Worker 进程
+- **理由**: BullMQ 已在技术栈中（architecture.md §三），repeatable jobs 是 BullMQ 内置能力，零额外依赖
+- **参考**: Odoo `ir.cron` 模型、Strapi cron tasks、BullMQ repeatable jobs 文档
 - **状态**: ✅ Phase 1b 已实现
 
 ### D1.11: 实时通信（WebSocket）
@@ -122,14 +113,24 @@
 - **参考**: Directus WebSocket + GraphQL Subscriptions、Odoo Long Polling (/longpolling/poll)
 - **状态**: ✅ Phase 2 已实现
 
-### D1.10: 定时任务调度
+### D1.12: 审计日志
 
-- **决策**: 使用 BullMQ repeatable jobs 实现定时任务。插件通过 `this.app.cron.add(schedule, handler)` API 注册定时任务
-- **声明**: manifest.yaml 中 `cron: [{ name, schedule, handler }]`，schedule 为 cron 表达式（兼容 node-cron），handler 为插件内函数名
-- **实现**: Core 将 manifest cron 声明转换为 BullMQ repeatable jobs，集成到已有 BullMQ + Redis 基础设施
-- **限制**: Phase 1 仅支持同进程执行（任务在 Core 进程中运行），Phase 2 支持独立 Worker 进程
-- **理由**: BullMQ 已在技术栈中（architecture.md §三），repeatable jobs 是 BullMQ 内置能力，零额外依赖
-- **参考**: Odoo `ir.cron` 模型、Strapi cron tasks、BullMQ repeatable jobs 文档
+- **决策**: Phase 1a 定义 `audit_log` 表（tenant_id, actor_id, action, resource_type, resource_id, old_values, new_values, ip, user_agent, created_at）。Core 中间件在 API 写操作时自动记录审计日志
+- **索引**: `(tenant_id, resource_type, resource_id)` 复合索引支持按资源查询审计历史
+- **清理**: Phase 1 不自动清理，Phase 2 支持按保留期限（如 90 天）自动归档
+- **参考**: Odoo `mail.tracking.value`、Corteza Data Privacy Console
+- **状态**: ✅ Phase 1a 已实现
+
+### D1.13: 健康检查
+
+- **决策**: Fastify 应用骨架内置 `GET /health`（无 API 前缀，Kubernetes probe 用）和 `GET /api/health`（有 API 前缀，API 一致性用），均返回 JSON `{ status: 'ok', db: true, redis: true, uptime: N }`。另提供 `GET /health/ready`（Kubernetes readiness probe，DB 连接成功后返回 200）
+- **状态**: 已决策，Phase 1a 实现
+
+### D1.14: 通知系统接口
+
+- **决策**: Phase 1b 定义 `NotificationProvider` 抽象接口（`send(recipient, template, data)`），不实现具体渠道。Phase 2 实现 Email（nodemailer）、InApp（数据库存储 + UI 展示）、Webhook 三种 Provider
+- **理由**: 通知是连接所有模块的横切关注点，Phase 1b 定义接口可让插件预先声明通知需求而不依赖具体实现
+- **参考**: Odoo mail 模块、NocoBase notification plugin、Strapi email plugin
 - **状态**: ✅ Phase 1b 已实现
 
 ### D2: manifest.yaml 插件声明系统
@@ -312,7 +313,7 @@ AUDEBase 采用 Odoo 式 Poland notation（前缀表达式）数组语法：
 - **实现**: Core 聚合翻译表 + t() 函数注入 PluginHost context
 - **Phase 1a**: 预加载所有翻译（eager loading）
 - **参考**: NocoBase @nocobase/i18n、Odoo .po 文件
-- **状态**: ✅ Phase 1b 已实现
+- **状态**: ✅ Phase 1a 已实现
 
 ### D15: 前端 i18n — react-i18next
 

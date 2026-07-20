@@ -1,6 +1,6 @@
 # AUDEBase 已知坑点与反模式
 
-**更新日期**: 2026-07-15
+**更新日期**: 2026-07-20
 
 ## MODACS 适配相关
 
@@ -13,12 +13,12 @@
 ### @modacs/* 引用处理
 - **问题**: 旧 MODACS 包引用需移除
 - **正确做法**: 移除所有 `@modacs/*` 引用，不自动替换为 `@AUDEBase/*`
-- **理由**: AUDEBase 包结构尚未确定，自动替换可能引入错误依赖
+- **2026-07-20**: 包结构已确定（@audebase/*）
 
 ### 架构文档处理
-- **问题**: `docs/architecture.md` 从 MODACS 继承，内容可能不完全适用
-- **正确做法**: 内容不足 50% 的章节使用 `TODO: 为 AUDEBase 重写此节` 占位
-- **状态**: 品牌名称已全部转换为 AUDEBase，内容适配在后续阶段进行
+- ~~**问题**: `docs/architecture.md` 从 MODACS 继承，内容可能不完全适用~~
+- ~~**正确做法**: 内容不足 50% 的章节使用 `TODO: 为 AUDEBase 重写此节` 占位~~
+- ✅ **已解决** (Phase 1a: architecture.md 已完全重写)
 
 ## TypeScript 反模式
 
@@ -54,9 +54,9 @@
 - **详见**: decisions.md D22、frontend-spec.md §5
 
 ### RTL 测试 ACL 包裹器
-- **问题**: 管理 UI 组件测试需要 MockACLWrapper 提供 ACLContext，但此包裹器尚未实现
-- **正确做法**: Phase 1a 编码时同步创建 `test-utils.tsx`（MockACLWrapper + renderWithProviders）
-- **详见**: dev-workflow.md §3.6（MockACLWrapper + renderWithProviders）
+- ~~**问题**: 管理 UI 组件测试需要 MockACLWrapper 提供 ACLContext，但此包裹器尚未实现~~
+- ✅ **已解决** (Phase 1a 已创建 test-utils.tsx)
+- ~~**正确做法**: Phase 1a 编码时同步创建 `test-utils.tsx`（MockACLWrapper + renderWithProviders）~~
 ## 插件架构相关
 
 ### ProcessPluginHost mock 保真度
@@ -78,6 +78,7 @@
 ### Drizzle pre-1.0 风险
 - **问题**: Drizzle ORM 尚未发布 v1.0，API 不保证稳定
 - **正确做法**: 锁定 0.45.x LTS，通过 DatabaseProvider 接口抽象隔离。更换 ORM 零成本
+- ✅ **已验证**: 所有包锁定 0.45.0（去 caret）
 - **详见**: decisions.md D9
 
 ### Ant Design 5 供应链安全
@@ -172,9 +173,7 @@
 - **详见**: .opencode/init-mcp-openspace.mjs、.opencode/opencode.json §mcp
 
 ### macOS `realpath` 不可用
-- **问题**: `pixi-init.sh` 使用 `realpath` 解析路径，macOS 默认不提供此命令（需 `brew install coreutils`）
-- **正确做法**: 使用 POSIX 兼容的 `cd "$dir" && pwd -P` 替代 `realpath`
-- **详见**: scripts/pixi-init.sh:9 -> `cd "${SCRIPT_DIR}/.." && pwd -P`
+- ✅ **已修复** — 改用 pwd -P（scripts/pixi-init.sh:9 -> `cd "${SCRIPT_DIR}/.." && pwd -P`）
 
 ### batch `setlocal` 导致 pixi 环境变量丢失
 - **问题**: `.bat` 脚本中 `setlocal enabledelayedexpansion` 创建的局部环境在脚本结束时销毁，`pixi shell-hook` 输出的 PATH 等修改全部丢失
@@ -206,6 +205,25 @@
 | 默认密码/密钥 | Strapi/Directus | - | 默认 admin:admin | D1.6: admin 默认密码强制首次修改 |
 | IDOR（不安全的直接对象引用） | Strapi | - | 缺乏行级权限检查 | D10: Record Rules 自动注入 WHERE 条件 |
 | CVE-2026-44442 | ERPNext | - | CWE-862 缺失授权检查 | D10: Record Rules + D19: ACLProvider/ACLGuard 声明式权限控制 |
+| CVE-2026-34156 | NocoBase | 9.9 | 工作流沙箱逃逸 | D1.1: Container 隔离
+| CVE-2026-52887 | NocoBase | - | SQL 注入 → PG-superuser RCE | D9 + D12
+| GHSA-ghvf-qf6h-g8x5 | NocoBase | - | 文件上传 + LFI → RCE | D4.1 + D12
+| CVE-2026-22599 | Strapi | 9.3 | SQL 注入 | D9: Drizzle 参数化查询
+| CVE-2025-64526 | Strapi | - | 速率限制绕过 | D8 + rate-limit 模块
+
+## 新增 pitfalls (2026-07-20)
+
+### 测试种子工厂必须 deep clone (commit cf64cc9)
+- **问题**: 种子工厂返回的对象被测试用例直接复用，导致共享引用污染
+- **正确做法**: 种子工厂返回时必须 deep clone，防止测试间相互污染
+
+### 内部包应显式导出所有对外 API (commit db55b30)
+- **问题**: 内部包未显式导出 API，导致消费者通过相对路径 import 绕过类型检查
+- **正确做法**: index.ts 显式 re-export 所有对外 API，避免隐式引用
+
+### admin-ui 测试使用 happy-dom 非 jsdom (commit a256190)
+- **问题**: jsdom 兼容性问题导致部分 React 19 特性（如 useId）测试失败
+- **正确做法**: admin-ui 测试环境改用 happy-dom，兼容 React 19 且启动更快
 
 **通用防范原则**：
 - 所有外部输入使用 Zod 验证（D8）
