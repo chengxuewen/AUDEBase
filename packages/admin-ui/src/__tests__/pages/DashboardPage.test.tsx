@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import DashboardPage from "../../pages/DashboardPage";
@@ -94,5 +94,31 @@ describe("DashboardPage", () => {
       expect(screen.getByText("无法加载系统概览")).toBeDefined();
     });
     expect(screen.getByRole("button", { name: /^重/ })).toBeDefined();
+  });
+
+  it("clicking retry button reloads data", async () => {
+    // Arrange — first call fails, retry succeeds
+    vi.mocked(apiClient.get)
+      .mockRejectedValueOnce(new Error("网络错误"))
+      .mockResolvedValueOnce({ data: [], meta: { count: 0, page: 1, pageSize: 1, totalPages: 0 } })
+      .mockResolvedValueOnce({ data: [], meta: { count: 0, page: 1, pageSize: 1, totalPages: 0 } })
+      .mockResolvedValueOnce({ status: "ok", db: true, uptime: 60 });
+
+    renderDashboard();
+
+    // Assert — error state shown
+    await waitFor(() => {
+      expect(screen.getByText("无法加载系统概览")).toBeDefined();
+    });
+
+    // Act — click retry
+    const retryBtn = screen.getByRole("button", { name: /^重/ });
+    fireEvent.click(retryBtn);
+
+    // Assert — data loads after retry (3 API calls on retry)
+    await waitFor(() => {
+      expect(screen.getByText("数据库")).toBeDefined();
+    });
+  });
   });
 });
