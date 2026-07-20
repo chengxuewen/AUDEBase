@@ -20,9 +20,9 @@
 - **组间通信**: JSON-RPC over stdin/stdout + Core 路由（同步 RPC） + Redis Pub/Sub（异步事件）
 - **资源**: 50 插件由原方案 50 进程/2.5-4GB 降为 8-12 进程/0.4-0.7GB
 - **manifest 命名**: `runtime.mode`（inline | process | container）和 `runtime.partition`（SYSTEM | oa | erp | mes | ...）
-- **信任边界**: 组间通信受访问控制矩阵约束（SYSTEM→全部、Domain→同域直调+RPC、Isolated→白名单、Container→全禁），详见 docs/plugin-architecture-analysis.md §4.2 信任边界表
+- **信任边界**: 组间通信受访问控制矩阵约束（SYSTEM→全部、Domain→同域直调+RPC、Isolated→白名单、Container→全禁），详见 docs/analysis/plugin-architecture-analysis.md §4.2 信任边界表
 - **参考**: VS Code Extension Host 组内共享模型、Chrome site isolation 信任分级、Erlang OTP 应用组
-- **详情**: 见 docs/plugin-architecture-analysis.md
+- **详情**: 见 docs/analysis/plugin-architecture-analysis.md
 - **状态**: ✅ Phase 2 已实现
 
 ### D1.2: PluginHost 接口抽象
