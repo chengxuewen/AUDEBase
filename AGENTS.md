@@ -45,8 +45,6 @@ AUDEBase/
 │   │   ├── redis-mock-guide.md       # ioredis-mock + BullMQ testMode
 │   │   ├── test-seed-strategy.md     # seed factory + transaction rollback
 │   │   └── e2e-test-flows.md         # 5 核心 E2E 流程 + Playwright
-│   ├── plans/          # 5 份 Phase 1a 执行计划文档（~160KB，含 1 份 README.md）
-│   └── reference/      # 15 份竞品产品画像
 ├── package.json        # pnpm workspace 根配置
 ├── pixi.toml           # Pixi 环境配置（runtime/dev/test 分层）
 ├── scripts/            # 部署/构建脚本目录
@@ -68,9 +66,9 @@ AUDEBase/
 | Agent 使用指南 | `.opencode/agent-guide.md` | OMO 编排体系、5 层模型路由 |
 | 技能注册表 | `SKILL.md` | superpowers + 项目专属技能清单 |
 │ 架构文档 | `docs/architecture.md` | 含 MVP 验收标准、Phase 1a/1b 五阶段路线图
-| Phase 划分 | `docs/phase-planning.md` | 单一真实来源，4 人并行分工 + 依赖图 |
-│ 插件架构分析 | `docs/plugin-architecture-analysis.md` | 四层信任分组 + 通信 + 安全 + 生命周期
-│ 竞品调研 | `docs/competitive-landscape.md` | 39+ 产品，五大分类
+| Phase 划分 | `docs/roadmap/phase-planning.md` | 单一真实来源，4 人并行分工 + 依赖图 |
+| 插件架构分析 | `docs/analysis/plugin-architecture-analysis.md` | 四层信任分组 + 通信 + 安全 + 生命周期
+| 竞品调研 | `docs/analysis/competitive-landscape.md` | 39+ 产品，五大分类
 | 竞品参考 | `docs/reference/` | 15 份详细产品画像（Odoo/NocoBase/ERPNext 等）|
 | 数据库 Schema | `docs/modules/database-schema.md` | 11 张表 DDL + 表关系 + 索引策略 |
 | API 规范 | `docs/modules/api-specification.md` | 19 个端点请求/响应格式 |
@@ -79,7 +77,6 @@ AUDEBase/
 │ TDD 文档 | `docs/modules/*-tdd.md` | shared-types、plugin-framework、plugin-core、manifest-engine、migration-engine、rbac、audit、i18n、health-check、admin-ui、logging-infra
 | 开发工作流 | `docs/modules/dev-workflow.md` | Monorepo + CLI + --watch + 测试策略 |
 | Admin UI | `docs/modules/frontend-spec.md` | 路由 + Build Output + 插件加载契约 |
-| 实施计划 | `docs/plans/` | 5 份 Phase 1a 执行计划文档（~160KB） |
 | 通用规则 | `.agents/rules/common/` | 安全、编码风格、测试、Git 工作流 |
 | 安全规则 | `.agents/rules/common/security.md` | Secret management、XSS、CSRF |
 
