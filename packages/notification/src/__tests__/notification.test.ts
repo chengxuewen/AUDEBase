@@ -78,9 +78,9 @@ describe("NotificationService", () => {
       });
 
       expect(sendCalls).toHaveLength(1);
-      expect(sendCalls[0].recipient).toBe("user-1");
-      expect(sendCalls[0].template).toBe("welcome");
-      expect(sendCalls[0].data).toEqual({ name: "Alice" });
+      expect(sendCalls[0]!.recipient).toBe("user-1");
+      expect(sendCalls[0]!.template).toBe("welcome");
+      expect(sendCalls[0]!.data).toEqual({ name: "Alice" });
     });
 
     test("throws CHANNEL_NOT_FOUND for unregistered channel", async () => {

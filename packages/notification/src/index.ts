@@ -1,6 +1,6 @@
 /**
  * Notification system interfaces and service.
- * Phase 1b: abstract provider interface (D1.14).
+ * Phase 1b: abstract provider interface + concrete providers (D1.14).
  * Phase 2+: Email, InApp, Webhook concrete providers.
  */
 
@@ -86,3 +86,9 @@ export class NotificationService {
     return Array.from(this.providers.keys());
   }
 }
+
+// Re-export concrete providers
+export { EmailNotificationProvider, readSmtpConfigFromEnv } from "./providers/email";
+export type { EmailTransporter, SmtpConfig } from "./providers/email";
+export { InAppNotificationProvider } from "./providers/in-app";
+export type { InAppStore } from "./providers/in-app";
