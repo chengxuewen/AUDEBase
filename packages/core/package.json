@@ -26,7 +26,7 @@
     "@audebase/notification": "workspace:*",
     "@audebase/api-versioning": "workspace:*",
     "@audebase/data-extends": "workspace:*",
-    "drizzle-orm": "^0.45.0",
+    "drizzle-orm": "0.45.0",
     "postgres": "^3.4.5",
     "ioredis": "^5.4.2",
     "fastify": "^5.10.0",
