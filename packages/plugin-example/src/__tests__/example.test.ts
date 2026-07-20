@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from "vitest";
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import type { ExamplePlugin } from "../index";
 import { createPlugin, TodoService } from "../index";
 
@@ -152,6 +152,52 @@ describe("ExamplePlugin", () => {
       // Assert
       expect(plugin.todos).toBeInstanceOf(TodoService);
       expect(todos).toEqual([]);
+    });
+  });
+
+  describe('install()', () => {
+    test('does nothing when db is null', async () => {
+      // Arrange
+      const pluginNoDb = createPlugin();
+
+      // Act
+      await pluginNoDb.install();
+
+      // Assert — no error thrown, db remains null
+      expect(pluginNoDb.isLoaded).toBe(false);
+    });
+
+    test('executes migration SQL when db is available', async () => {
+      // Arrange
+      const executeSpy = vi.fn().mockResolvedValue(undefined);
+      const dbWithExecute = { ...createMockDb(), execute: executeSpy };
+      const pluginWithDb = createPlugin(dbWithExecute);
+
+      // Act
+      await pluginWithDb.install();
+
+      // Assert
+      expect(executeSpy).toHaveBeenCalledTimes(1);
+      const sql = executeSpy.mock.calls[0][0] as string;
+      expect(sql).toContain('CREATE TABLE IF NOT EXISTS example_todos');
+      expect(sql).toContain('CREATE INDEX IF NOT EXISTS idx_example_todos_tenant');
+      expect(sql).toContain('CREATE INDEX IF NOT EXISTS idx_example_todos_user');
+    });
+  });
+
+  describe('acceptDb()', () => {
+    test('sets db and allows load() to create TodoService', async () => {
+      // Arrange
+      const pluginNoDb = createPlugin();
+      const db = createMockDb();
+
+      // Act
+      pluginNoDb.acceptDb(db);
+      await pluginNoDb.load();
+
+      // Assert
+      expect(pluginNoDb.isLoaded).toBe(true);
+      expect(pluginNoDb.todos).toBeInstanceOf(TodoService);
     });
   });
 });
