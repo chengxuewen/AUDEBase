@@ -15,10 +15,21 @@ export {
 } from './token.js'
 export {
   parseDomainFilter,
-  applyRecordRule,
-  injectTenantFilter,
+  evaluateCondition,
+  generateWhereClause,
+  DomainFilterError,
 } from './record-rules.js'
-export type { DomainFilterAST } from './record-rules.js'
+export type {
+  ComparisonOperator,
+  LeafCondition,
+  AndCondition,
+  OrCondition,
+  NotCondition,
+  TypedCondition,
+  DomainFilterTuple,
+  WhereClauseResult,
+  WhereClauseOptions,
+} from './record-rules.js'
 export type {
   DatabaseProvider,
   UserRecord,

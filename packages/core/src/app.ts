@@ -35,6 +35,7 @@ import { generateBootstrapData, isBootstrapComplete } from '@audebase/plugin-cor
 import { resolveDependencyOrder } from '@audebase/plugin-framework'
 import { registerLogRoutes } from './logs/routes.js'
 import { checkLoginRateLimit, loginRateLimitBody } from './middleware/login-rate-limit.js'
+import { registerGraphQLRoute } from './api/graphql.js'
 
 const HTTP_STATUS: Record<string, number> = {
   [ErrorCode.AUTH_INVALID_CREDENTIALS]: 401,
@@ -998,6 +999,9 @@ export class CoreApp {
     })
     // --- Log routes ---
     registerLogRoutes(app, authHook)
+
+    // --- GraphQL endpoint ---
+    registerGraphQLRoute(app, this._db!, this.logger, { authHook })
 
     // --- File upload routes ---
     app.post('/api/files/upload', {

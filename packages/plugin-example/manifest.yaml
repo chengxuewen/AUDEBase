@@ -1,0 +1,47 @@
+name: "@audebase/plugin-example-todo"
+version: "0.2.0"
+display_name: "Example Todo"
+description: "Example plugin demonstrating the AUDEBase plugin framework with a simple todo model"
+category: "oa"
+license: "Apache-2.0"
+
+application:
+  entry: "./src/index.ts"
+  author: "AUDEBase Team"
+
+dependencies: []
+
+lifecycle:
+  auto_install: false
+
+runtime:
+  mode: inline
+  partition: oa
+  crash_policy: restart
+
+security:
+  db_namespace: "public"
+
+models:
+  - name: todos
+    table: example_todos
+    fields:
+      - name: id
+        type: uuid
+        primary: true
+        default: uuid_generate_v4()
+      - name: title
+        type: text
+        required: true
+      - name: completed
+        type: boolean
+        default: false
+      - name: user_id
+        type: uuid
+        required: true
+
+permissions:
+  - todos:create
+  - todos:read
+  - todos:update
+  - todos:delete

@@ -9,7 +9,13 @@ import { runPluginCreate } from './commands/plugin-create.js'
 import { runBuild } from './commands/build.js'
 import { runTest } from './commands/test.js'
 import { runLint } from './commands/lint.js'
-
+import { runPluginList } from './commands/plugin-list.js'
+import { runPluginInfo } from './commands/plugin-info.js'
+import { runPluginEnable } from './commands/plugin-enable.js'
+import { runPluginDisable } from './commands/plugin-disable.js'
+import { runPluginUpgrade } from './commands/plugin-upgrade.js'
+import { runPluginScaffold } from './commands/plugin-scaffold.js'
+import { runDoctor } from './commands/doctor.js'
 export function createProgram(): Command {
   const program = new Command()
 
@@ -90,6 +96,97 @@ export function createProgram(): Command {
     .action(async () => {
       try {
         await runLint()
+      } catch (error) {
+        console.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        process.exit(1)
+      }
+    })
+
+  program
+    .command('plugin:list')
+    .description('List system plugins')
+    .action(async () => {
+      try {
+        await runPluginList()
+      } catch (error) {
+        console.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        process.exit(1)
+      }
+    })
+
+  program
+    .command('plugin:info <name>')
+    .description('Show plugin details')
+    .action(async (name: string) => {
+      try {
+        await runPluginInfo(name)
+      } catch (error) {
+        console.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        process.exit(1)
+      }
+    })
+
+  program
+    .command('plugin:enable <name>')
+    .description('Enable a plugin')
+    .action(async (name: string) => {
+      try {
+        await runPluginEnable(name)
+      } catch (error) {
+        console.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        process.exit(1)
+      }
+    })
+
+  program
+    .command('plugin:disable <name>')
+    .description('Disable a plugin')
+    .action(async (name: string) => {
+      try {
+        await runPluginDisable(name)
+      } catch (error) {
+        console.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        process.exit(1)
+      }
+    })
+
+  program
+    .command('plugin:upgrade <name>')
+    .description('Upgrade a plugin (run migrations + update version)')
+    .action(async (name: string) => {
+      try {
+        await runPluginUpgrade(name)
+      } catch (error) {
+        console.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        process.exit(1)
+      }
+    })
+
+  program
+    .command('plugin:scaffold <name>')
+    .description('Generate plugin skeleton with templates')
+    .option('--partition <name>', 'plugin partition', 'oa')
+    .option('--mode <mode>', 'runtime mode (inline|process|container)', 'inline')
+    .option('--with-models', 'include model migration templates')
+    .action(async (name: string, options) => {
+      try {
+        runPluginScaffold(name, {
+          partition: options.partition,
+          mode: options.mode,
+          withModels: options.withModels,
+        })
+      } catch (error) {
+        console.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        process.exit(1)
+      }
+    })
+
+  program
+    .command('doctor')
+    .description('Run health checks (manifests, tsc, vitest, i18n)')
+    .action(async () => {
+      try {
+        await runDoctor()
       } catch (error) {
         console.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
         process.exit(1)

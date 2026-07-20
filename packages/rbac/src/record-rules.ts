@@ -1,144 +1,387 @@
 /**
- * Record Rules - Domain Filter (Poland Notation) parsing and evaluation
+ * Record Rules Engine (D10) — Odoo-style domain filter injection
  *
- * Implements D10 Record Rules with Poland notation (prefix expression) array syntax.
+ * Parses Poland-notation domain filter arrays from manifest permissions
+ * and auto-injects WHERE conditions into DB queries.
  *
- * @audebase/rbac
+ * Domain Filter Syntax (D10):
+ *   ["&", condA, condB]  →  AND
+ *   ["|", condA, condB]  →  OR
+ *   ["!", cond]          →  NOT
+ *   ["field", "op", val] →  comparison leaf
+ *
+ * Operators: = != > < >= <= in 'not in' like ilike
+ *
+ * Example:
+ *   ["&", ["status", "=", "draft"], ["amount", ">", 1000]]
+ *   → WHERE status = $1 AND amount > $2  with params ['draft', 1000]
  */
 
-import type { TenantContext } from './types.js'
+// ── Types ────────────────────────────────────────────────────────────────────
 
-/** AST node for parsed domain filter */
-export interface DomainFilterAST {
-  type: 'operator' | 'condition'
-  operator?: string
-  field?: string
-  value?: unknown
-  children?: DomainFilterAST[]
+/** All supported comparison operators */
+export type ComparisonOperator =
+  | "="
+  | "!="
+  | ">"
+  | "<"
+  | ">="
+  | "<="
+  | "in"
+  | "not in"
+  | "like"
+  | "ilike";
+
+/** A single field-value comparison */
+export interface LeafCondition {
+  readonly field: string;
+  readonly operator: ComparisonOperator;
+  readonly value: unknown;
 }
 
-const LOGICAL_OPERATORS = new Set(['&', '|', '!'])
-const COMPARISON_OPERATORS = new Set([
-  '=', '!=', '>', '<', '>=', '<=',
-  'in', 'not in', 'like', 'ilike',
-])
+/** AND node */
+export interface AndCondition {
+  readonly operator: "&";
+  readonly conditions: readonly TypedCondition[];
+}
+
+/** OR node */
+export interface OrCondition {
+  readonly operator: "|";
+  readonly conditions: readonly TypedCondition[];
+}
+
+/** NOT node */
+export interface NotCondition {
+  readonly operator: "!";
+  readonly condition: TypedCondition;
+}
+
+/** Parsed condition tree */
+export type TypedCondition =
+  | LeafCondition
+  | AndCondition
+  | OrCondition
+  | NotCondition;
+
+/** Raw domain filter tuple as declared in manifest */
+export type DomainFilterTuple = readonly unknown[];
+
+/** Result of SQL WHERE clause generation */
+export interface WhereClauseResult {
+  readonly sql: string;
+  readonly params: readonly unknown[];
+}
+
+/** Options for generateWhereClause */
+export interface WhereClauseOptions {
+  readonly tableAlias?: string;
+  readonly tenantId?: string;
+  readonly tenantFieldName?: string;
+}
+
+/** Error thrown for malformed domain filters */
+export class DomainFilterError extends Error {
+  constructor(message: string) {
+    super(`[DomainFilter] ${message}`);
+    this.name = "DomainFilterError";
+  }
+}
+
+// ── Constants ────────────────────────────────────────────────────────────────
+
+const VALID_OPERATORS: ReadonlySet<string> = new Set([
+  "=",
+  "!=",
+  ">",
+  "<",
+  ">=",
+  "<=",
+  "in",
+  "not in",
+  "like",
+  "ilike",
+]);
+
+const FIELD_NAME_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+// ── Validators ───────────────────────────────────────────────────────────────
+
+function validateField(field: unknown): string {
+  if (typeof field !== "string" || !FIELD_NAME_RE.test(field)) {
+    throw new DomainFilterError(
+      `Invalid field name: ${JSON.stringify(field)}. Must match ${FIELD_NAME_RE}.`,
+    );
+  }
+  return field;
+}
+
+function validateOperator(op: unknown): ComparisonOperator {
+  if (typeof op !== "string" || !VALID_OPERATORS.has(op)) {
+    throw new DomainFilterError(
+      `Invalid operator: ${JSON.stringify(op)}. Must be one of: ${[...VALID_OPERATORS].sort().join(", ")}.`,
+    );
+  }
+  return op as ComparisonOperator;
+}
+
+function validateValueForOperator(
+  operator: ComparisonOperator,
+  value: unknown,
+): void {
+  if (operator === "in" || operator === "not in") {
+    if (!Array.isArray(value)) {
+      throw new DomainFilterError(
+        `Operator "${operator}" requires an array value, got: ${JSON.stringify(value)}.`,
+      );
+    }
+    if (value.length === 0) {
+      throw new DomainFilterError(
+        `Operator "${operator}" requires a non-empty array.`,
+      );
+    }
+  }
+}
+
+// ── Type Guards ──────────────────────────────────────────────────────────────
+
+function isLeaf(c: TypedCondition): c is LeafCondition {
+  return "field" in c;
+}
+
+// ── Parser ───────────────────────────────────────────────────────────────────
 
 /**
- * Parse a Poland notation domain filter array into an AST.
- *
- * @returns AST root node, or null for empty filter
- * @throws Error on invalid filter structure or unknown operator
+ * Parse an Odoo-style Poland-notation domain filter array into a condition tree.
  */
-export function parseDomainFilter(filter: unknown): DomainFilterAST | null {
-  if (!Array.isArray(filter) || filter.length === 0) {
-    return null
+export function parseDomainFilter(filter: DomainFilterTuple): TypedCondition {
+  if (!Array.isArray(filter)) {
+    throw new DomainFilterError(`Expected an array, got ${typeof filter}.`);
+  }
+  if (filter.length === 0) {
+    throw new DomainFilterError("Empty filter array.");
   }
 
-  return parseNode(filter as unknown[])
+  const first = filter[0];
+
+  if (first === "&") {
+    const children = filter.slice(1);
+    if (children.length < 2) {
+      throw new DomainFilterError(
+        `"&" requires at least 2 conditions, got ${children.length}.`,
+      );
+    }
+    return {
+      operator: "&",
+      conditions: children.map((c) => parseDomainFilter(c as DomainFilterTuple)),
+    };
+  }
+
+  if (first === "|") {
+    const children = filter.slice(1);
+    if (children.length < 2) {
+      throw new DomainFilterError(
+        `"|" requires at least 2 conditions, got ${children.length}.`,
+      );
+    }
+    return {
+      operator: "|",
+      conditions: children.map((c) => parseDomainFilter(c as DomainFilterTuple)),
+    };
+  }
+
+  if (first === "!") {
+    const children = filter.slice(1);
+    if (children.length !== 1) {
+      throw new DomainFilterError(
+        `"!" requires exactly 1 condition, got ${children.length}.`,
+      );
+    }
+    return {
+      operator: "!",
+      condition: parseDomainFilter(children[0] as DomainFilterTuple),
+    };
+  }
+
+  // Leaf: [field, operator, value]
+  if (filter.length !== 3) {
+    throw new DomainFilterError(
+      `Leaf condition must have 3 elements [field, op, value], got ${filter.length}: ${JSON.stringify(filter)}.`,
+    );
+  }
+
+  const field = validateField(filter[0]);
+  const operator = validateOperator(filter[1]);
+  const value = filter[2];
+  validateValueForOperator(operator, value);
+
+  return { field, operator, value };
 }
 
-function parseNode(filter: unknown[]): DomainFilterAST {
-  const first = filter[0]
+// ── In-Memory Evaluator ──────────────────────────────────────────────────────
 
-  // Logical operator: & (AND), | (OR), ! (NOT)
-  if (typeof first === 'string' && LOGICAL_OPERATORS.has(first)) {
-    const operator = first
-    const childCount = operator === '!' ? 1 : 2
-    const children: DomainFilterAST[] = []
+/**
+ * Evaluate a parsed condition against a data row (in-memory).
+ */
+export function evaluateCondition(
+  condition: TypedCondition,
+  row: Readonly<Record<string, unknown>>,
+): boolean {
+  if (isLeaf(condition)) {
+    return matchLeaf(condition, row);
+  }
+  if (condition.operator === "&") {
+    return condition.conditions.every((c) => evaluateCondition(c, row));
+  }
+  if (condition.operator === "|") {
+    return condition.conditions.some((c) => evaluateCondition(c, row));
+  }
+  return !evaluateCondition(condition.condition, row);
+}
 
-    for (let i = 1; i <= childCount; i++) {
-      const child = filter[i]
-      if (!Array.isArray(child)) {
-        throw new Error(`Expected array at position ${i} for operator "${operator}"`)
+function matchLeaf(
+  c: LeafCondition,
+  row: Readonly<Record<string, unknown>>,
+): boolean {
+  const rowValue = row[c.field];
+
+  switch (c.operator) {
+    case "=":
+      return coerceEqual(rowValue, c.value);
+    case "!=":
+      return !coerceEqual(rowValue, c.value);
+    case ">":
+      return coerceCompare(rowValue, c.value) > 0;
+    case "<":
+      return coerceCompare(rowValue, c.value) < 0;
+    case ">=":
+      return coerceCompare(rowValue, c.value) >= 0;
+    case "<=":
+      return coerceCompare(rowValue, c.value) <= 0;
+    case "in":
+      return (c.value as unknown[]).some((v) => coerceEqual(rowValue, v));
+    case "not in":
+      return !(c.value as unknown[]).some((v) => coerceEqual(rowValue, v));
+    case "like":
+    case "ilike": {
+      if (rowValue == null) return false;
+      // ponytail: simple substring; Odoo %_ wildcards deferred
+      const pattern = String(c.value);
+      const source = String(rowValue);
+      if (c.operator === "ilike") {
+        return source.toLowerCase().includes(pattern.toLowerCase());
       }
-      children.push(parseNode(child as unknown[]))
-    }
-
-    return {
-      type: 'operator',
-      operator,
-      children,
+      return source.includes(pattern);
     }
   }
-
-  // Comparison condition: [field, operator, value]
-  if (typeof first === 'string') {
-    const field = first
-    const operator = filter[1]
-    const value = filter[2]
-
-    if (typeof operator !== 'string' || !COMPARISON_OPERATORS.has(operator)) {
-      throw new Error(`Unknown operator: ${String(operator)}`)
-    }
-
-    return {
-      type: 'condition',
-      operator,
-      field,
-      value,
-    }
-  }
-
-  throw new Error(`Invalid domain filter node: ${String(first)}`)
 }
 
+function coerceEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a == null || b == null) return a == null && b == null;
+  return String(a) === String(b);
+}
+
+function coerceCompare(a: unknown, b: unknown): number {
+  if (a === b) return 0;
+  if (a == null && b == null) return 0;
+  if (a == null) return -1;
+  if (b == null) return 1;
+  // Numeric comparison when both are numbers (avoids lexicographic "1000" < "500")
+  if (typeof a === "number" && typeof b === "number") {
+    if (a < b) return -1;
+    if (a > b) return 1;
+    return 0;
+  }
+  const sa = String(a);
+  const sb = String(b);
+  if (sa < sb) return -1;
+  if (sa > sb) return 1;
+  return 0;
+}
+
+// ── SQL WHERE Clause Generator ──────────────────────────────────────────────
+
 /**
- * Apply a record rule (parsed AST) to a query object.
- * Adds tenant_id and record rule conditions to query.where.
+ * Generate a parameterized SQL WHERE clause from condition trees.
  *
- * @param query - Mutable query object with `where` property
- * @param tenantId - Tenant ID to inject (null = system-level, no tenant filter)
- * @param recordRule - Raw domain filter array or parsed AST (null = no rule)
- * @returns The same query object with conditions added
+ * @returns { sql, params } — SQL with $1, $2, ... placeholders
  */
-export function applyRecordRule(
-  query: Record<string, unknown>,
-  tenantId: string | null,
-  recordRule: unknown[] | DomainFilterAST | null,
-): Record<string, unknown> {
-  const where = (query.where ?? {}) as Record<string, unknown>
+export function generateWhereClause(
+  conditions: readonly TypedCondition[],
+  options: WhereClauseOptions = {},
+): WhereClauseResult {
+  const alias = options.tableAlias ? `${options.tableAlias}.` : "";
+  const collector = new ParamCollector();
+  const clauses: string[] = [];
 
-  if (tenantId !== null) {
-    where.tenant_id = tenantId
+  if (options.tenantId !== undefined) {
+    const tfn = options.tenantFieldName ?? "tenant_id";
+    validateField(tfn);
+    clauses.push(`${alias}${tfn} = ${collector.add(options.tenantId)}`);
   }
 
-  if (recordRule !== null) {
-    const ast = Array.isArray(recordRule)
-      ? parseDomainFilter(recordRule)
-      : recordRule
-    if (ast !== null) {
-      applyAstToWhere(ast, where)
-    }
+  for (const cond of conditions) {
+    clauses.push(compileCondition(cond, alias, collector));
   }
 
-  return { ...query, where }
+  const sql = clauses.length > 0 ? clauses.join(" AND ") : "TRUE";
+  return { sql, params: collector.params() };
 }
 
-/**
- * Inject tenant_id filter from JWT context into a query.
- * Overwrites any client-supplied tenant_id (D10 security: tenant_id from JWT only).
- */
-export function injectTenantFilter(
-  query: Record<string, unknown>,
-  context: TenantContext,
-): Record<string, unknown> {
-  const where = (query.where ?? {}) as Record<string, unknown>
+/** Accumulator for $1, $2, ... parameter numbering. */
+class ParamCollector {
+  private items: unknown[] = [];
 
-  if (context.tenant_id !== null) {
-    where.tenant_id = context.tenant_id
+  add(value: unknown): string {
+    this.items.push(value);
+    return `$${this.items.length}`;
   }
 
-  return { ...query, where }
+  params(): readonly unknown[] {
+    return this.items;
+  }
 }
 
-// --- Helpers ---
-
-function applyAstToWhere(ast: DomainFilterAST, where: Record<string, unknown>): void {
-  if (ast.type === 'condition' && ast.field !== undefined && ast.value !== undefined) {
-    where[ast.field] = ast.value
-  } else if (ast.type === 'operator' && ast.children) {
-    for (const child of ast.children) {
-      applyAstToWhere(child, where)
-    }
+function compileCondition(
+  condition: TypedCondition,
+  alias: string,
+  pc: ParamCollector,
+): string {
+  if (isLeaf(condition)) {
+    return compileLeaf(condition, alias, pc);
   }
+  if (condition.operator === "!") {
+    return `NOT (${compileCondition(condition.condition, alias, pc)})`;
+  }
+  const joiner = condition.operator === "&" ? " AND " : " OR ";
+  const parts = condition.conditions.map((c) => compileCondition(c, alias, pc));
+  return `(${parts.join(joiner)})`;
+}
+
+function compileLeaf(
+  c: LeafCondition,
+  alias: string,
+  pc: ParamCollector,
+): string {
+  const col = `${alias}${c.field}`;
+
+  if (c.operator === "in") {
+    const values = c.value as unknown[];
+    const placeholders = values.map((v) => pc.add(v));
+    return `${col} IN (${placeholders.join(", ")})`;
+  }
+
+  if (c.operator === "not in") {
+    const values = c.value as unknown[];
+    const placeholders = values.map((v) => pc.add(v));
+    return `${col} NOT IN (${placeholders.join(", ")})`;
+  }
+
+  // ponytail: % wrapping for LIKE; Odoo %_ wildcards deferred
+  if (c.operator === "like" || c.operator === "ilike") {
+    return `${col} ${c.operator.toUpperCase()} ${pc.add(`%${String(c.value)}%`)}`;
+  }
+
+  return `${col} ${c.operator} ${pc.add(c.value)}`;
 }

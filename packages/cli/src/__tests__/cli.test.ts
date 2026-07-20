@@ -12,7 +12,7 @@ describe('CLI program', () => {
     expect(program.version()).toBe('0.1.0')
   })
 
-  it('registers all 6 commands', () => {
+  it('registers all 13 commands', () => {
     // Arrange
     const program = createProgram()
 
@@ -26,7 +26,14 @@ describe('CLI program', () => {
     expect(commands).toContain('build')
     expect(commands).toContain('test')
     expect(commands).toContain('lint')
-    expect(commands).toHaveLength(6)
+    expect(commands).toContain('plugin:list')
+    expect(commands).toContain('plugin:info')
+    expect(commands).toContain('plugin:enable')
+    expect(commands).toContain('plugin:disable')
+    expect(commands).toContain('plugin:upgrade')
+    expect(commands).toContain('plugin:scaffold')
+    expect(commands).toContain('doctor')
+    expect(commands).toHaveLength(13)
   })
 
   it('outputs help text with AUDEBase description', () => {
