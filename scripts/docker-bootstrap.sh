@@ -16,7 +16,7 @@ done
 echo "[bootstrap] Redis is ready."
 
 echo "[bootstrap] Running database migrations..."
-npx tsx packages/kernel/src/cli.ts db:migrate
+npx tsx packages/core/src/cli.ts db:migrate
 
 echo "[bootstrap] Starting AUDEBase kernel on port 3000..."
-exec npx tsx packages/kernel/src/cli.ts start
+exec npx tsx packages/core/src/cli.ts start

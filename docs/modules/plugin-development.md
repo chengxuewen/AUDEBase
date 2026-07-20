@@ -395,7 +395,7 @@ export function createPlugin(): FooPlugin {
 > **代码示例约定**：以下各节（§5-§15）的代码示例中，`host` 代表 Kernel 注入的服务上下文
 （非 `PluginHost` 接口），包含 `db`, `events`, `logger`, `router`, `rpc`, `t` 等能力。
 > 这些能力由 Kernel 在插件 `load()` 阶段通过入口模块注入。
-> 实际接口定义见 `packages/kernel/src/plugins/loader.ts`。
+> 实际接口定义见 `packages/core/src/plugins/loader.ts`。
 
 ## 5. 数据模型声明
 

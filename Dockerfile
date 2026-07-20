@@ -12,13 +12,13 @@ WORKDIR /app
 # Copy monorepo files for pnpm workspace resolution
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY tsconfig.base.json ./
-COPY packages/kernel/package.json packages/kernel/
-COPY packages/kernel/tsconfig.json packages/kernel/
+COPY packages/core/package.json packages/core/
+COPY packages/core/tsconfig.json packages/core/
 COPY packages/shared-types/package.json packages/shared-types/
 COPY packages/plugin-framework/package.json packages/plugin-framework/
 COPY packages/plugin-core/package.json packages/plugin-core/
 COPY packages/manifest-engine/package.json packages/manifest-engine/
-COPY packages/migration-engine/package.json packages/migration-engine/
+COPY packages/migration/package.json packages/migration/
 COPY packages/rbac/package.json packages/rbac/
 COPY packages/audit/package.json packages/audit/
 COPY packages/i18n/package.json packages/i18n/
