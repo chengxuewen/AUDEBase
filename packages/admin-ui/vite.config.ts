@@ -1,25 +1,15 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import path from "node:path";
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  resolve: {
-    alias: {
-      "@audebase/shared-types": path.resolve(__dirname, "../shared-types/src/index.ts"),
-    },
-  },
   server: {
     port: 5173,
     proxy: {
-      "/api": {
-        target: "http://localhost:3000",
+      '/api': {
+        target: 'http://localhost:5101',
         changeOrigin: true,
       },
     },
   },
-  build: {
-    outDir: "dist",
-    sourcemap: true,
-  },
-});
+})

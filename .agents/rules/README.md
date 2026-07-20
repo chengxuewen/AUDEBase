@@ -16,9 +16,16 @@ Rules are part of the `.agents/` directory, organized into a **common** layer pl
 ├── typescript/      # TypeScript/JavaScript specific
 ├── python/          # Python specific
 ├── golang/          # Go specific
-├── web/             # Web and frontend specific
+├── rust/            # Rust specific
+├── java/            # Java specific
+├── kotlin/          # Kotlin specific
+├── csharp/          # C# specific
 ├── swift/           # Swift specific
-└── php/             # PHP specific
+├── php/             # PHP specific
+├── perl/            # Perl specific
+├── dart/            # Dart specific
+├── web/             # Web and frontend specific
+└── zh/              # 中文副本（common 规则中文版）
 ```
 
 - **common/** contains universal principles — no language-specific code examples.
@@ -29,7 +36,7 @@ Rules are project-local and read directly by the AI assistant from `.agents/rule
 ## Rules vs Skills
 
 - **Rules** define standards, conventions, and checklists that apply broadly (e.g., "80% test coverage", "no hardcoded secrets").
-- **Skills** (`.agents/skills/` directory) provide deep, actionable reference material for specific tasks (e.g., `cpp-coding-standards`, `cpp-testing`).
+- **Skills** (`.agents/skills/` directory) provide deep, actionable reference material for specific tasks (e.g., `design-system`, `test-harness`).
 
 Language-specific rule files reference relevant skills where appropriate. Rules tell you *what* to do; skills tell you *how* to do it.
 

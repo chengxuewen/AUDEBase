@@ -45,6 +45,13 @@ Rules 中通过 `See skill: <name>` 引用 Skills，形成 "规则约束 → 技
 | `openspec-archive-change` | `openspec-archive-change/SKILL.md` | 归档已完成变更：记录决策、更新记忆、清理产物 |
 | `openspec-explore` | `openspec-explore/SKILL.md` | 探索模式：思考伙伴，用于探索想法、调查问题、澄清需求 |
 | `openspec-sync-specs` | `openspec-sync-specs/SKILL.md` | 将 delta specs 同步到主规格（不归档变更） |
+| `openspec-apply` | `openspec-apply/SKILL.md` | 实施 MSRCS 变更提案中的任务（C++17/Qt5.15/ROS2 代码库） |
+| `openspec-archive` | `openspec-archive/SKILL.md` | 归档已完成的 MSRCS 变更提案：记录决策、更新记忆、清理产物 |
+| `openspec-verify` | `openspec-verify/SKILL.md` | 验证 MSRCS 变更提案是否正确实现：编译、测试、设计要求检查 |
+| `doc-audit` | `doc-audit/SKILL.md` | 项目文档与架构审计：6 维度并行检查文档自洽性、完整性、缺口 |
+| `test-harness` | `test-harness/SKILL.md` | SDD 驱动测试全生命周期：从规范生成测试骨架、TDD 循环、一致性验证、覆盖率分析 |
+| `book-to-skill` | `book-to-skill/SKILL.md` | 将书籍/文档转换为结构化 agent 技能 |
+| `skill-creator` | `skill-creator/SKILL.md` | 从 SDD 文档/TypeScript 接口/manifest.yaml 生成项目专属技能 |
 
 ## 代理（Agents）
 
@@ -71,6 +78,6 @@ AI 助手会自动匹配适用的技能并加载。也可在对话中指定：
 
 ## 添加新技能
 
-1. 在 `.agents/skills/` 下创建 `<name>.md`
+1. 在 `.agents/skills/` 下创建 `<name>/SKILL.md`（文件夹形式）
 2. 在本文档的「项目专属技能」表格中添加条目
 3. 在对应的规则文件中添加 `See skill: <name>` 引用

@@ -1,36 +1,8 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter } from "react-router-dom";
-import { ConfigProvider, App as AntApp } from "antd";
-import zhCN from "antd/locale/zh_CN";
-import App from "./App";
+import { createRoot } from 'react-dom/client'
+import { App } from './App.js'
+import { I18nProvider } from './i18n/index.js'
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      staleTime: 30_000,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+const root = document.getElementById('root')
+if (!root) throw new Error('Root element not found')
 
-const container = document.getElementById("root");
-if (container === null) {
-  throw new Error("Root element #root not found in DOM");
-}
-
-createRoot(container).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <ConfigProvider locale={zhCN}>
-          <AntApp>
-            <App />
-          </AntApp>
-        </ConfigProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
-  </StrictMode>,
-);
+createRoot(root).render(<I18nProvider><App /></I18nProvider>)

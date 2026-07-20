@@ -1,31 +1,24 @@
-// Engine
-export { PermissionEngine } from "./engine";
+/**
+ * @audebase/rbac - Public API
+ */
 
-// Role management
+export { AuthService } from './auth-service.js'
+export { RBACService } from './rbac-service.js'
+export { aclMiddleware, requireAuth } from './middleware.js'
 export {
-  createRole,
-  listRoles,
-  assignRole,
-  revokeRole,
-  getUserRoles,
-  getAllPermissions,
-} from "./roles";
-export type { CreateRoleParams } from "./roles";
-
-// Middleware
-export { rbacGuard } from "./middleware";
-export type { AuthenticatedUser } from "./middleware";
-
-// Seed data
-export { seedDefaultPermissions, seedDefaultRoles, seedAdminUserRole } from "./seed";
-
-// Record Rules (D10)
+  signToken,
+  verifyToken,
+  generateAccessToken,
+  generateRefreshToken,
+  hashToken,
+  assertJwtSecret,
+} from './token.js'
 export {
   parseDomainFilter,
   evaluateCondition,
   generateWhereClause,
   DomainFilterError,
-} from "./record-rules";
+} from './record-rules.js'
 export type {
   ComparisonOperator,
   LeafCondition,
@@ -36,4 +29,11 @@ export type {
   DomainFilterTuple,
   WhereClauseResult,
   WhereClauseOptions,
-} from "./record-rules";
+} from './record-rules.js'
+export type {
+  DatabaseProvider,
+  UserRecord,
+  RefreshTokenRecord,
+  RoleRecord,
+  TenantContext,
+} from './types.js'

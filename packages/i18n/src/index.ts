@@ -1,3 +1,7 @@
-export { I18nEngine } from "./i18n.js";
-export type { I18nConfig } from "./types.js";
-export type { LocaleMap, LocaleCode, TranslateFunction } from "@audebase/shared-types";
+/**
+ * @audebase/i18n - Internationalization utilities
+ */
+
+export type { TranslatorConfig } from './types.js'
+export { createTranslator } from './translator.js'
+export { loadLocaleFile, validateLocaleFile } from './locale-loader.js'

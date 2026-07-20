@@ -44,6 +44,7 @@
 | 20 | `POST` | `/api/auth/logout` | 是 | 登出（撤销 refresh_token） |
 | 21 | `GET` | `/api/permissions` | 是 | 权限列表（角色权限选择器） |
 | 22 | `POST` | `/api/plugins/{name}/install` | 是 | 安装插件 |
+| 23 | `DELETE` | `/api/plugins/{name}` | 是 | 卸载插件 |
 
 ---
 

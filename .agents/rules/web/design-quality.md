@@ -56,7 +56,7 @@ Do not default to dark mode automatically. Choose the visual direction the produ
 
 ## Component Checklist
 
-- [ ] Does it avoid looking like a default Tailwind or shadcn template?
+- [ ] Does it avoid looking like a default Ant Design template?
 - [ ] Does it have intentional hover/focus/active states?
 - [ ] Does it use hierarchy rather than uniform emphasis?
 - [ ] Would this look believable in a real product screenshot?

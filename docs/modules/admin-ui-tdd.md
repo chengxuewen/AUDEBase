@@ -150,7 +150,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       thresholds: {
-        lines: 70,
+        lines: 80,
         branches: 60,
         functions: 70,
       },
@@ -675,9 +675,9 @@ afterAll(() => server.close())
 
 | 指标 | 目标 | 说明 |
 |------|:---:|------|
-| 行覆盖率 | **70%+** | UI 代码天然有 JSX 开销，70% 合理 |
-| 分支覆盖率 | **60%+** | 权限分支、加载/错误/空状态分支 |
-| 函数覆盖率 | **70%+** | 页面组件 + hooks + 工具函数 |
+| 行覆盖率 | **80%+** | 对齐项目统一标准（testing.md） |
+| 分支覆盖率 | **70%+** | 权限分支、加载/错误/空状态分支 |
+| 函数覆盖率 | **80%+** | 页面组件 + hooks + 工具函数 |
 | E2E | 5 流程 | 参照 e2e-test-flows.md |
 
 **豁免项**（不计入覆盖率）：

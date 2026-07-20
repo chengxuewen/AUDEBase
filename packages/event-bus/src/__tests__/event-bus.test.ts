@@ -1,487 +1,501 @@
-import { describe, test, expect, vi } from "vitest";
-import { z } from "zod";
-import { InMemoryEventBus } from "../event-bus";
-import type { EventBus, EventContext } from "../types";
-
-// ── Helpers ─────────────────────────────────────────────────────────
-
-function createBus(onError?: (error: unknown, ctx: EventContext) => void): EventBus {
-  return new InMemoryEventBus({ onError });
-}
-
-function makeHandler() {
-  return vi.fn<(_payload: unknown, _ctx: EventContext) => void>();
-}
-
-// ── Publish / Subscribe ─────────────────────────────────────────────
-
-describe("publish / subscribe", () => {
-  test("delivers payload to a single registered handler", async () => {
-    // Arrange
-    const bus = createBus();
-    const handler = makeHandler();
-    bus.subscribe("user.created", handler);
-
-    // Act
-    await bus.publish("user.created", { id: 1, name: "Alice" });
-
-    // Assert
-    expect(handler).toHaveBeenCalledTimes(1);
-    expect(handler).toHaveBeenCalledWith(
-      { id: 1, name: "Alice" },
-      expect.objectContaining({ subject: "user.created", scope: "local" }),
-    );
-  });
-
-  test("delivers to multiple handlers for the same subject", async () => {
-    // Arrange
-    const bus = createBus();
-    const h1 = makeHandler();
-    const h2 = makeHandler();
-    bus.subscribe("order.created", h1);
-    bus.subscribe("order.created", h2);
-
-    // Act
-    await bus.publish("order.created", { id: 42 });
-
-    // Assert
-    expect(h1).toHaveBeenCalledTimes(1);
-    expect(h2).toHaveBeenCalledTimes(1);
-  });
-
-  test("does not deliver to handlers of different subjects", async () => {
-    // Arrange
-    const bus = createBus();
-    const hUser = makeHandler();
-    const hOrder = makeHandler();
-    bus.subscribe("user.created", hUser);
-    bus.subscribe("order.created", hOrder);
-
-    // Act
-    await bus.publish("user.created", {});
-
-    // Assert
-    expect(hUser).toHaveBeenCalledTimes(1);
-    expect(hOrder).not.toHaveBeenCalled();
-  });
-
-  test("no-op when publishing to subject with zero subscribers", async () => {
-    // Arrange
-    const bus = createBus();
-
-    // Act & Assert — should not throw
-    await expect(bus.publish("nonexistent", {})).resolves.toBeUndefined();
-  });
-
-  test("context includes correct timestamp", async () => {
-    // Arrange
-    const bus = createBus();
-    const handler = makeHandler();
-    bus.subscribe("test.event", handler);
-    const before = Date.now();
-
-    // Act
-    await bus.publish("test.event", {});
-
-    // Assert
-    const ctx = handler.mock.calls[0]?.[1];
-    expect(ctx?.timestamp).toBeGreaterThanOrEqual(before);
-    expect(ctx?.timestamp).toBeLessThanOrEqual(Date.now());
-  });
-});
-
-// ── Unsubscribe ─────────────────────────────────────────────────────
-
-describe("unsubscribe", () => {
-  test("removes handler so it no longer receives events", async () => {
-    // Arrange
-    const bus = createBus();
-    const handler = makeHandler();
-    bus.subscribe("user.created", handler);
-    bus.unsubscribe("user.created", handler);
-
-    // Act
-    await bus.publish("user.created", {});
-
-    // Assert
-    expect(handler).not.toHaveBeenCalled();
-  });
-
-  test("returns true when handler existed and was removed", () => {
-    // Arrange
-    const bus = createBus();
-    const handler = makeHandler();
-    bus.subscribe("user.created", handler);
-
-    // Act
-    const result = bus.unsubscribe("user.created", handler);
-
-    // Assert
-    expect(result).toBe(true);
-  });
-
-  test("returns false when handler was not registered", () => {
-    // Arrange
-    const bus = createBus();
-    const handler = makeHandler();
-
-    // Act
-    const result = bus.unsubscribe("user.created", handler);
-
-    // Assert
-    expect(result).toBe(false);
-  });
-
-  test("returns false for unknown subject", () => {
-    // Arrange
-    const bus = createBus();
-    const handler = makeHandler();
-
-    // Act
-    const result = bus.unsubscribe("nonexistent", handler);
-
-    // Assert
-    expect(result).toBe(false);
-  });
-
-  test("disposer returned by subscribe() removes the handler", async () => {
-    // Arrange
-    const bus = createBus();
-    const handler = makeHandler();
-    const dispose = bus.subscribe("user.created", handler);
-
-    // Act
-    dispose();
-
-    // Assert
-    expect(bus.subscriberCount("user.created")).toBe(0);
-  });
-});
-
-// ── subscriberCount ─────────────────────────────────────────────────
-
-describe("subscriberCount", () => {
-  test("returns 0 for a subject with no subscribers", () => {
-    // Arrange
-    const bus = createBus();
-
-    // Act
-    const count = bus.subscriberCount("nonexistent");
-
-    // Assert
-    expect(count).toBe(0);
-  });
-
-  test("returns the exact number of registered handlers", () => {
-    // Arrange
-    const bus = createBus();
-    bus.subscribe("user.created", makeHandler());
-    bus.subscribe("user.created", makeHandler());
-    bus.subscribe("user.created", makeHandler());
-
-    // Act
-    const count = bus.subscriberCount("user.created");
-
-    // Assert
-    expect(count).toBe(3);
-  });
-
-  test("reflects unsubscribe", () => {
-    // Arrange
-    const bus = createBus();
-    const h1 = makeHandler();
-    const h2 = makeHandler();
-    bus.subscribe("user.created", h1);
-    bus.subscribe("user.created", h2);
-
-    // Act
-    bus.unsubscribe("user.created", h1);
-
-    // Assert
-    expect(bus.subscriberCount("user.created")).toBe(1);
-  });
-});
-
-// ── Error Isolation ─────────────────────────────────────────────────
-
-describe("error isolation", () => {
-  test("one handler throwing does not prevent remaining handlers from running", async () => {
-    // Arrange
-    const bus = createBus();
-    const good = makeHandler();
-    const bad = vi.fn(() => {
-      throw new Error("boom");
-    });
-    bus.subscribe("user.created", bad);
-    bus.subscribe("user.created", good);
-
-    // Act
-    await bus.publish("user.created", {});
-
-    // Assert
-    expect(bad).toHaveBeenCalledTimes(1);
-    expect(good).toHaveBeenCalledTimes(1);
-  });
-
-  test("calls onError callback when a handler throws", async () => {
-    // Arrange
-    const onError = vi.fn();
-    const bus = createBus(onError);
-    const bad = vi.fn(() => {
-      throw new Error("handler error");
-    });
-    bus.subscribe("user.created", bad);
-
-    // Act
-    await bus.publish("user.created", {});
-
-    // Assert
-    expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError).toHaveBeenCalledWith(
-      expect.objectContaining({ message: "handler error" }),
-      expect.objectContaining({ subject: "user.created" }),
-    );
-  });
-
-  test("schema validation failure calls onError and skips handler", async () => {
-    // Arrange
-    const onError = vi.fn();
-    const bus = createBus(onError);
-    const handler = makeHandler();
-    const schema = z.object({ name: z.string() });
-    bus.subscribe("user.created", handler, { schema });
-
-    // Act
-    await bus.publish("user.created", { name: 123 });
-
-    // Assert
-    expect(handler).not.toHaveBeenCalled();
-    expect(onError).toHaveBeenCalledTimes(1);
-  });
-
-  test("schema validation passes for valid payloads", async () => {
-    // Arrange
-    const bus = createBus();
-    const handler = makeHandler();
-    const schema = z.object({ name: z.string() });
-    bus.subscribe("user.created", handler, { schema });
-
-    // Act
-    await bus.publish("user.created", { name: "Alice" });
-
-    // Assert
-    expect(handler).toHaveBeenCalledTimes(1);
-  });
-});
-
-// ── Scope Filtering ─────────────────────────────────────────────────
-
-describe("scope filtering", () => {
-  test("local publish reaches local subscribers", async () => {
-    // Arrange
-    const bus = createBus();
-    const handler = makeHandler();
-    bus.subscribe("user.created", handler, { scope: "local" });
-
-    // Act
-    await bus.publish("user.created", {}, { scope: "local" });
-
-    // Assert
-    expect(handler).toHaveBeenCalledTimes(1);
-  });
-
-  test("global publish reaches global subscribers", async () => {
-    // Arrange
-    const bus = createBus();
-    const handler = makeHandler();
-    bus.subscribe("user.created", handler, { scope: "global" });
-
-    // Act
-    await bus.publish("user.created", {}, { scope: "global" });
-
-    // Assert
-    expect(handler).toHaveBeenCalledTimes(1);
-  });
-
-  test("local publish does NOT reach global-only subscribers", async () => {
-    // Arrange
-    const bus = createBus();
-    const handler = makeHandler();
-    bus.subscribe("user.created", handler, { scope: "global" });
-
-    // Act
-    await bus.publish("user.created", {}, { scope: "local" });
-
-    // Assert
-    expect(handler).not.toHaveBeenCalled();
-  });
-
-  test("global publish reaches both local and global subscribers", async () => {
-    // Arrange
-    const bus = createBus();
-    const local = makeHandler();
-    const global = makeHandler();
-    bus.subscribe("user.created", local, { scope: "local" });
-    bus.subscribe("user.created", global, { scope: "global" });
-
-    // Act
-    await bus.publish("user.created", {}, { scope: "global" });
-
-    // Assert
-    expect(local).toHaveBeenCalledTimes(1);
-    expect(global).toHaveBeenCalledTimes(1);
-  });
-
-  test("default scope is local for both publish and subscribe", async () => {
-    // Arrange
-    const bus = createBus();
-    const handler = makeHandler();
-    bus.subscribe("user.created", handler); // no scope option
-
-    // Act
-    await bus.publish("user.created", {}); // no scope option
-
-    // Assert
-    expect(handler).toHaveBeenCalledTimes(1);
-    const ctx = handler.mock.calls[0]?.[1];
-    expect(ctx?.scope).toBe("local");
-  });
-});
-
-// ── Async Handlers ──────────────────────────────────────────────────
-
-describe("async handlers", () => {
-  test("awaits async handlers", async () => {
-    // Arrange
-    const bus = createBus();
-    let resolved = false;
-    const handler = vi.fn(async () => {
-      await new Promise((r) => setTimeout(r, 5));
-      resolved = true;
-    });
-    bus.subscribe("user.created", handler);
-
-    // Act
-    await bus.publish("user.created", {});
-
-    // Assert
-    expect(handler).toHaveBeenCalledTimes(1);
-    expect(resolved).toBe(true);
-  });
-
-  test("error in async handler is isolated", async () => {
-    // Arrange
-    const onError = vi.fn();
-    const bus = createBus(onError);
-    const good = makeHandler();
-    const bad = vi.fn(async () => {
-      throw new Error("async boom");
-    });
-    bus.subscribe("user.created", bad);
-    bus.subscribe("user.created", good);
-
-    // Act
-    await bus.publish("user.created", {});
-
-    // Assert
-    expect(bad).toHaveBeenCalledTimes(1);
-    expect(good).toHaveBeenCalledTimes(1);
-    expect(onError).toHaveBeenCalledTimes(1);
-  });
-});
-
-// ── Handler Order ───────────────────────────────────────────────────
-
-describe("handler order", () => {
-  test("invokes handlers in subscription order", async () => {
-    // Arrange
-    const bus = createBus();
-    const calls: string[] = [];
-    bus.subscribe("user.created", () => {
-      calls.push("first");
-    });
-    bus.subscribe("user.created", () => {
-      calls.push("second");
-    });
-    bus.subscribe("user.created", () => {
-      calls.push("third");
-    });
-
-    // Act
-    await bus.publish("user.created", {});
-
-    // Assert
-    expect(calls).toEqual(["first", "second", "third"]);
-  });
-});
-
-// ── Same Handler Duplicate ──────────────────────────────────────────
-
-describe("duplicate handler", () => {
-  test("same handler registered twice is called twice", async () => {
-    // Arrange
-    const bus = createBus();
-    const handler = makeHandler();
-    bus.subscribe("user.created", handler);
-    bus.subscribe("user.created", handler);
-
-    // Act
-    await bus.publish("user.created", {});
-
-    // Assert
-    expect(handler).toHaveBeenCalledTimes(2);
-  });
-
-  test("unsubscribe removes only one registration of a duplicate handler", async () => {
-    // Arrange
-    const bus = createBus();
-    const handler = makeHandler();
-    bus.subscribe("user.created", handler);
-    bus.subscribe("user.created", handler);
-
-    // Act
-    const removed = bus.unsubscribe("user.created", handler);
-
-    // Assert
-    expect(removed).toBe(true);
-    expect(bus.subscriberCount("user.created")).toBe(1);
-  });
-});
-
-// ── Adapter readiness ───────────────────────────────────────────────
-
-describe("adapter readiness (Phase 2)", () => {
-  test("dispatchRemote delivers to global subscribers", () => {
-    // Arrange
-    const bus = new InMemoryEventBus();
-    const handler = makeHandler();
-    bus.subscribe("user.created", handler, { scope: "global" });
-
-    // Act
-    bus.dispatchRemote("user.created", { id: 99 }, 1700000000000);
-
-    // Assert
-    expect(handler).toHaveBeenCalledTimes(1);
-    expect(handler).toHaveBeenCalledWith(
-      { id: 99 },
-      expect.objectContaining({
-        subject: "user.created",
-        scope: "global",
-        timestamp: 1700000000000,
-      }),
-    );
-  });
-
-  test("dispatchRemote does not deliver to local-only subscribers", () => {
-    // Arrange
-    const bus = new InMemoryEventBus();
-    const handler = makeHandler();
-    bus.subscribe("user.created", handler, { scope: "local" });
-
-    // Act
-    bus.dispatchRemote("user.created", {}, 0);
-
-    // Assert
-    expect(handler).not.toHaveBeenCalled();
-  });
-});
+/**
+ * @audebase/event-bus - EventBus unit tests
+ *
+ * AAA pattern. Each test clears the bus in afterEach to avoid state leaks.
+ */
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { z } from 'zod'
+import { EventBus, matchSubject, EventBusValidationError } from '../index.js'
+
+describe('EventBus', () => {
+  let bus: EventBus
+
+  beforeEach(() => {
+    bus = new EventBus({ partition: 'test' })
+  })
+
+  afterEach(() => {
+    bus.clear()
+  })
+
+  // --- Basic publish/subscribe ---
+
+  describe('basic publish/subscribe', () => {
+    it('delivers payload to a matching subscriber', () => {
+      // Arrange
+      const received: unknown[] = []
+      bus.subscribe('order.created', (payload) => {
+        received.push(payload)
+      })
+
+      // Act
+      const count = bus.publish('order.created', { id: 1 })
+
+      // Assert
+      expect(count).toBe(1)
+      expect(received).toEqual([{ id: 1 }])
+    })
+
+    it('returns 0 when no subscribers match', () => {
+      // Arrange
+      // (no subscriptions)
+
+      // Act
+      const count = bus.publish('order.created', { id: 1 })
+
+      // Assert
+      expect(count).toBe(0)
+    })
+  })
+
+  // --- Multiple subscribers ---
+
+  describe('multiple subscribers', () => {
+    it('calls all subscribers for the same subject in registration order', () => {
+      // Arrange
+      const order: string[] = []
+      bus.subscribe('order.created', () => {
+        order.push('first')
+      })
+      bus.subscribe('order.created', () => {
+        order.push('second')
+      })
+      bus.subscribe('order.created', () => {
+        order.push('third')
+      })
+
+      // Act
+      const count = bus.publish('order.created', {})
+
+      // Assert
+      expect(count).toBe(3)
+      expect(order).toEqual(['first', 'second', 'third'])
+    })
+
+    it('calls subscribers across different matching patterns', () => {
+      // Arrange
+      const received: string[] = []
+      bus.subscribe('order.created', () => {
+        received.push('exact')
+      })
+      bus.subscribe('order.*', () => {
+        received.push('wildcard')
+      })
+
+      // Act
+      const count = bus.publish('order.created', {})
+
+      // Assert
+      expect(count).toBe(2)
+      expect(received).toContain('exact')
+      expect(received).toContain('wildcard')
+    })
+  })
+
+  // --- Unsubscribe ---
+
+  describe('unsubscribe', () => {
+    it('stops handler from being called after unsubscribe', () => {
+      // Arrange
+      let calls = 0
+      const handler = (): void => {
+        calls++
+      }
+      const sub = bus.subscribe('order.created', handler)
+
+      // Act
+      bus.unsubscribe(sub)
+      bus.publish('order.created', {})
+
+      // Assert
+      expect(calls).toBe(0)
+    })
+
+    it('unsubscribe is a no-op for non-existent subscription', () => {
+      // Arrange
+      const handler = (): void => {}
+      const sub = bus.subscribe('order.created', handler)
+      bus.unsubscribe(sub)
+
+      // Act & Assert - no throw
+      expect(() => bus.unsubscribe(sub)).not.toThrow()
+    })
+
+    it('unsubscribeAll removes all handlers for a subject', () => {
+      // Arrange
+      let calls = 0
+      bus.subscribe('order.created', () => {
+        calls++
+      })
+      bus.subscribe('order.created', () => {
+        calls++
+      })
+
+      // Act
+      bus.unsubscribeAll('order.created')
+      bus.publish('order.created', {})
+
+      // Assert
+      expect(calls).toBe(0)
+    })
+  })
+
+  // --- Wildcard matching ---
+
+  describe('wildcard matching', () => {
+    it('order.* matches order.created and order.updated', () => {
+      // Arrange
+      const received: string[] = []
+      bus.subscribe('order.*', (payload) => {
+        received.push((payload as { type: string }).type)
+      })
+
+      // Act
+      bus.publish('order.created', { type: 'created' })
+      bus.publish('order.updated', { type: 'updated' })
+
+      // Assert
+      expect(received).toEqual(['created', 'updated'])
+    })
+
+    it('order.* does NOT match order_created (underscore)', () => {
+      // Arrange
+      let calls = 0
+      bus.subscribe('order.*', () => {
+        calls++
+      })
+
+      // Act
+      bus.publish('order_created', {})
+
+      // Assert
+      expect(calls).toBe(0)
+    })
+
+    it('order.* does NOT match order.created.confirmed (multi-segment)', () => {
+      // Arrange
+      let calls = 0
+      bus.subscribe('order.*', () => {
+        calls++
+      })
+
+      // Act
+      bus.publish('order.created.confirmed', {})
+
+      // Assert
+      expect(calls).toBe(0)
+    })
+
+    it('* matches everything', () => {
+      // Arrange
+      const received: string[] = []
+      bus.subscribe('*', (payload) => {
+        received.push((payload as { name: string }).name)
+      })
+
+      // Act
+      bus.publish('order.created', { name: 'a' })
+      bus.publish('user.signup', { name: 'b' })
+      bus.publish('random', { name: 'c' })
+
+      // Assert
+      expect(received).toEqual(['a', 'b', 'c'])
+    })
+
+    it('exact subject does not match wildcard-like subjects', () => {
+      // Arrange
+      let calls = 0
+      bus.subscribe('order.created', () => {
+        calls++
+      })
+
+      // Act
+      bus.publish('order.updated', {})
+
+      // Assert
+      expect(calls).toBe(0)
+    })
+  })
+
+  // --- Handler error isolation ---
+
+  describe('handler error isolation', () => {
+    it('one handler throwing does not prevent others from being called', () => {
+      // Arrange
+      const logger = { error: vi.fn() }
+      const busWithLogger = new EventBus({ partition: 'test', logger })
+      const received: number[] = []
+      busWithLogger.subscribe('evt', () => {
+        received.push(1)
+      })
+      busWithLogger.subscribe('evt', () => {
+        throw new Error('boom')
+      })
+      busWithLogger.subscribe('evt', () => {
+        received.push(3)
+      })
+
+      // Act
+      const count = busWithLogger.publish('evt', {})
+
+      // Assert
+      expect(count).toBe(3)
+      expect(received).toEqual([1, 3])
+      expect(logger.error).toHaveBeenCalledTimes(1)
+    })
+
+    it('publish does not throw when a handler throws', () => {
+      // Arrange
+      bus.subscribe('evt', () => {
+        throw new Error('boom')
+      })
+
+      // Act & Assert
+      expect(() => bus.publish('evt', {})).not.toThrow()
+    })
+
+    it('async handler rejection is caught and logged', async () => {
+      // Arrange
+      const logger = { error: vi.fn() }
+      const busWithLogger = new EventBus({ partition: 'test', logger })
+      let afterReject = false
+      busWithLogger.subscribe('evt', async () => {
+        throw new Error('async boom')
+      })
+      busWithLogger.subscribe('evt', () => {
+        afterReject = true
+      })
+
+      // Act
+      const count = busWithLogger.publish('evt', {})
+      // Allow microtasks to flush
+      await new Promise((resolve) => setImmediate(resolve))
+
+      // Assert
+      expect(count).toBe(2)
+      expect(afterReject).toBe(true)
+      expect(logger.error).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  // --- subscribeOnce ---
+
+  describe('subscribeOnce', () => {
+    it('handler is called only once then auto-unsubscribed', () => {
+      // Arrange
+      let calls = 0
+      bus.subscribeOnce('order.created', () => {
+        calls++
+      })
+
+      // Act
+      bus.publish('order.created', {})
+      bus.publish('order.created', {})
+
+      // Assert
+      expect(calls).toBe(1)
+    })
+
+    it('returns count 0 on second publish after once fired', () => {
+      // Arrange
+      bus.subscribeOnce('order.created', () => {})
+
+      // Act
+      const first = bus.publish('order.created', {})
+      const second = bus.publish('order.created', {})
+
+      // Assert
+      expect(first).toBe(1)
+      expect(second).toBe(0)
+    })
+  })
+
+  // --- clear ---
+
+  describe('clear', () => {
+    it('removes all subscriptions', () => {
+      // Arrange
+      let calls = 0
+      bus.subscribe('order.created', () => {
+        calls++
+      })
+      bus.subscribe('order.*', () => {
+        calls++
+      })
+
+      // Act
+      bus.clear()
+      bus.publish('order.created', {})
+
+      // Assert
+      expect(calls).toBe(0)
+    })
+  })
+
+  // --- Zod schema validation ---
+
+  describe('Zod schema validation', () => {
+    it('valid payload passes validation and is dispatched', () => {
+      // Arrange
+      const schema = z.object({ orderId: z.string() })
+      bus.registerSchema('order.created', schema)
+      const received: unknown[] = []
+      bus.subscribe('order.created', (payload) => {
+        received.push(payload)
+      })
+
+      // Act
+      bus.publish('order.created', { orderId: '123' })
+
+      // Assert
+      expect(received).toEqual([{ orderId: '123' }])
+    })
+
+    it('invalid payload throws EventBusValidationError', () => {
+      // Arrange
+      const schema = z.object({ orderId: z.string() })
+      bus.registerSchema('order.created', schema)
+
+      // Act & Assert
+      expect(() => bus.publish('order.created', { foo: 'bar' })).toThrow(
+        EventBusValidationError,
+      )
+    })
+
+    it('validation error message includes subject', () => {
+      // Arrange
+      const schema = z.object({ orderId: z.string() })
+      bus.registerSchema('order.created', schema)
+
+      // Act & Assert
+      try {
+        bus.publish('order.created', { foo: 'bar' })
+        expect.fail('should have thrown')
+      } catch (err) {
+        const msg = (err as Error).message
+        expect(msg).toContain('order.created')
+      }
+    })
+
+    it('publish without registered schema does not validate', () => {
+      // Arrange
+      const received: unknown[] = []
+      bus.subscribe('order.created', (payload) => {
+        received.push(payload)
+      })
+
+      // Act
+      bus.publish('order.created', { anything: true })
+
+      // Assert
+      expect(received).toEqual([{ anything: true }])
+    })
+
+    it('validatePayload=false skips validation even with schema', () => {
+      // Arrange
+      const busNoValidate = new EventBus({
+        partition: 'test',
+        validatePayload: false,
+      })
+      const schema = z.object({ orderId: z.string() })
+      busNoValidate.registerSchema('order.created', schema)
+      const received: unknown[] = []
+      busNoValidate.subscribe('order.created', (payload) => {
+        received.push(payload)
+      })
+
+      // Act
+      busNoValidate.publish('order.created', { foo: 'bar' })
+
+      // Assert
+      expect(received).toEqual([{ foo: 'bar' }])
+      busNoValidate.clear()
+    })
+  })
+
+  // --- Edge cases ---
+
+  describe('edge cases', () => {
+    it('publish to subject with no subscribers does not crash', () => {
+      // Arrange
+      // (no subscriptions)
+
+      // Act & Assert
+      expect(() => bus.publish('nope', {})).not.toThrow()
+    })
+
+    it('multiple wildcard subscribers all fire', () => {
+      // Arrange
+      let calls = 0
+      bus.subscribe('order.*', () => {
+        calls++
+      })
+      bus.subscribe('order.*', () => {
+        calls++
+      })
+      bus.subscribe('*', () => {
+        calls++
+      })
+
+      // Act
+      bus.publish('order.created', {})
+
+      // Assert
+      expect(calls).toBe(3)
+    })
+
+    it('getPartition returns the partition name', () => {
+      // Arrange
+      const b = new EventBus({ partition: 'erp' })
+
+      // Act & Assert
+      expect(b.getPartition()).toBe('erp')
+      b.clear()
+    })
+  })
+})
+
+// --- matchSubject unit tests ---
+
+describe('matchSubject', () => {
+  it('exact match returns true', () => {
+    // Arrange & Act & Assert
+    expect(matchSubject('order.created', 'order.created')).toBe(true)
+  })
+
+  it('exact mismatch returns false', () => {
+    expect(matchSubject('order.created', 'order.updated')).toBe(false)
+  })
+
+  it('single wildcard matches any single segment', () => {
+    expect(matchSubject('order.*', 'order.created')).toBe(true)
+    expect(matchSubject('order.*', 'order.updated')).toBe(true)
+  })
+
+  it('single wildcard does NOT match multi-segment', () => {
+    expect(matchSubject('order.*', 'order.created.confirmed')).toBe(false)
+  })
+
+  it('single wildcard does NOT match zero-segment (bare)', () => {
+    expect(matchSubject('order.*', 'order')).toBe(false)
+  })
+
+  it('bare * matches everything', () => {
+    expect(matchSubject('*', 'order.created')).toBe(true)
+    expect(matchSubject('*', 'anything.at.all')).toBe(true)
+    expect(matchSubject('*', 'single')).toBe(true)
+  })
+
+  it('wildcard in middle segment', () => {
+    expect(matchSubject('user.*.updated', 'user.profile.updated')).toBe(true)
+    expect(matchSubject('user.*.updated', 'user.settings.updated')).toBe(true)
+    expect(matchSubject('user.*.updated', 'user.profile.created')).toBe(false)
+  })
+
+  it('different segment counts do not match', () => {
+    expect(matchSubject('a.b', 'a')).toBe(false)
+    expect(matchSubject('a', 'a.b')).toBe(false)
+    expect(matchSubject('a.b.c', 'a.b')).toBe(false)
+  })
+})

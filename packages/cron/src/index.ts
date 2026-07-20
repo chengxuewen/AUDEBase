@@ -1,15 +1,12 @@
-// === Types ===
+/**
+ * @audebase/cron - Public API
+ */
+
+export { CronManager } from './cron-manager.js'
 export type {
-  CronJob,
-  CronHandler,
-  CronRegistry,
-  CronSchedulerOptions,
-  RegisteredJob,
-} from "./types";
-
-// === Scheduler ===
-export { BullScheduler } from "./scheduler";
-
-// === Plugin ===
-export { registerCronPlugin } from "./plugin";
-export type { CronPluginOptions } from "./plugin";
+  CronJobConfig,
+  CronJobInfo,
+  CronManagerOptions,
+  CronLogger,
+  CronExecutionLog,
+} from './types.js'

@@ -1,10 +1,12 @@
-export { InMemoryEventBus } from "./event-bus";
+/**
+ * @audebase/event-bus - Public API
+ */
+
+export { EventBus, EventBusValidationError } from './event-bus.js'
+export { matchSubject } from './wildcard.js'
 export type {
-  EventBus,
   EventHandler,
-  EventContext,
-  EventScope,
-  EventOptions,
-  SubscribeOptions,
-  PubSubAdapter,
-} from "./types";
+  EventSubscription,
+  EventBusOptions,
+  EventManifest,
+} from './types.js'

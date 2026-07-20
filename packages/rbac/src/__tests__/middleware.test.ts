@@ -1,107 +1,175 @@
-import { describe, test, expect } from "vitest";
-import { ErrorCode, UserError } from "@audebase/shared-types";
-import { rbacGuard } from "../middleware";
-import type { PermissionEngine } from "../engine";
+// RED PHASE: imports will resolve once implementation is created
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { aclMiddleware, requireAuth } from '../index.js'
 
-/**
- * 创建 mock 引擎
- */
-function createMockEngine(canReturn: boolean): PermissionEngine {
-  return {
-    can: async () => canReturn,
-    getUserPermissions: async () => [],
-    invalidateCache: () => {},
-    invalidateAllCache: () => {},
-  } as unknown as PermissionEngine;
+const mockAuthService = {
+  verifyAccessToken: vi.fn(),
 }
 
-/**
- * 创建 mock Fastify request
- */
-function createMockRequest(options: {
-  hasUser: boolean;
-  userId?: string;
-}): Record<string, unknown> {
-  if (options.hasUser) {
-    return {
-      user: {
-        userId: options.userId ?? "user-1",
-        tenantId: "tenant-1",
-        username: "admin",
-        roles: ["admin"],
-      },
-    };
-  }
-  return {};
+const mockRbacService = {
+  can: vi.fn(),
 }
 
-describe("rbacGuard", () => {
-  test("无 request.user → 抛出 AUTH_TOKEN_INVALID", async () => {
+describe('aclMiddleware', () => {
+  let mockRequest: Record<string, unknown>
+  let mockReply: Record<string, unknown>
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockReply = {
+      code: vi.fn().mockReturnThis(),
+      send: vi.fn(),
+    }
+  })
+
+  it('无 Authorization 头返回 401', async () => {
     // Arrange
-    const engine = createMockEngine(true);
-    const guard = rbacGuard(engine, "read", "user");
-    const request = createMockRequest({ hasUser: false }) as never;
-    const reply = {} as never;
+    mockRequest = {
+      headers: {},
+      routeConfig: { acl: { action: 'read', resource: 'user' } },
+    }
 
-    // Act & Assert
-    await expect(guard(request, reply)).rejects.toThrow(UserError);
-    await expect(guard(request, reply)).rejects.toMatchObject({
-      code: ErrorCode.AUTH_TOKEN_INVALID,
-    });
-  });
+    // Act
+    await aclMiddleware(mockRequest, mockReply, mockAuthService as never, mockRbacService as never)
 
-  test("有权限 → 正常通过（不抛异常）", async () => {
+    // Assert
+    expect(mockReply.code).toHaveBeenCalledWith(401)
+    expect(mockReply.send).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 'AUTH_REQUIRED' }) }),
+    )
+  })
+
+  it('无效 token 返回 401', async () => {
     // Arrange
-    const engine = createMockEngine(true);
-    const guard = rbacGuard(engine, "read", "user");
-    const request = createMockRequest({ hasUser: true }) as never;
-    const reply = {} as never;
+    mockRequest = {
+      headers: { authorization: 'Bearer invalid-token' },
+      routeConfig: { acl: { action: 'read', resource: 'user' } },
+    }
+    mockAuthService.verifyAccessToken.mockRejectedValue({ code: 'AUTH_TOKEN_INVALID' })
 
-    // Act & Assert
-    await expect(guard(request, reply)).resolves.toBeUndefined();
-  });
+    // Act
+    await aclMiddleware(mockRequest, mockReply, mockAuthService as never, mockRbacService as never)
 
-  test("无权限 → 抛出 FORBIDDEN", async () => {
+    // Assert
+    expect(mockReply.code).toHaveBeenCalledWith(401)
+  })
+
+  it('过期 token 返回 401', async () => {
     // Arrange
-    const engine = createMockEngine(false);
-    const guard = rbacGuard(engine, "delete", "user");
-    const request = createMockRequest({ hasUser: true }) as never;
-    const reply = {} as never;
+    mockRequest = {
+      headers: { authorization: 'Bearer expired-token' },
+      routeConfig: { acl: { action: 'read', resource: 'user' } },
+    }
+    mockAuthService.verifyAccessToken.mockRejectedValue({ code: 'AUTH_TOKEN_EXPIRED' })
 
-    // Act & Assert
-    await expect(guard(request, reply)).rejects.toThrow(UserError);
-    await expect(guard(request, reply)).rejects.toMatchObject({
-      code: ErrorCode.FORBIDDEN,
-    });
-  });
+    // Act
+    await aclMiddleware(mockRequest, mockReply, mockAuthService as never, mockRbacService as never)
 
-  test("admin 有 manage 权限应通过", async () => {
+    // Assert
+    expect(mockReply.code).toHaveBeenCalledWith(401)
+    expect(mockReply.send).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 'AUTH_TOKEN_EXPIRED' }) }),
+    )
+  })
+
+  it('有 token 但无权限返回 403', async () => {
     // Arrange
-    const engine = createMockEngine(true);
-    const guard = rbacGuard(engine, "manage", "plugin");
-    const request = createMockRequest({
-      hasUser: true,
-      userId: "user-admin",
-    }) as never;
-    const reply = {} as never;
+    mockRequest = {
+      headers: { authorization: 'Bearer valid-member-token' },
+      routeConfig: { acl: { action: 'delete', resource: 'user' } },
+      user: { id: 'user-uuid-member' },
+    }
+    mockAuthService.verifyAccessToken.mockResolvedValue({
+      sub: 'user-uuid-member',
+      tenant_id: null,
+      username: 'member',
+    })
+    mockRbacService.can.mockResolvedValue(false)
 
-    // Act & Assert
-    await expect(guard(request, reply)).resolves.toBeUndefined();
-  });
+    // Act
+    await aclMiddleware(mockRequest, mockReply, mockAuthService as never, mockRbacService as never)
 
-  test("member 无 manage 权限应拒绝", async () => {
+    // Assert
+    expect(mockReply.code).toHaveBeenCalledWith(403)
+    expect(mockReply.send).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 'FORBIDDEN' }) }),
+    )
+  })
+
+  it('有效 token + 有权限 -> next() 被调用', async () => {
     // Arrange
-    const engine = createMockEngine(false);
-    const guard = rbacGuard(engine, "manage", "plugin");
-    const request = createMockRequest({
-      hasUser: true,
-      userId: "user-member",
-    }) as never;
-    const reply = {} as never;
+    const next = vi.fn()
+    mockRequest = {
+      headers: { authorization: 'Bearer valid-admin-token' },
+      routeConfig: { acl: { action: 'manage', resource: 'plugin' } },
+      user: { id: 'user-uuid-admin' },
+    }
+    mockAuthService.verifyAccessToken.mockResolvedValue({
+      sub: 'user-uuid-admin',
+      tenant_id: null,
+      username: 'admin',
+    })
+    mockRbacService.can.mockResolvedValue(true)
 
-    // Act & Assert
-    await expect(guard(request, reply)).rejects.toMatchObject({
-      code: ErrorCode.FORBIDDEN,
-    });
-  });
-});
+    // Act
+    await aclMiddleware(mockRequest, mockReply, mockAuthService as never, mockRbacService as never, next)
+
+    // Assert - should call next() not reply.code()
+    expect(next).toHaveBeenCalled()
+    expect(mockReply.code).not.toHaveBeenCalled()
+  })
+})
+
+describe('requireAuth', () => {
+  let mockReply: Record<string, unknown>
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockReply = {
+      code: vi.fn().mockReturnThis(),
+      send: vi.fn(),
+    }
+  })
+
+  it('无 Authorization 头返回 401 AUTH_REQUIRED', async () => {
+    // Arrange
+    const mockRequest = { headers: {} }
+
+    // Act
+    await requireAuth(mockRequest, mockReply, mockAuthService as never)
+
+    // Assert
+    expect(mockReply.code).toHaveBeenCalledWith(401)
+  })
+
+  it('Authorization 格式错误（无 Bearer 前缀）返回 401', async () => {
+    // Arrange
+    const mockRequest = { headers: { authorization: 'Basic sometoken' } }
+
+    // Act
+    await requireAuth(mockRequest, mockReply, mockAuthService as never)
+
+    // Assert
+    expect(mockReply.code).toHaveBeenCalledWith(401)
+  })
+
+  it('有效 token 注入 req.user', async () => {
+    // Arrange
+    const mockRequest = {
+      headers: { authorization: 'Bearer valid-token' },
+    }
+    mockAuthService.verifyAccessToken.mockResolvedValue({
+      sub: 'user-uuid-1',
+      tenant_id: null,
+      username: 'admin',
+      roles: ['admin'],
+    })
+
+    // Act
+    await requireAuth(mockRequest, mockReply, mockAuthService as never)
+
+    // Assert
+    expect(mockRequest.user).toBeDefined()
+    expect((mockRequest.user as { sub: string }).sub).toBe('user-uuid-1')
+  })
+})

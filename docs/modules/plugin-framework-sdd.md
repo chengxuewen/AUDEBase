@@ -57,7 +57,7 @@ interface PluginManager {
   /**
    * 卸载插件
    * 1. 如果插件为 enabled 状态，先执行 disable
-   * 2. 触发 pre_uninstall 生命周期
+   * 2. 触发 preUninstall 生命周期
    * 3. 写入 audit_log（action='lifecycle:uninstall'）
    */
   uninstall(pluginName: string): Promise<void>
@@ -221,7 +221,7 @@ async function testDelayInjection() {
 | installed | enable | enabled | 无 | 执行 afterEnable |
 | enabled | disable | disabled | 无其他启用插件依赖它 | 执行 afterDisable |
 | disabled | enable | enabled | 无 | 执行 afterEnable |
-| disabled | uninstall | (移除) | 无其他插件依赖它 | 执行 pre_uninstall |
+| disabled | uninstall | (移除) | 无其他插件依赖它 | 执行 preUninstall |
 | * | (迁移失败) | migration_failed | 迁移执行失败 | 记录 audit_log + logger.error |
 
 ---
@@ -389,6 +389,22 @@ type PluginError =
 | #8 RBAC | `manifest.permissions` | 解析 manifest 时注册权限项 |
 | #10 审计日志 | `PluginManager.*` | 每次状态变更写入 audit_log |
 | #12 管理 UI | `PluginManager` 全部公共 API | REST API `/api/plugins/*` 代理 |
+
+### 6.2 PluginManager 方法与 HTTP 端点映射
+
+PluginManager 公共方法通过 REST API `/api/plugins/*` 暴露给 Admin UI：
+
+| PluginManager 方法 | HTTP 方法 | 端点 | 说明 |
+|---------------------|-----------|------|------|
+| `discover()` | `GET` | `/api/plugins` | 列出所有已发现/已安装插件 |
+| `install(name)` | `POST` | `/api/plugins/{name}/install` | 安装插件 |
+| `enable(name)` | `POST` | `/api/plugins/{name}/enable` | 启用插件 |
+| `disable(name)` | `POST` | `/api/plugins/{name}/disable` | 禁用插件 |
+| `uninstall(name)` | `DELETE` | `/api/plugins/{name}` | 卸载插件（先 disable 再 preUninstall）|
+| `isLoaded(name)` | - | 内部方法，不暴露 HTTP | - |
+| `getPlugin(name)` | - | 内部方法，不暴露 HTTP | - |
+
+详见 [api-specification.md](api-specification.md) 端点 #13-#15, #22。
 
 ---
 

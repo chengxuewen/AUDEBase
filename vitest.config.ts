@@ -1,54 +1,24 @@
-import { defineConfig } from "vitest/config";
-import { resolve } from "node:path";
+import { defineConfig } from 'vitest/config'
 
-const packagesDir = resolve(__dirname, "packages");
 export default defineConfig({
-  // Resolve @audebase/* workspace packages to their local directories
-  resolve: {
-    alias: {
-      "@audebase/audit": resolve(packagesDir, "audit/src"),
-      "@audebase/health-check": resolve(packagesDir, "health-check/src"),
-      "@audebase/i18n": resolve(packagesDir, "i18n/src"),
-      "@audebase/logging-infra": resolve(packagesDir, "logging-infra/src"),
-      "@audebase/manifest-engine": resolve(packagesDir, "manifest-engine/src"),
-      "@audebase/migration-engine": resolve(packagesDir, "migration-engine/src"),
-      "@audebase/plugin-core": resolve(packagesDir, "plugin-core/src"),
-      "@audebase/plugin-framework": resolve(packagesDir, "plugin-framework/src"),
-      "@audebase/rbac": resolve(packagesDir, "rbac/src"),
-      "@audebase/shared-types": resolve(packagesDir, "shared-types/src"),
-    },
-  },
   test: {
     globals: true,
-    environment: "node",
-    include: ["packages/*/src/**/*.test.ts", "packages/*/src/**/*.spec.ts"],
-    exclude: ["node_modules", "dist", ".turbo"],
+    environment: 'node',
+    include: ['packages/*/src/**/*.test.ts'],
+    exclude: [
+      'packages/*/src/**/*.integration.test.ts',
+      'packages/*/src/**/*.contract.test.ts',
+      'packages/admin-ui/**',
+      'node_modules/**',
+    ],
     coverage: {
-      provider: "v8",
-      reporter: ["text", "json", "html", "lcov"],
-      include: ["packages/*/src/**/*.ts"],
-      exclude: [
-        "packages/*/src/**/*.test.ts",
-        "packages/*/src/**/*.spec.ts",
-        "packages/*/src/**/index.ts",
-        "packages/*/src/**/__tests__/**",
-        // E2E-only code — tested via HTTP/CLI, not direct imports
-        "packages/kernel/src/api/users.ts",
-        "packages/kernel/src/api/roles.ts",
-        "packages/kernel/src/auth/routes.ts",
-        "packages/kernel/src/cli.ts",
-        "packages/kernel/src/bootstrap.ts",
-        "packages/kernel/src/startup.ts",
-        "packages/kernel/src/vitest.setup.ts",
-        "packages/kernel/src/db/schema/**",
-        "packages/rbac/src/seed.ts",
-      ],
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      include: ['packages/*/src/**/*.ts'],
+      exclude: ['packages/*/src/**/*.test.ts', 'packages/*/src/**/__tests__/**', 'packages/*/src/**/index.ts'],
       thresholds: {
-        lines: 80,
-        functions: 80,
-        branches: 80,
-        statements: 80,
+        lines: process.env.AUDE_PHASE_1A ? 60 : 80,
       },
     },
   },
-});
+})

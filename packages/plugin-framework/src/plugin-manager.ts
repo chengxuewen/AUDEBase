@@ -1,198 +1,119 @@
 /**
- * PluginManager — orchestrates plugin loading, unloading, and lifecycle.
+ * Plugin Manager - dependency resolution (Phase 1a)
  *
- * Uses PluginHost for low-level load/unload operations.
- * Handles dependency resolution, partition ordering, and lifecycle execution.
- *
- * Phase 1a: 2 states (loaded, disabled).
+ * Kahn's algorithm topological sort.
+ * D1.6: @audebase/plugin-core always first.
  */
-import type { Manifest } from "@audebase/manifest-engine";
-import { ErrorCode, UserError } from "@audebase/shared-types";
-import type { PluginInstance, PluginHost, LifecyclePhase } from "./types.js";
-import { resolveDependencies } from "./resolver.js";
-import { runLifecycleSequence } from "./lifecycle.js";
 
-export class PluginManager {
-  readonly #host: PluginHost;
-  readonly #loadedPlugins = new Map<string, PluginInstance>();
-  readonly #loadingOrder: string[] = [];
+import type { PluginDescriptor } from '@audebase/shared-types'
 
-  constructor(host: PluginHost) {
-    this.#host = host;
+const PLUGIN_CORE = '@audebase/plugin-core'
+
+/**
+ * Resolve plugin load order via topological sort (Kahn's algorithm).
+ *
+ * @throws Error('循环依赖: ...') on circular dependency
+ * @throws Error('缺失依赖: ...') on missing dependency
+ * @throws Error on self-referencing dependency
+ */
+export async function resolveDependencyOrder(
+  plugins: PluginDescriptor[],
+): Promise<PluginDescriptor[]> {
+  if (plugins.length === 0) {
+    return []
   }
 
-  // ── Dependency Resolution ──────────────────────────────────
-
-  /**
-   * Topologically sort manifests by dependencies.
-   * SYSTEM partition plugins are placed first.
-   * Static method — does not require instantiation.
-   */
-  static resolveDependencies(manifests: readonly Manifest[]): Manifest[] {
-    return resolveDependencies(manifests);
+  const pluginMap = new Map<string, PluginDescriptor>()
+  for (const p of plugins) {
+    pluginMap.set(p.name, p)
   }
 
-  // ── Plugin Loading ─────────────────────────────────────────
-
-  /**
-   * Load multiple plugins in dependency order, running lifecycle hooks.
-   *
-   * Load sequence per plugin:
-   *   1. afterAdd (if defined)
-   *   2. beforeLoad (if defined)
-   *   3. load (required — PluginHost.loadPlugin)
-   *   4. install (if defined)
-   *
-   * If any plugin fails, the error is logged but other plugins continue loading
-   * (Phase 1a: no cascading rollback).
-   *
-   * @returns Map of successfully loaded plugin name → PluginInstance
-   */
-  async loadPlugins(manifests: readonly Manifest[]): Promise<Map<string, PluginInstance>> {
-    const sorted = resolveDependencies(manifests);
-    const results = new Map<string, PluginInstance>();
-
-    for (const manifest of sorted) {
-      try {
-        // Step 1: afterAdd — the plugin is registered
-        await this.#host.loadPlugin(manifest);
-        const instance = this.#host.getPlugin(manifest.name);
-        if (!instance) {
-          throw new Error(`Plugin "${manifest.name}" failed to load`);
-        }
-
-        // Step 2-4: Lifecycle hooks
-        await runLifecycleSequence(instance, ["afterAdd", "beforeLoad"]);
-
-        // load hook is called internally by PluginHost.loadPlugin,
-        // but if the plugin exports a load hook, call it explicitly
-        await instance.load();
-
-        await this.#runOptionalHook(instance, "install");
-
-        instance.status = "loaded";
-        this.#loadedPlugins.set(manifest.name, instance);
-        this.#loadingOrder.push(manifest.name);
-        results.set(manifest.name, instance);
-      } catch (err: unknown) {
-        // Phase 1a: log and skip, don't block other plugins
-        const msg = err instanceof Error ? err.message : String(err);
-        // ponytail: use stderr for now; Phase 1b switches to structured logger
-        process.stderr.write(`[PluginManager] Failed to load "${manifest.name}": ${msg}\n`);
-      }
+  // Detect self-reference
+  for (const p of plugins) {
+    if (p.dependencies.includes(p.name)) {
+      throw new Error(`循环依赖: ${p.name} depends on itself`)
     }
-
-    return results;
   }
 
-  /**
-   * Load a single plugin (convenience wrapper around loadPlugins).
-   */
-  async loadPlugin(manifest: Manifest): Promise<PluginInstance> {
-    const results = await this.loadPlugins([manifest]);
-    const instance = results.get(manifest.name);
-    if (!instance) {
-      throw new UserError(
-        ErrorCode.PLUGIN_LIFECYCLE_ERROR,
-        `Failed to load plugin "${manifest.name}"`,
-        { plugin: manifest.name },
-      );
-    }
-    return instance;
-  }
-
-  // ── Plugin Unloading ───────────────────────────────────────
-
-  /**
-   * Unload a plugin.
-   * Phase 1a: unloads unconditionally. Phase 1b+ should check reverse dependencies.
-   *
-   * Sequence: preUninstall → PluginHost.unloadPlugin
-   */
-  async unloadPlugin(name: string): Promise<void> {
-    const instance = this.#loadedPlugins.get(name);
-    if (!instance) {
-      throw new UserError(ErrorCode.PLUGIN_NOT_FOUND, `Plugin "${name}" is not loaded`, {
-        plugin: name,
-      });
-    }
-
-    try {
-      await this.#runOptionalHook(instance, "preUninstall");
-      await this.#host.unloadPlugin(name);
-    } finally {
-      this.#loadedPlugins.delete(name);
-      const idx = this.#loadingOrder.indexOf(name);
-      if (idx >= 0) {
-        this.#loadingOrder.splice(idx, 1);
+  // Detect missing dependencies
+  for (const p of plugins) {
+    for (const dep of p.dependencies) {
+      if (!pluginMap.has(dep)) {
+        throw new Error(`缺失依赖: ${p.name} requires ${dep}`)
       }
     }
   }
 
-  // ── Enable / Disable ───────────────────────────────────────
+  // Build adjacency list: dep -> [plugins that depend on dep]
+  // in-degree: number of unsatisfied dependencies per plugin
+  const inDegree = new Map<string, number>()
+  const dependents = new Map<string, string[]>() // dep -> plugins depending on dep
 
-  /**
-   * Enable a loaded plugin.
-   * Runs afterEnable hook.
-   * State goes loaded → enabled.
-   */
-  async enablePlugin(name: string): Promise<void> {
-    const instance = this.#loadedPlugins.get(name);
-    if (!instance) {
-      throw new UserError(ErrorCode.PLUGIN_NOT_FOUND, `Plugin "${name}" is not loaded`, {
-        plugin: name,
-      });
-    }
-
-    await this.#runOptionalHook(instance, "afterEnable");
-    instance.status = "enabled";
-  }
-
-  /**
-   * Disable a loaded plugin.
-   * Runs afterDisable hook.
-   * State goes enabled → disabled.
-   *
-   * Phase 1a: does not check reverse deps (Phase 1b).
-   */
-  async disablePlugin(name: string): Promise<void> {
-    const instance = this.#loadedPlugins.get(name);
-    if (!instance) {
-      throw new UserError(ErrorCode.PLUGIN_NOT_FOUND, `Plugin "${name}" is not loaded`, {
-        plugin: name,
-      });
-    }
-
-    await this.#runOptionalHook(instance, "afterDisable");
-    instance.status = "disabled";
-  }
-
-  // ── Query ──────────────────────────────────────────────────
-
-  /** Get a loaded plugin instance, or undefined */
-  getPlugin(name: string): PluginInstance | undefined {
-    return this.#loadedPlugins.get(name);
-  }
-
-  /** Get all loaded plugin instances */
-  getPlugins(): PluginInstance[] {
-    // Return in load order
-    return this.#loadingOrder
-      .map((name) => this.#loadedPlugins.get(name))
-      .filter((p): p is PluginInstance => p !== undefined);
-  }
-
-  /** Check if a plugin is loaded */
-  isLoaded(name: string): boolean {
-    return this.#loadedPlugins.has(name);
-  }
-
-  // ── Private ────────────────────────────────────────────────
-
-  async #runOptionalHook(instance: PluginInstance, phase: LifecyclePhase): Promise<void> {
-    const hook = instance[phase];
-    if (typeof hook === "function") {
-      await hook();
+  for (const p of plugins) {
+    inDegree.set(p.name, p.dependencies.length)
+    for (const dep of p.dependencies) {
+      const list = dependents.get(dep) ?? []
+      list.push(p.name)
+      dependents.set(dep, list)
     }
   }
+
+  // Initialize queue with zero-in-degree nodes
+  // plugin-core gets priority (D1.6)
+  const queue: string[] = []
+  for (const p of plugins) {
+    if ((inDegree.get(p.name) ?? 0) === 0) {
+      queue.push(p.name)
+    }
+  }
+
+  // Sort queue so plugin-core is always first
+  queue.sort((a, b) => {
+    if (a === PLUGIN_CORE) return -1
+    if (b === PLUGIN_CORE) return 1
+    return 0
+  })
+
+  const result: string[] = []
+
+  while (queue.length > 0) {
+    const name = queue.shift()!
+    result.push(name)
+
+    // Get dependents and sort for deterministic plugin-core priority
+    const deps = dependents.get(name) ?? []
+    const newlyReady: string[] = []
+
+    for (const depName of deps) {
+      const newDegree = (inDegree.get(depName) ?? 1) - 1
+      inDegree.set(depName, newDegree)
+      if (newDegree === 0) {
+        newlyReady.push(depName)
+      }
+    }
+
+    // Sort newly ready nodes for plugin-core priority
+    newlyReady.sort((a, b) => {
+      if (a === PLUGIN_CORE) return -1
+      if (b === PLUGIN_CORE) return 1
+      return 0
+    })
+
+    // Append newly ready to queue, maintaining sort
+    // Merge sorted newlyReady into queue (which stays sorted by core-priority + original order)
+    for (const nr of newlyReady) {
+      queue.push(nr)
+    }
+  }
+
+  // Cycle detection: if not all nodes processed, there's a cycle
+  if (result.length !== plugins.length) {
+    const unresolved = plugins
+      .filter((p) => !result.includes(p.name))
+      .map((p) => p.name)
+    throw new Error(`循环依赖: ${unresolved.join(' -> ')}`)
+  }
+
+  // Map back to descriptors
+  return result.map((name) => pluginMap.get(name)!)
 }

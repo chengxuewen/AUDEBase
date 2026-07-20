@@ -1,11 +1,18 @@
-import type { LocaleCode } from "@audebase/shared-types";
+/**
+ * i18n types
+ *
+ * @audebase/i18n
+ */
+
+import type { LocaleCode, LocaleMap } from '@audebase/shared-types'
 
 /**
- * Configuration for the I18nEngine.
+ * Translations organized by namespace then locale.
+ * e.g. { 'plugin-core': { 'menu.plugins': '插件管理' }, client: { 'loading': '加载中...' } }
  */
-export interface I18nConfig {
-  /** Default locale used as first fallback for missing translations. */
-  defaultLocale: LocaleCode;
-  /** Optional second fallback locale (defaults to 'en' when omitted). */
-  fallbackLocale?: LocaleCode;
+export interface TranslatorConfig {
+  translations: Record<string, LocaleMap>
+  defaultLang: LocaleCode
 }
+
+export { LocaleCode, LocaleMap }

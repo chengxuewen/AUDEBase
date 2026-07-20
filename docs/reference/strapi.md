@@ -678,7 +678,7 @@ Strapi 的插件生命周期系统（register → bootstrap → destroy）是 AU
 |-------------|-------------------|--------|
 | `register()` | `beforeLoad` | 高 — 注册声明，不依赖运行时 |
 | `bootstrap()` | `load` / `afterEnable` | 高 — 全量运行时可用 |
-| `destroy()` | `afterDisable` / `pre_uninstall` | 高 — 资源清理 |
+| `destroy()` | `afterDisable` / `preUninstall` | 高 - 资源清理 |
 | — | `afterAdd` | Strapi 无对应（npm install 即时生效） |
 | — | `install` | Strapi 无对应（首次安装逻辑） |
 

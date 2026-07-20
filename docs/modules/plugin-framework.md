@@ -195,7 +195,7 @@ assets:
 lifecycle:
   beforeLoad: "registerModels"
   afterEnable: "startScheduler"
-  pre_uninstall: "warnUserDataLoss"
+  preUninstall: "warnUserDataLoss"
 
 # Phase 1: 运行时配置
 runtime:
@@ -259,7 +259,7 @@ plugins:
 | **install** | 安装 | 创建 DB 表、写入系统配置、加载 demo 数据 | Odoo data files |
 | **afterEnable** | 激活 | 启动定时任务、注册事件监听、开端口 | NocoBase afterEnable |
 | **afterDisable** | 停用 | 注销事件、停止定时任务 | NocoBase afterDisable |
-| **pre_uninstall** | 卸载前 | 提醒用户备份数据 | Odoo warning |
+| **preUninstall** | 卸载前 | 提醒用户备份数据 | Odoo warning |
 
 > **升级流程**: 插件升级通过 D1.7 迁移框架处理（三阶段 SQL 引擎: preload → postsync → postload），不在生命周期钩子中定义独立的 pre_upgrade / post_upgrade。详见 decisions.md D1.4 + D1.7。
 

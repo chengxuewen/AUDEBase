@@ -163,6 +163,6 @@ Person D:
 ## 参考
 
 - 架构文档: [architecture.md](architecture.md) §七、§八
-- 决策记录: `../.agents/memorys/decisions.md`（47 条决策）
+- 决策记录: `../.agents/memorys/decisions.md`（48 条决策）
 - 项目状态: `../.agents/memorys/status.md`
 - 审计摘要: 见本文件 §Phase 总览、发现 #1-#24

@@ -1,12 +1,49 @@
-import { Storage } from "happy-dom";
-import "@testing-library/jest-dom/vitest";
+import '@testing-library/jest-dom/vitest'
+import { vi, afterEach } from 'vitest'
+import { cleanup } from '@testing-library/react'
 
-// happy-dom provides localStorage natively, but vitest's environment setup
-// doesn't copy it to the global scope due to a Node.js 22 compatibility
-// issue: 'localStorage' in globalThis === true, so getWindowKeys skips it.
-// Use happy-dom's Storage directly instead of reimplementing a mock.
-Object.defineProperty(globalThis, "localStorage", {
-  value: new Storage(),
-  writable: true,
-  configurable: true,
-});
+// Auto-wrap vi.mock factory return values: function properties become vi.fn()
+// This enables .mockReturnValue() on factory functions (vitest 1.x compat)
+globalThis.__wrapMockResult = <T>(obj: T): T => {
+  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+    const wrapped: Record<string, unknown> = {}
+    for (const key of Object.keys(obj as Record<string, unknown>)) {
+      const val = (obj as Record<string, unknown>)[key]
+      if (typeof val === 'function' && !('_isMockFunction' in val)) {
+        wrapped[key] = vi.fn(val as (...a: unknown[]) => unknown)
+      } else {
+        wrapped[key] = val
+      }
+    }
+    return wrapped as T
+  }
+  return obj
+}
+
+if (!window.matchMedia) {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  })
+}
+
+// Polyfill ResizeObserver for jsdom (antd requires it)
+if (!window.ResizeObserver) {
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver
+}
+afterEach(() => {
+  cleanup()
+})

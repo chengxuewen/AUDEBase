@@ -1,7 +1,6 @@
 ---
 name: design-system
-description: >-
-  为 AUDEBase 工业控制平台生成一致的 UI。引导 AI 代理创建符合 AUDEBase 工业设计系统的前端界面。
+  为 AUDEBase 企业应用平台生成一致的 UI。引导 AI 代理创建符合 AUDEBase 设计系统的前端界面。
 compatibility: >-
   Designed for Claude Code, GitHub Copilot, 和类似 AI 编码代理。
 disable-model-invocation: false
@@ -242,7 +241,7 @@ AUDEBase 的品牌形象由工业控制场景的根本需求决定：
 - 使用自动消失的错误状态（工业场景中错误必须持续可见直到操作员确认）
 - 使用消费级间距（间距过松不满足工业数据密度要求）
 - 创建设计系统之外的色值（所有颜色必须来自 `docs/AUDEBase-Design.md` 定义的色板）
-- 使用 Tailwind CSS v3 配置语法（项目使用 v4）
+- 使用 Tailwind CSS 语法（项目使用 Ant Design 5 主题定制，不使用 Tailwind）
 
 ---
 

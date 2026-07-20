@@ -385,12 +385,12 @@
 
 | # | 验收项 | 目标 | 验证方法 | 状态 |
 |---|--------|:---:|----------|:----:|
-| N1 | 全局覆盖率（lines）达标 | ≥60% | `pnpm test:coverage` 报告 | [ ] |
+| N1 | 全局覆盖率（lines）达标 | ≥80% | `pnpm test:coverage` 报告 | [ ] |
 | N2 | `packages/core/src/plugin-manager.ts` 行覆盖率 | ≥80% | 覆盖率报告 | [ ] |
 | N3 | `packages/rbac/src/middleware.ts` 行覆盖率 | ≥80% | 覆盖率报告 | [ ] |
 | N4 | `packages/migration/src/engine.ts` 行覆盖率 | ≥80% | 覆盖率报告 | [ ] |
-| N5 | `packages/audit/src/middleware.ts` 行覆盖率 | ≥60% | 覆盖率报告 | [ ] |
-| N6 | `packages/core/src/db.ts` 行覆盖率 | ≥60% | 覆盖率报告 | [ ] |
+| N5 | `packages/audit/src/middleware.ts` 行覆盖率 | ≥80% | 覆盖率报告 | [ ] |
+| N6 | `packages/core/src/db.ts` 行覆盖率 | ≥80% | 覆盖率报告 | [ ] |
 | N7 | 每个模块边界至少 2 个集成测试用例（DB→ORM、DB→Migration、API→DB、Auth→JWT、Config→env、RateLimit→IP） | ≥2/边界 | 测试文件审查 | [ ] |
 | N8 | 5 条核心 E2E 流程全部实现且通过 Playwright | 3/3 环境 | `pnpm test:e2e` 在 CI/本地/Docker 全部通过 | [ ] |
 | N9 | 契约测试覆盖 9+ 个 Phase 1a 端点（auth/login、auth/refresh、users CRUD、roles CRUD、health、health/ready） | ≥9 端点 | `pnpm test:contract` 报告 | [ ] |
@@ -468,7 +468,7 @@
 | C2 | ESLint 检查通过（零 error） | `pnpm lint` → 退出码 0 | [ ] |
 | C3 | TypeScript 类型检查通过（零 error） | `pnpm type-check` → 退出码 0 | [ ] |
 | C4 | Vitest 单元+集成测试全部通过 | `pnpm test` → 所有测试 PASS | [ ] |
-| C5 | 覆盖率门禁触发：低于 60% 全局或低于 80% 核心模块时 CI 阻断 | 故意降低覆盖率 → CI 失败 | [ ] |
+| C5 | 覆盖率门禁触发：低于 80% 全局或低于 80% 核心模块时 CI 阻断 | 故意降低覆盖率 -> CI 失败 | [ ] |
 | C6 | E2E Playwright 测试通过（chromium） | `pnpm test:e2e` → 5 条核心流程全部 PASS | [ ] |
 | C7 | 契约测试全部通过 | `pnpm test:contract` → 全部 PASS | [ ] |
 | C8 | 构建成功（所有包 tsup/Vite 编译） | `pnpm build` → 退出码 0 | [ ] |

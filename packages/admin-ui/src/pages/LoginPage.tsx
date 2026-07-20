@@ -1,68 +1,53 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Form, Input, Button, Typography, message, Card } from "antd";
-import { UserOutlined, LockOutlined } from "@ant-design/icons";
-import { useAuth } from "../auth/AuthContext";
+import { useState } from 'react'
+import type { ReactNode } from 'react'
+import { Button, Card, Form, Input, message } from 'antd'
+import { useTranslation } from 'react-i18next'
+import { apiPost, setTokens } from '../api/client.js'
 
-export default function LoginPage() {
-  const navigate = useNavigate();
-  const { login } = useAuth();
-  const [submitting, setSubmitting] = useState(false);
+interface LoginPageProps {
+  onLogin?: () => void
+}
 
-  const onFinish = async (values: { username: string; password: string }) => {
-    setSubmitting(true);
+interface LoginResponse {
+  access_token: string
+  refresh_token: string
+}
+
+export function LoginPage({ onLogin }: LoginPageProps): ReactNode {
+  const { t } = useTranslation('client')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (values: { username: string; password: string }): Promise<void> => {
+    setLoading(true)
     try {
-      await login(values.username, values.password);
-      void navigate("/admin", { replace: true });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "登录失败，请重试";
-      void message.error(msg);
+      const result = await apiPost<LoginResponse>('/api/auth/login', values)
+      setTokens(result.access_token, result.refresh_token)
+      onLogin?.()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t('login.failed')
+      void message.error(msg)
     } finally {
-      setSubmitting(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "100vh",
-        background: "#f5f5f5",
-      }}
-    >
-      <Card style={{ width: 400 }}>
-        <Typography.Title level={3} style={{ textAlign: "center" }}>
-          AUDEBase
-        </Typography.Title>
-        <Typography.Paragraph type="secondary" style={{ textAlign: "center", marginBottom: 24 }}>
-          企业应用开发平台
-        </Typography.Paragraph>
-
-        <Form
-          name="login"
-          onFinish={(values: Record<string, unknown>) => {
-            void onFinish(values as { username: string; password: string });
-          }}
-          autoComplete="off"
-          size="large"
-        >
-          <Form.Item name="username" rules={[{ required: true, message: "请输入用户名" }]}>
-            <Input prefix={<UserOutlined />} placeholder="用户名" autoFocus />
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+      <Card title={t('login.title')} style={{ width: 400 }}>
+        <Form onFinish={handleSubmit}>
+          <Form.Item name="username" rules={[{ required: true, message: t('login.usernameRequired') }]}>
+            <Input placeholder={t('login.username')} />
           </Form.Item>
-
-          <Form.Item name="password" rules={[{ required: true, message: "请输入密码" }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="密码" />
+          <Form.Item name="password" rules={[{ required: true, message: t('login.passwordRequired') }]}>
+            <Input.Password placeholder={t('login.password')} />
           </Form.Item>
-
           <Form.Item>
-            <Button type="primary" htmlType="submit" loading={submitting} block>
-              登录
+            <Button type="primary" htmlType="submit" block loading={loading}>
+              {t('login.submit')}
             </Button>
           </Form.Item>
         </Form>
       </Card>
     </div>
-  );
+  )
 }

@@ -1,20 +1,11 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "outDir": "./dist",
+    "rootDir": "./src",
     "jsx": "react-jsx",
-    "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
-    "paths": {
-      "@audebase/shared-types": ["../shared-types/src/index.ts"]
-    },
-    "types": ["vite/client"],
-    "noEmit": true,
-    "verbatimModuleSyntax": true
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
   },
-  "include": ["src", "*.config.ts", "*.config.mjs"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["src/**/__tests__/**","node_modules", "dist"]
 }

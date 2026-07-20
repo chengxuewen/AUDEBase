@@ -1,0 +1,20 @@
+{
+  "name": "@audebase/cli",
+  "private": true,
+  "type": "module",
+  "bin": { "aude": "./src/index.ts" },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "tsc --noEmit",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@audebase/shared-types": "workspace:*",
+    "@audebase/core": "workspace:*",
+    "@audebase/migration": "workspace:*",
+    "commander": "^12.0.0"
+  }
+}

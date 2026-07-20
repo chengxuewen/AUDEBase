@@ -1,253 +1,290 @@
-import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   EmailNotificationProvider,
   readSmtpConfigFromEnv,
   InAppNotificationProvider,
-  NotificationError,
-} from "../index";
-import type { EmailTransporter } from "../providers/email";
-import type { InAppStore } from "../providers/in-app";
+} from '../index.js'
+import type { EmailTransporter } from '../providers/email.js'
+import type { InAppStore } from '../providers/in-app.js'
+import type { NotificationRecipient, NotificationTemplate } from '../types.js'
+import type { SmtpConfig } from '../index.js'
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function makeEmailRecipient(email: string): NotificationRecipient {
+  return { email }
+}
+
+function makeTemplate(overrides?: Partial<NotificationTemplate>): NotificationTemplate {
+  return {
+    id: 'test-template',
+    subject: 'Test Subject',
+    body: 'Hello {{name}}',
+    variables: ['name'],
+    ...overrides,
+  }
+}
 
 // ---------------------------------------------------------------------------
 // EmailNotificationProvider
 // ---------------------------------------------------------------------------
 
 function createMockTransporter(): EmailTransporter & { sendMail: ReturnType<typeof vi.fn> } {
-  const sendMail = vi.fn().mockResolvedValue({ messageId: "msg-1" });
-  return { sendMail };
+  const sendMail = vi.fn().mockResolvedValue({ messageId: 'msg-1' })
+  return { sendMail }
 }
 
-describe("EmailNotificationProvider", () => {
-  let transporter: ReturnType<typeof createMockTransporter>;
-  let provider: EmailNotificationProvider;
+describe('EmailNotificationProvider', () => {
+  let transporter: ReturnType<typeof createMockTransporter>
+  let provider: EmailNotificationProvider
 
   beforeEach(() => {
-    transporter = createMockTransporter();
-    provider = new EmailNotificationProvider(transporter, { from: "test@audebase.local" });
-  });
+    transporter = createMockTransporter()
+    provider = new EmailNotificationProvider(transporter, { from: 'test@audebase.local' })
+  })
 
-  test("getChannels returns [email]", () => {
-    expect(provider.getChannels()).toEqual(["email"]);
-  });
+  test('has name "email"', () => {
+    expect(provider.name).toBe('email')
+  })
 
-  test("send calls transporter.sendMail with correct options", async () => {
+  test('send calls transporter.sendMail with correct options', async () => {
     // Arrange
-    const recipient = "user@example.com";
-    const template = "welcome";
-    const data = { body: "Hello, Alice!", name: "Alice" };
+    const recipient = makeEmailRecipient('user@audebase.local')
+    const template = makeTemplate({ id: 'welcome', subject: 'Welcome!' })
 
     // Act
-    await provider.send(recipient, template, data);
+    const result = await provider.send(recipient, template, { name: 'Alice' })
 
     // Assert
-    expect(transporter.sendMail).toHaveBeenCalledTimes(1);
-    const call = transporter.sendMail.mock.calls[0]![0];
-    expect(call.to).toBe("user@example.com");
-    expect(call.from).toBe("test@audebase.local");
-    expect(call.subject).toBe("[AUDEBase] welcome");
-    expect(call.text).toBe("Hello, Alice!");
-  });
+    expect(result.success).toBe(true)
+    expect(result.providerName).toBe('email')
+    expect(transporter.sendMail).toHaveBeenCalledTimes(1)
+    expect(transporter.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: 'test@audebase.local',
+        to: 'user@audebase.local',
+        subject: '[AUDEBase] Welcome!',
+      }),
+    )
+  })
 
-  test("send uses html field when data.html is provided", async () => {
+  test('send returns failure when recipient has no email', async () => {
     // Arrange
-    const data = { body: "plain", html: "<p>rich</p>" };
+    const recipient: NotificationRecipient = { userId: 'user-1' }
+    const template = makeTemplate()
 
     // Act
-    await provider.send("to@test.com", "alert", data);
+    const result = await provider.send(recipient, template, {})
 
     // Assert
-    const call = transporter.sendMail.mock.calls[0]![0];
-    expect(call.html).toBe("<p>rich</p>");
-  });
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('Recipient email is required')
+    expect(transporter.sendMail).not.toHaveBeenCalled()
+  })
 
-  test("send defaults html to undefined when not in data", async () => {
+  test('send returns failure when transporter throws', async () => {
     // Arrange
-    const data = { body: "just text" };
+    transporter.sendMail.mockRejectedValueOnce(new Error('SMTP connection refused'))
+    const recipient = makeEmailRecipient('user@audebase.local')
+    const template = makeTemplate()
 
     // Act
-    await provider.send("to@test.com", "alert", data);
+    const result = await provider.send(recipient, template, {})
 
     // Assert
-    const call = transporter.sendMail.mock.calls[0]![0];
-    expect(call.html).toBeUndefined();
-  });
+    expect(result.success).toBe(false)
+    expect(result.providerName).toBe('email')
+    expect(result.error).toContain('Email send failed')
+    expect(result.error).toContain('SMTP connection refused')
+  })
 
-  test("send wraps transporter errors as SEND_FAILED", async () => {
+  test('send respects html field in data', async () => {
     // Arrange
-    transporter.sendMail.mockRejectedValue(new Error("SMTP connection refused"));
+    const recipient = makeEmailRecipient('user@audebase.local')
+    const template = makeTemplate()
 
-    // Act & Assert
-    await expect(
-      provider.send("to@test.com", "alert", {}),
-    ).rejects.toThrow(NotificationError);
+    // Act
+    await provider.send(recipient, template, { body: 'Plain text fallback', html: '<b>HTML</b>' })
 
-    await expect(
-      provider.send("to@test.com", "alert", {}),
-    ).rejects.toThrow(/Email send failed for template "alert": SMTP connection refused/);
-  });
-});
+    // Assert
+    expect(transporter.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: 'Plain text fallback',
+        html: '<b>HTML</b>',
+      }),
+    )
+  })
+
+  test('send uses data body as text when no body field', async () => {
+    // Arrange
+    const recipient = makeEmailRecipient('user@audebase.local')
+    const template = makeTemplate()
+
+    // Act
+    await provider.send(recipient, template, { other: 'value' })
+
+    // Assert
+    expect(transporter.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: JSON.stringify({ other: 'value' }, null, 2),
+      }),
+    )
+  })
+})
 
 // ---------------------------------------------------------------------------
 // readSmtpConfigFromEnv
 // ---------------------------------------------------------------------------
 
-describe("readSmtpConfigFromEnv", () => {
-  const prev = { ...process.env };
+describe('readSmtpConfigFromEnv', () => {
+  const envBackup = { ...process.env }
 
   beforeEach(() => {
-    process.env = { ...prev };
-  });
+    vi.resetModules()
+    process.env = { ...envBackup }
+  })
 
   afterEach(() => {
-    process.env = prev;
-  });
+    process.env = { ...envBackup }
+  })
 
-  test("returns config when all required env vars are set", () => {
-    // Arrange
-    process.env.AUDE_SMTP_HOST = "smtp.example.com";
-    process.env.AUDE_SMTP_PORT = "587";
-    process.env.AUDE_SMTP_USER = "user";
-    process.env.AUDE_SMTP_PASS = "pass";
+  test('returns null when AUDE_SMTP_HOST is not set', () => {
+    delete process.env.AUDE_SMTP_HOST
+    expect(readSmtpConfigFromEnv()).toBeNull()
+  })
 
-    // Act
-    const config = readSmtpConfigFromEnv();
+  test('returns null when AUDE_SMTP_PORT is not set', () => {
+    process.env.AUDE_SMTP_HOST = 'smtp.example.com'
+    delete process.env.AUDE_SMTP_PORT
+    expect(readSmtpConfigFromEnv()).toBeNull()
+  })
 
-    // Assert
-    expect(config).not.toBeNull();
-    expect(config!.host).toBe("smtp.example.com");
-    expect(config!.port).toBe(587);
-    expect(config!.secure).toBe(false);
-    expect(config!.auth.user).toBe("user");
-    expect(config!.auth.pass).toBe("pass");
-  });
+  test('returns null when AUDE_SMTP_PORT is NaN', () => {
+    process.env.AUDE_SMTP_HOST = 'smtp.example.com'
+    process.env.AUDE_SMTP_PORT = 'not-a-number'
+    expect(readSmtpConfigFromEnv()).toBeNull()
+  })
 
-  test("returns secure=true when port is 465", () => {
-    // Arrange
-    process.env.AUDE_SMTP_HOST = "smtp.example.com";
-    process.env.AUDE_SMTP_PORT = "465";
+  test('returns SmtpConfig with secure=true for port 465', () => {
+    process.env.AUDE_SMTP_HOST = 'smtp.example.com'
+    process.env.AUDE_SMTP_PORT = '465'
+    process.env.AUDE_SMTP_USER = 'user'
+    process.env.AUDE_SMTP_PASS = 'pass'
 
-    // Act
-    const config = readSmtpConfigFromEnv();
+    const config = readSmtpConfigFromEnv()
+    expect(config).not.toBeNull()
+    expect(config!.host).toBe('smtp.example.com')
+    expect(config!.port).toBe(465)
+    expect(config!.secure).toBe(true)
+    expect(config!.auth.user).toBe('user')
+    expect(config!.auth.pass).toBe('pass')
+  })
 
-    // Assert
-    expect(config!.secure).toBe(true);
-  });
+  test('returns SmtpConfig with secure=false for port 587', () => {
+    process.env.AUDE_SMTP_HOST = 'smtp.example.com'
+    process.env.AUDE_SMTP_PORT = '587'
 
-  test("returns null when AUDE_SMTP_HOST is missing", () => {
-    process.env.AUDE_SMTP_PORT = "587";
-    expect(readSmtpConfigFromEnv()).toBeNull();
-  });
+    const config = readSmtpConfigFromEnv()
+    expect(config).not.toBeNull()
+    expect(config!.port).toBe(587)
+    expect(config!.secure).toBe(false)
+  })
 
-  test("returns null when AUDE_SMTP_PORT is missing", () => {
-    process.env.AUDE_SMTP_HOST = "smtp.example.com";
-    expect(readSmtpConfigFromEnv()).toBeNull();
-  });
+  test('uses empty strings for missing user/pass', () => {
+    process.env.AUDE_SMTP_HOST = 'smtp.example.com'
+    process.env.AUDE_SMTP_PORT = '25'
 
-  test("returns null when AUDE_SMTP_PORT is not a number", () => {
-    process.env.AUDE_SMTP_HOST = "smtp.example.com";
-    process.env.AUDE_SMTP_PORT = "abc";
-    expect(readSmtpConfigFromEnv()).toBeNull();
-  });
-
-  test("returns config with empty auth when user/pass are missing", () => {
-    // Arrange
-    process.env.AUDE_SMTP_HOST = "smtp.example.com";
-    process.env.AUDE_SMTP_PORT = "25";
-
-    // Act
-    const config = readSmtpConfigFromEnv();
-
-    // Assert
-    expect(config).not.toBeNull();
-    expect(config!.auth.user).toBe("");
-    expect(config!.auth.pass).toBe("");
-  });
-});
+    const config: SmtpConfig | null = readSmtpConfigFromEnv()
+    expect(config).not.toBeNull()
+    expect(config!.auth.user).toBe('')
+    expect(config!.auth.pass).toBe('')
+  })
+})
 
 // ---------------------------------------------------------------------------
 // InAppNotificationProvider
 // ---------------------------------------------------------------------------
 
-function createMockStore(): InAppStore & {
-  insert: ReturnType<typeof vi.fn>;
-} {
-  const returning = vi.fn().mockResolvedValue([{ id: "notif-1" }]);
-  const values = vi.fn().mockReturnValue({ returning });
-  const insert = vi.fn().mockReturnValue({ values });
-
-  return { insert };
+function createMockStore(): InAppStore & { insert: ReturnType<typeof vi.fn> } {
+  const insert = vi.fn().mockResolvedValue({ id: 'notif-1' })
+  return { insert }
 }
 
-describe("InAppNotificationProvider", () => {
-  let store: ReturnType<typeof createMockStore>;
-  let provider: InAppNotificationProvider;
+describe('InAppNotificationProvider', () => {
+  let store: ReturnType<typeof createMockStore>
+  let provider: InAppNotificationProvider
 
   beforeEach(() => {
-    store = createMockStore();
-    provider = new InAppNotificationProvider(store);
-  });
+    store = createMockStore()
+    provider = new InAppNotificationProvider(store)
+  })
 
-  test("getChannels returns [in-app]", () => {
-    expect(provider.getChannels()).toEqual(["in-app"]);
-  });
+  test('has name "in-app"', () => {
+    expect(provider.name).toBe('in-app')
+  })
 
-  test("send inserts a row with correct fields", async () => {
+  test('send inserts a row and returns success', async () => {
     // Arrange
-    const recipient = "user-abc";
-    const template = "task-assigned";
-    const data = {
-      title: "New Task",
-      body: "You have a new task",
-      link: "/tasks/42",
-    };
+    const recipient: NotificationRecipient = { userId: 'user-abc' }
+    const template = makeTemplate({ id: 'task-assigned', subject: 'New Task' })
 
     // Act
-    await provider.send(recipient, template, data);
+    const result = await provider.send(recipient, template, {
+      title: 'Custom Title',
+      body: 'Task body',
+      link: '/tasks/42',
+    })
 
     // Assert
-    expect(store.insert).toHaveBeenCalledTimes(1);
-    const callValues = store.insert.mock.calls[0]![0]; // the pgTable arg
-    expect(callValues).toBeDefined();
+    expect(result.success).toBe(true)
+    expect(result.providerName).toBe('in-app')
+    expect(result.messageId).toBe('notif-1')
+    expect(store.insert).toHaveBeenCalledTimes(1)
+    expect(store.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipient: 'user-abc',
+        template: 'task-assigned',
+        title: 'Custom Title',
+        body: 'Task body',
+        link: '/tasks/42',
+      }),
+    )
+  })
 
-    const valuesArg = store.insert().values.mock.calls[0][0];
-    expect(valuesArg.recipient).toBe("user-abc");
-    expect(valuesArg.template).toBe("task-assigned");
-    expect(valuesArg.title).toBe("New Task");
-    expect(valuesArg.body).toBe("You have a new task");
-    expect(valuesArg.link).toBe("/tasks/42");
-    expect(valuesArg.data).toEqual(data);
-  });
-
-  test("send falls back to template name when data.title is missing", async () => {
-    // Act
-    await provider.send("user-abc", "generic-alert", {});
-
-    // Assert
-    const valuesArg = store.insert().values.mock.calls[0][0];
-    expect(valuesArg.title).toBe("generic-alert");
-  });
-
-  test("send sets body/link to null when not in data", async () => {
-    // Act
-    await provider.send("user-abc", "simple-alert", { title: "Hi" });
-
-    // Assert
-    const valuesArg = store.insert().values.mock.calls[0][0];
-    expect(valuesArg.body).toBeNull();
-    expect(valuesArg.link).toBeNull();
-  });
-
-  test("send wraps DB errors as SEND_FAILED", async () => {
+  test('send falls back to template.subject as title', async () => {
     // Arrange
-    store.insert().values.mockReturnValueOnce({
-      returning: vi.fn().mockRejectedValueOnce(new Error("connection lost")),
-    });
+    const recipient: NotificationRecipient = { email: 'user@audebase.local' }
+    const template = makeTemplate()
 
-    // Act & Assert
-    await expect(
-      provider.send("user-abc", "alert", {}),
-    ).rejects.toThrow(
-      /In-app notification insert failed for template "alert": connection lost/,
-    );
-  });
-});
+    // Act
+    await provider.send(recipient, template, {})
+
+    // Assert
+    expect(store.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Test Subject',
+        body: null,
+        link: null,
+        recipient: 'user@audebase.local',
+      }),
+    )
+  })
+
+  test('send returns failure when store throws', async () => {
+    // Arrange
+    store.insert.mockRejectedValueOnce(new Error('DB connection lost'))
+    const recipient: NotificationRecipient = { userId: 'user-1' }
+    const template = makeTemplate()
+
+    // Act
+    const result = await provider.send(recipient, template, {})
+
+    // Assert
+    expect(result.success).toBe(false)
+    expect(result.providerName).toBe('in-app')
+    expect(result.error).toContain('In-app notification insert failed')
+    expect(result.error).toContain('DB connection lost')
+  })
+})

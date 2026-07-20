@@ -1,54 +1,42 @@
+# AUDEBase Development Environment
+# GO-032: Docker Compose for local development
+# Usage: docker compose up -d
+# PostgreSQL 16 + Valkey (Redis-compatible) for Phase 1a
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: audebase-postgres
-    restart: unless-stopped
     environment:
-      POSTGRES_USER: aude
-      POSTGRES_PASSWORD: aude
+      POSTGRES_USER: audebase
+      POSTGRES_PASSWORD: audebase_dev
       POSTGRES_DB: audebase
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - audebase-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U aude -d audebase"]
+      test: ["CMD-SHELL", "pg_isready -U audebase -d audebase"]
       interval: 5s
-      timeout: 5s
+      timeout: 3s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: audebase-redis
-    restart: unless-stopped
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: audebase-valkey
+    environment:
+      VALKEY_PASSWORD: audebase_dev
+    command: valkey-server --requirepass audebase_dev
     ports:
       - "6379:6379"
+    volumes:
+      - audebase-valkeydata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "valkey-cli -a audebase_dev ping | grep PONG"]
       interval: 5s
-      timeout: 5s
+      timeout: 3s
       retries: 5
-
-  kernel:
-    build: .
-    container_name: audebase-kernel
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    env_file:
-      - .env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
 
 volumes:
-  pgdata:
+  audebase-pgdata:
+  audebase-valkeydata:

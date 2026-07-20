@@ -1,58 +1,133 @@
-import type { FastifyRequest, FastifyReply } from "fastify";
-import { ErrorCode, UserError } from "@audebase/shared-types";
-import type { PermissionEngine } from "./engine";
-
 /**
- * 认证后挂载到 request 上的用户信息
+ * Fastify middleware: requireAuth + aclMiddleware
+ *
+ * @audebase/rbac
  */
-export interface AuthenticatedUser {
-  userId: string;
-  tenantId: string;
-  username: string;
-  roles: string[];
+
+import { ErrorCode, UserError } from '@audebase/shared-types'
+import type { PermissionAction } from '@audebase/shared-types'
+
+/** AuthService-like interface for middleware DI */
+interface AuthVerifier {
+  verifyAccessToken(token: string): Promise<unknown>
 }
 
+/** RBACService-like interface for middleware DI */
+interface PermissionChecker {
+  can(userId: string, action: PermissionAction, resource: string): Promise<boolean>
+}
+
+/** Minimal request shape */
+interface MiddlewareRequest {
+  headers: { authorization?: string }
+  routeConfig?: { acl?: { action: PermissionAction; resource: string } }
+  user?: { sub?: string; tenant_id?: string | null; username?: string; roles?: string[] }
+}
+
+/** Minimal reply shape */
+interface MiddlewareReply {
+  code(status: number): MiddlewareReply
+  send(body: unknown): void
+}
+
+/** Next function */
+type NextFunction = () => void
+
 /**
- * Fastify Request 类型扩展
+ * requireAuth - Extract Bearer token, verify, inject req.user.
+ * @throws 401 via reply if no token or invalid token
  */
-declare module "fastify" {
-  interface FastifyRequest {
-    user?: AuthenticatedUser;
+export async function requireAuth(
+  request: MiddlewareRequest,
+  reply: MiddlewareReply,
+  authService: AuthVerifier,
+): Promise<void> {
+  const authHeader = request.headers.authorization
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    reply.code(401).send({
+      error: { code: ErrorCode.AUTH_REQUIRED, message: 'Authentication required' },
+    })
+    return
+  }
+
+  const token = authHeader.slice(7)
+  try {
+    const payload = await authService.verifyAccessToken(token)
+    request.user = payload as { sub: string; tenant_id: string | null; username: string; roles: string[] }
+  } catch {
+    reply.code(401).send({
+      error: { code: ErrorCode.AUTH_TOKEN_INVALID, message: 'Invalid token' },
+    })
   }
 }
 
 /**
- * rbacGuard — 权限校验中间件工厂
+ * aclMiddleware - Check ACL based on routeConfig.acl.
+ * Requires request to have already passed requireAuth (or have user set).
  *
- * 使用示例：
- *   fastify.get('/api/users', { preHandler: rbacGuard(engine, 'read', 'user') }, handler)
- *   fastify.post('/api/users', { preHandler: rbacGuard(engine, 'create', 'user') }, handler)
- *
- * 流程：
- * 1. 确保 request 已通过认证中间件（request.user 已设置）
- * 2. 调用 PermissionEngine.can() 检查权限
- * 3. 失败 → 返回 403 FORBIDDEN
- *
- * @param engine — PermissionEngine 实例
- * @param action — 所需权限动作
- * @param resource — 资源名
- * @returns Fastify preHandler 函数
+ * Call with: aclMiddleware(request, reply, authService, rbacService, next?)
  */
-export function rbacGuard(
-  engine: PermissionEngine,
-  action: string,
-  resource: string,
-): (request: FastifyRequest, reply: FastifyReply) => Promise<void> {
-  return async (request: FastifyRequest, _reply: FastifyReply): Promise<void> => {
-    // 确保认证中间件已设置 request.user
-    if (!request.user) {
-      throw new UserError(ErrorCode.AUTH_TOKEN_INVALID, "缺少认证信息");
-    }
+export async function aclMiddleware(
+  request: MiddlewareRequest,
+  reply: MiddlewareReply,
+  authService: AuthVerifier,
+  rbacService: PermissionChecker,
+  next?: NextFunction,
+): Promise<void> {
+  // Check auth first
+  const authHeader = request.headers.authorization
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    reply.code(401).send({
+      error: { code: ErrorCode.AUTH_REQUIRED, message: 'Authentication required' },
+    })
+    return
+  }
 
-    const hasPermission = await engine.can(request.user.userId, action, resource);
+  const token = authHeader.slice(7)
 
-    if (!hasPermission) {
-      throw new UserError(ErrorCode.FORBIDDEN, `无权限执行 ${action} 操作于 ${resource}`);
+  // Verify token (unless user is already set from requireAuth)
+  let userId: string
+  if (request.user?.sub) {
+    userId = request.user.sub
+  } else {
+    try {
+      const payload = (await authService.verifyAccessToken(token)) as {
+        sub: string
+        tenant_id: string | null
+        username: string
+      }
+      request.user = payload
+      userId = payload.sub
+    } catch (err) {
+      // Handle both UserError instances and plain objects with code property (mock rejection)
+      const errObj = err as { code?: string; message?: string }
+      const code =
+        (err instanceof UserError && err.code === ErrorCode.AUTH_TOKEN_EXPIRED) ||
+        errObj?.code === ErrorCode.AUTH_TOKEN_EXPIRED
+          ? ErrorCode.AUTH_TOKEN_EXPIRED
+          : ErrorCode.AUTH_TOKEN_INVALID
+      reply.code(401).send({
+        error: { code, message: err instanceof Error ? err.message : 'Token error' },
+      })
+      return
     }
-  };
+  }
+
+  // Check ACL
+  const acl = request.routeConfig?.acl
+  if (!acl) {
+    // No ACL configured = public route
+    if (next) next()
+    return
+  }
+
+  const hasPermission = await rbacService.can(userId, acl.action, acl.resource)
+  if (!hasPermission) {
+    reply.code(403).send({
+      error: { code: ErrorCode.FORBIDDEN, message: 'Permission denied' },
+    })
+    return
+  }
+
+  if (next) next()
 }

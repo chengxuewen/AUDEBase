@@ -1,111 +1,166 @@
 ---
 name: openspec-propose
-description: Propose a new change with all artifacts generated in one step. Use when the user wants to quickly describe what they want to build and get a complete proposal with design, specs, and tasks ready for implementation.
+description: >-
+  Propose a new change for MSRCS with structured artifacts (proposal, design,
+  tasks). Use when the user wants to quickly describe what they want to build
+  and get a complete proposal ready for implementation.
 license: MIT
-compatibility: Requires openspec CLI.
+compatibility: Designed for Claude Code, GitHub Copilot, and similar agents.
+disable-model-invocation: false
 metadata:
   author: openspec
   version: "1.0"
-  generatedBy: "1.4.1"
+  category: workflow
+  project: MSRCS
 ---
 
-Propose a new change - create the change and generate all artifacts in one step.
+# OpenSpec Propose — MSRCS
 
-I'll create a change with artifacts:
-- proposal.md (what & why)
-- design.md (how)
-- tasks.md (implementation steps)
+Propose a new change for the MSRCS project. Generate structured artifacts that prepare the work for implementation.
 
-When ready to implement, run /opsx-apply
+When ready to implement, follow with `/openspec-apply`.
 
 ---
 
-**Input**: The user's request should include a change name (kebab-case) OR a description of what they want to build.
+**Input**: The user's request should include a change name (kebab-case) OR a description of what they want to build in the MSRCS codebase.
 
-**Steps**
+---
 
-1. **If no clear input provided, ask what they want to build**
+## Steps
 
-   Use the **AskUserQuestion tool** (open-ended, no preset options) to ask:
-   > "What change do you want to work on? Describe what you want to build or fix."
+### 1. Understand what the user wants
 
-   From their description, derive a kebab-case name (e.g., "add user authentication" → `add-user-auth`).
+If no clear input provided, ask what they want to build:
 
-   **IMPORTANT**: Do NOT proceed without understanding what the user wants to build.
+> "What change do you want to work on? Describe what you want to build or fix in MSRCS."
 
-2. **Create the change directory**
-   ```bash
-   openspec new change "<name>"
-   ```
-   This creates a scaffolded change in the planning home resolved by the CLI with `.openspec.yaml`.
+From their description, derive a kebab-case name (e.g., "add video feed panel" → `add-video-feed-panel`).
 
-3. **Get the artifact build order**
-   ```bash
-   openspec status --change "<name>" --json
-   ```
-   Parse the JSON to get:
-   - `applyRequires`: array of artifact IDs needed before implementation (e.g., `["tasks"]`)
-   - `artifacts`: list of all artifacts with their status and dependencies
-   - `planningHome`, `changeRoot`, `artifactPaths`, and `actionContext`: path and scope context. Use these instead of assuming repo-local paths.
+**Do NOT proceed without understanding what the user wants to build.**
 
-4. **Create artifacts in sequence until apply-ready**
+### 2. Create the proposal directory
 
-   Use the **TodoWrite tool** to track progress through the artifacts.
+Create a structured proposal directory under `.sisyphus/plans/`:
 
-   Loop through artifacts in dependency order (artifacts with no pending dependencies first):
+```bash
+mkdir -p .sisyphus/plans/<change-name>
+```
 
-   a. **For each artifact that is `ready` (dependencies satisfied)**:
-      - Get instructions:
-        ```bash
-        openspec instructions <artifact-id> --change "<name>" --json
-        ```
-      - The instructions JSON includes:
-        - `context`: Project background (constraints for you - do NOT include in output)
-        - `rules`: Artifact-specific rules (constraints for you - do NOT include in output)
-        - `template`: The structure to use for your output file
-        - `instruction`: Schema-specific guidance for this artifact type
-        - `resolvedOutputPath`: Resolved path or pattern to write the artifact
-        - `dependencies`: Completed artifacts to read for context
-      - Read any completed dependency files for context
-      - Create the artifact file using `template` as the structure and write it to `resolvedOutputPath`
-      - Apply `context` and `rules` as constraints - but do NOT copy them into the file
-      - Show brief progress: "Created <artifact-id>"
+This directory will hold the proposal artifacts.
 
-   b. **Continue until all `applyRequires` artifacts are complete**
-      - After creating each artifact, re-run `openspec status --change "<name>" --json`
-      - Check if every artifact ID in `applyRequires` has `status: "done"` in the artifacts array
-      - Stop when all `applyRequires` artifacts are done
+### 3. Create proposal artifacts
 
-   c. **If an artifact requires user input** (unclear context):
-      - Use **AskUserQuestion tool** to clarify
-      - Then continue with creation
+Create the following artifacts in the proposal directory:
 
-5. **Show final status**
-   ```bash
-   openspec status --change "<name>"
-   ```
+#### a. `proposal.md` — What & Why
 
-**Output**
+Describe:
+- **Problem**: What's the current limitation or bug? Reference existing code.
+- **Goal**: What should be achieved?
+- **Scope**: Which MSRCS packages are affected?
+  - e.g., `src/ms_rcs_hmi/`, `src/ms_rcs_control/`, `CMakeLists.txt`
+- **Out of scope**: What is deliberately NOT being changed?
+- **Success criteria**: How will we know it's done?
 
-After completing all artifacts, summarize:
-- Change name and location
-- List of artifacts created with brief descriptions
-- What's ready: "All artifacts created! Ready for implementation."
-- Prompt: "Run `/opsx-apply` or ask me to implement to start working on the tasks."
+#### b. `design.md` — How
 
-**Artifact Creation Guidelines**
+Describe the solution architecture:
+- **Approach**: High-level design decisions
+- **C++/Qt/ROS2 specifics**:
+  - New classes/functions needed
+  - Qt signal/slot wiring
+  - ROS2 topic/service interfaces
+  - Thread safety considerations
+- **Files to modify**: List specific files with brief notes
+- **Dependencies**: Any new pixi/npm/ROS2 dependencies
+- **Migration**: If changing existing code, what's the upgrade path?
 
-- Follow the `instruction` field from `openspec instructions` for each artifact type
-- The schema defines what each artifact should contain - follow it
-- Read dependency artifacts for context before creating new ones
-- Use `template` as the structure for your output file - fill in its sections
-- **IMPORTANT**: `context` and `rules` are constraints for YOU, not content for the file
-  - Do NOT copy `<context>`, `<rules>`, `<project_context>` blocks into the artifact
-  - These guide what you write, but should never appear in the output
+#### c. `tasks.md` — Implementation steps
 
-**Guardrails**
-- Create ALL artifacts needed for implementation (as defined by schema's `apply.requires`)
-- Always read dependency artifacts before creating a new one
-- If context is critically unclear, ask the user - but prefer making reasonable decisions to keep momentum
-- If a change with that name already exists, ask if user wants to continue it or create a new one
-- Verify each artifact file exists after writing before proceeding to next
+Break the work into atomic tasks:
+
+```markdown
+## Tasks
+
+- [ ] Task 1: [brief description, file references]
+- [ ] Task 2: [brief description, file references]
+- [ ] Task 3: [brief description, file references]
+```
+
+Each task should be:
+- Small enough to implement in one session
+- Independently testable (build, lint, or unit test)
+- Ordered by dependency (do task 1 before task 2)
+
+### 4. Review and confirm
+
+Show the user what was created:
+
+```
+## Proposal: <change-name>
+
+**Artifacts created:**
+- `.sisyphus/plans/<change-name>/proposal.md` — What & why
+- `.sisyphus/plans/<change-name>/design.md` — How
+- `.sisyphus/plans/<change-name>/tasks.md` — Tasks
+
+**Tasks: N/M complete** — Ready for implementation!
+```
+
+Confirm with the user:
+- Does the proposal capture their intent?
+- Any adjustments needed to scope or design?
+
+---
+
+## MSRCS-Specific Guidelines
+
+### Package references
+When a change affects specific MSRCS packages, always reference the actual source path:
+
+| Package | Path | Type |
+|---------|------|------|
+| HMI Window | `src/ms_rcs_hmi/ms_rcs_hmi_window/` | C++ Qt5/ROS2 |
+| HMI WebView | `src/ms_rcs_hmi/ms_rcs_hmi_webview/` | C++ Qt5 WebEngine |
+| Dashboard | `src/ms_rcs_hmi/ms_rcs_hmi_dashboard/` | C++ Qt5 |
+| HMI Common | `src/ms_rcs_hmi/ms_rcs_hmi_common/` | C++ rosidl messages |
+| Control Client | `src/ms_rcs_control/ms_rcs_control_client/` | Python ROS2 |
+| Config Server | `src/ms_rcs_config/` | C++ + Python + React |
+| Media | `src/ms_rcs_media/` | C++ (capture/receiver) |
+
+### Build commands to reference
+
+```bash
+# Full build
+./make.sh
+
+# HMI-only build
+./make.sh --packages ms_rcs_hmi_common ms_rcs_hmi_window ms_rcs_hmi_webview
+
+# Debug build
+./make.sh --debug
+
+# Skip packaging (build only)
+./make.sh --skip-pack --skip-archive
+```
+
+### C++ conventions to reference in design
+
+- C++17 standard, RAII, smart pointers
+- Qt5.15 (conda-forge, not system Qt)
+- ROS2 Jazzy (rclcpp, ament_cmake)
+- Multi-process HMI uses QWindow::fromWinId embedding
+- Thread safety: Qt QueuedConnection, ROS2 spin + call_async
+- Config via YAML + config_server FastAPI bridge
+
+---
+
+## Guardrails
+
+- Create ALL artifacts needed for implementation
+- Always reference actual MSRCS file paths and package names
+- If context is critically unclear, ask the user — but prefer making reasonable decisions to keep momentum
+- If a proposal with that name already exists, ask if user wants to continue it or create a new one
+- Do NOT propose changes to `version.txt` — versioning is user-managed
+- Do NOT propose changes to QExt or OpenCTK submodules — those are separate repositories
+- Verify each artifact file exists after writing before proceeding

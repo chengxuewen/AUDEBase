@@ -1,31 +1,10 @@
 /**
- * @audebase/plugin-framework — Core plugin architecture
- *
- * Provides PluginManager, PluginHost, InlinePluginHost for Phase 1a.
- * See docs/modules/plugin-framework-sdd.md for the full API contract.
+ * @audebase/plugin-framework - Public API
  */
 
-// Core types
-export type {
-  PluginInstance,
-  PluginHost,
-  PluginHostOptions,
-  LifecyclePhase,
-  PluginStatus,
-  Manifest,
-} from "./types.js";
+export { manifestSchema } from './manifest-schema.js'
+export type { Manifest } from './manifest-schema.js'
 
-// PluginManager — orchestrator
-export { PluginManager } from "./plugin-manager.js";
+export { resolveDependencyOrder } from './plugin-manager.js'
 
-// PluginHost — abstraction
-export type { PluginHost as IPluginHost } from "./types.js";
-
-// InlinePluginHost — Phase 1a implementation
-export { InlinePluginHost } from "./inline-host.js";
-
-// Dependency resolver
-export { resolveDependencies } from "./resolver.js";
-
-// Lifecycle runner
-export { runLifecycle, runLifecycleSequence } from "./lifecycle.js";
+export { InlinePluginHost } from './plugin-host.js'

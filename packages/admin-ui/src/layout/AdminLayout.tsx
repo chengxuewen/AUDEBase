@@ -1,93 +1,80 @@
-import { Suspense, type ReactNode } from "react";
-import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import ProLayout, { PageContainer } from "@ant-design/pro-layout";
-import { ErrorBoundary } from "react-error-boundary";
-import { Button, Result } from "antd";
-import {
-  DashboardOutlined,
-  UserOutlined,
-  AppstoreOutlined,
-  TeamOutlined,
-  LogoutOutlined,
-} from "@ant-design/icons";
-import { useAuth } from "../auth/AuthContext";
+import type { ReactNode } from 'react'
+import { Layout, Menu, Dropdown, Space } from 'antd'
+import { DownOutlined } from '@ant-design/icons'
+import { useTenant } from '../providers/TenantProvider.js'
+import { useTranslation } from 'react-i18next'
+
+const { Sider, Header, Content } = Layout
+
+interface AdminLayoutProps {
+  canRoute?: (snippet: string) => boolean
+  activeKey?: string
+  onMenuClick?: (key: string) => void
+  children?: ReactNode
+}
 
 interface MenuItem {
-  path: string;
-  name: string;
-  icon: ReactNode;
+  key: string
+  labelKey: string
+  snippet: string
 }
 
-const menuData: MenuItem[] = [
-  { path: "/", name: "仪表盘", icon: <DashboardOutlined /> },
-  { path: "/users", name: "用户管理", icon: <UserOutlined /> },
-  { path: "/plugins", name: "插件管理", icon: <AppstoreOutlined /> },
-  { path: "/roles", name: "角色管理", icon: <TeamOutlined /> },
-];
+const defaultMenuItems: MenuItem[] = [
+  { key: 'plugins', labelKey: 'menu.plugins', snippet: 'plugin' },
+  { key: 'users', labelKey: 'menu.users', snippet: 'user' },
+  { key: 'roles', labelKey: 'menu.roles', snippet: 'role' },
+  { key: 'audit', labelKey: 'menu.audit', snippet: 'audit_log' },
+  { key: 'extensions', labelKey: 'menu.extensions', snippet: 'extension' },
+]
 
-function PageErrorFallback({
-  error,
-  resetErrorBoundary,
-}: {
-  error: Error;
-  resetErrorBoundary: () => void;
-}) {
-  return (
-    <Result
-      status="error"
-      title="页面加载失败"
-      subTitle={error.message}
-      extra={
-        <Button type="primary" onClick={resetErrorBoundary}>
-          重试
-        </Button>
-      }
-    />
-  );
-}
 
-export default function AdminLayout() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { user, logout } = useAuth();
+function TenantSwitcher(): ReactNode {
+  const tenantCtx = useTenant()
 
-  const handleMenuClick = (path: string) => {
-    void navigate(path);
-  };
+  if (!tenantCtx || tenantCtx.availableTenants.length === 0) {
+    return null
+  }
 
-  const handleLogout = () => {
-    void logout();
-    void navigate("/login", { replace: true });
-  };
+  const current = tenantCtx.availableTenants.find((t) => t.id === tenantCtx.tenantId)
+  const currentName = current?.name ?? tenantCtx.tenantId
+
+  const items = tenantCtx.availableTenants.map((t) => ({
+    key: t.id,
+    label: t.name,
+  }))
 
   return (
-    <ProLayout
-      title="AUDEBase"
-      logo={null}
-      location={{ pathname: location.pathname }}
-      menuDataRender={() =>
-        menuData.map((item) => ({
-          ...item,
-          key: item.path,
-        }))
-      }
-      menuItemRender={(item, dom) => <a onClick={() => handleMenuClick(item.path ?? "/")}>{dom}</a>}
-      rightContentRender={() => (
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span>{user?.display_name ?? user?.username}</span>
-          <Button type="text" icon={<LogoutOutlined />} onClick={handleLogout}>
-            退出
-          </Button>
-        </div>
-      )}
+    <Dropdown
+      menu={{
+        items,
+        onClick: ({ key }) => tenantCtx.switchTenant(key),
+      }}
     >
-      <PageContainer>
-        <ErrorBoundary FallbackComponent={PageErrorFallback} key={location.pathname}>
-          <Suspense fallback={<div>加载中...</div>}>
-            <Outlet />
-          </Suspense>
-        </ErrorBoundary>
-      </PageContainer>
-    </ProLayout>
-  );
+      <Space style={{ cursor: 'pointer' }} data-testid="tenant-switcher">
+        {currentName}
+        <DownOutlined />
+      </Space>
+    </Dropdown>
+  )
+}
+
+export function AdminLayout({ canRoute, activeKey, onMenuClick, children }: AdminLayoutProps): ReactNode {
+  const { t } = useTranslation('client')
+  const items = canRoute
+    ? defaultMenuItems.filter((item) => canRoute(item.snippet))
+    : defaultMenuItems
+
+  return (
+    <Layout style={{ minHeight: '100vh' }}>
+      <Sider>
+        <Menu theme="dark" mode="inline" selectedKeys={activeKey !== undefined ? [activeKey] : []} onClick={({ key }: { key: string }) => onMenuClick?.(key)} items={items.map((i: MenuItem) => ({ key: i.key, label: t(i.labelKey) }))} />
+      </Sider>
+      <Layout>
+        <Header style={{ background: '#fff', padding: '0 16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+          <TenantSwitcher />
+        </Header>
+        <Content style={{ padding: '24px' }}>{children}</Content>
+      </Layout>
+    </Layout>
+  )
 }

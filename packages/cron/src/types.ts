@@ -1,51 +1,54 @@
 /**
- * Cron module type definitions
+ * @audebase/cron - Type definitions
  *
- * Phase 1b: BullMQ repeatable jobs for scheduled tasks.
- * Same-process execution only.
+ * Structural types only. No bullmq dependency at type level.
  */
 
-import type { Queue, Worker, Job } from "bullmq";
-
-/** Registered cron job descriptor */
-export interface CronJob {
-  /** Unique job name (e.g. "audit-cleanup") */
-  name: string;
-  /** Cron expression (e.g. "0 3 * * *") */
-  schedule: string;
-  /** Plugin that registered this job */
-  pluginName: string;
+/** Logger interface injected by Core */
+export interface CronLogger {
+  info(msg: string, data?: unknown): void
+  error(msg: string, err?: unknown): void
+  warn(msg: string, data?: unknown): void
 }
 
-/** Handler function signature for a cron job */
-export type CronHandler = (job: Job) => Promise<void>;
-
-/** Options for creating a BullScheduler */
-export interface CronSchedulerOptions {
-  /** Redis connection URL (e.g. redis://localhost:6379) */
-  redisUrl: string;
-  /** Optional queue name (default: "system-cron") */
-  queueName?: string;
+/** Options for constructing a CronManager */
+export interface CronManagerOptions {
+  /** Redis URL (e.g. redis://localhost:6379) or connection object */
+  readonly connection: string | { host: string; port: number }
+  /** Optional structured logger */
+  readonly logger?: CronLogger
 }
 
-/** Cron management interface */
-export interface CronRegistry {
-  /** Register a repeatable cron job */
-  add(job: CronJob, handler: CronHandler): Promise<void>;
-  /** Remove a previously registered cron job */
-  remove(name: string): Promise<void>;
-  /** List all registered cron jobs */
-  list(): Promise<CronJob[]>;
-  /** Start processing (create Worker) */
-  start(): Promise<void>;
-  /** Stop processing (close Worker) */
-  stop(): Promise<void>;
+/** Configuration for a cron job */
+export interface CronJobConfig {
+  /** Unique job name within the plugin scope */
+  readonly name: string
+  /** Cron expression: 5-field (min hour day month weekday) or 6-field (sec min hour day month weekday) */
+  readonly schedule: string
+  /** Async handler invoked when the job fires */
+  readonly handler: () => Promise<void>
+  /** Optional: IANA timezone (e.g. "Asia/Shanghai"). Defaults to UTC. */
+  readonly timezone?: string
+  /** Optional: max retry attempts on failure (1-10, default 3) */
+  readonly maxRetries?: number
+  /** Optional: plugin name for namespacing (auto-set by Core) */
+  readonly pluginName?: string
 }
 
-/** Internal: stored job with its handler */
-export interface RegisteredJob {
-  job: CronJob;
-  handler: CronHandler;
-  queue: Queue;
-  worker: Worker | null;
+/** Result returned by list() */
+export interface CronJobInfo {
+  readonly name: string
+  readonly schedule: string
+  readonly status: 'active' | 'paused'
+}
+
+/** Execution log entry for a single job run */
+export interface CronExecutionLog {
+  readonly jobName: string
+  readonly pluginName: string
+  readonly startedAt: string
+  readonly completedAt: string
+  readonly durationMs: number
+  readonly success: boolean
+  readonly error: string | null
 }

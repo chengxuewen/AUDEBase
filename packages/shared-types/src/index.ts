@@ -1,7 +1,11 @@
-// === Errors ===
-export { ErrorCode, UserError, SystemError, AssertionError } from "./errors";
+/**
+ * @audebase/shared-types - 统一导出入口
+ */
 
-// === API ===
+// 错误码 + 错误类
+export { ErrorCode, UserError, SystemError, AssertionError } from './errors.js'
+
+// API 响应信封
 export type {
   ApiListResponse,
   PaginationMeta,
@@ -10,63 +14,65 @@ export type {
   SortParam,
   FilterOperator,
   FilterCondition,
-} from "./api";
-export { paginationMetaSchema, paginationParamsSchema } from "./api";
+} from './api.js'
 
-// === Auth ===
+// 认证/授权类型
 export type {
   JwtPayload,
-  UserBrief,
   LoginRequest,
   LoginResponse,
   RefreshRequest,
   RefreshResponse,
   LogoutRequest,
-} from "./auth";
-export {
-  loginSchema,
-  tokenResponseSchema,
-  refreshSchema,
-  logoutSchema,
-  userBriefSchema,
-  loginResponseSchema,
-} from "./auth";
+  UserBrief,
+} from './auth.js'
 
-// === User ===
-export type { User, CreateUserRequest, UpdateUserRequest } from "./user";
-export { createUserSchema, updateUserSchema, paginatedUsersSchema } from "./user";
+// 用户类型
+export type { User, CreateUserRequest, UpdateUserRequest } from './user.js'
 
-// === Role ===
+// 角色/权限类型
 export type {
-  PermissionAction,
-  PermissionBrief,
-  RoleBrief,
-  Permission,
   Role,
   CreateRoleRequest,
   UpdateRoleRequest,
-} from "./role";
+  RoleBrief,
+  Permission,
+  PermissionAction,
+  PermissionBrief,
+} from './role.js'
+
+// 插件类型
+export type {
+  PluginStatus,
+  PluginRuntimeMode,
+  PluginPartition,
+  PluginDescriptor,
+  Plugin,
+} from './plugin.js'
+
+// 审计日志类型
+export type { AuditActionCategory, AuditLogEntry } from './audit.js'
+
+// i18n 类型
+export type { LocaleMap, LocaleCode, TranslateFunction } from './i18n.js'
+
+// 过滤/排序类型
+export type { ListQueryParams } from './filter.js'
+
+// Zod schema
 export {
-  permissionActionSchema,
+  loginSchema,
+  tokenResponseSchema,
+  paginatedUsersSchema,
+  healthResponseSchema,
+  errorResponseSchema,
+  createUserSchema,
+  updateUserSchema,
   createRoleSchema,
-  updateRoleSchema,
-  paginatedRolesSchema,
-  paginatedPermissionsSchema,
-} from "./role";
+} from './schemas.js'
 
-// === Plugin ===
-export type { PluginStatus, PluginRuntimeMode, PluginPartition, PluginDescriptor } from "./plugin";
-export { pluginStatusSchema, pluginRuntimeModeSchema, paginatedPluginsSchema } from "./plugin";
+// Manifest 类型（从 Zod schema 推导）
+export type { Manifest } from './manifest.js'
 
-// === Audit ===
-export type { AuditActionCategory, AuditLogEntry } from "./audit";
-export { auditActionCategorySchema, paginatedAuditLogsSchema } from "./audit";
-
-// === i18n ===
-export type { LocaleMap, LocaleCode, TranslateFunction } from "./i18n";
-// === Versioning (D1.8) ===
-export type { SemVer, VersionInfo } from "./plugin";
-export { parseSemVer, semVerSchema } from "./plugin";
-
-// === Filter ===
-export type { ListQueryParams } from "./filter";
+// PluginHost 接口
+export type { PluginHost, PluginManifest, PluginLogger, PluginConfig } from './plugin-host.js'

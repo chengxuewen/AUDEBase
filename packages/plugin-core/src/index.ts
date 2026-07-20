@@ -1,40 +1,22 @@
 /**
- * plugin-core — Bootstrap plugin that creates initial system data.
+ * @audebase/plugin-core - Public API
  *
- * This is the Odoo `base` module equivalent. It runs before any other plugin
- * and populates the database with core permissions, roles, the admin user,
- * and default menu items.
- *
- * Zero dependencies: does not import from any other @audebase/plugin-* package.
+ * Zero-dependency kernel plugin for AUDEBase bootstrap data initialization.
  */
-export { install } from "./install";
-export type {
-  BootstrapMenuItem,
-  BootstrapPermission,
-  BootstrapRole,
-  BootstrapUser,
-  PermissionAction,
-  PluginDbContext,
-  PluginInstallContext,
-  PluginLogger,
-} from "./install";
 
-/** Manifest metadata consumed by PluginManager */
-export const manifest = {
-  name: "@audebase/plugin-core",
-  version: "1.0.0",
-  displayName: "Core Plugin",
-  description: "Bootstrap plugin that creates initial system data on first run",
-  category: "SYSTEM" as const,
-  dependencies: [] as string[],
-  runtime: {
-    mode: "inline" as const,
-    partition: "SYSTEM" as const,
-  },
-  lifecycle: {
-    autoInstall: true,
-    hooks: {
-      install: "install",
-    },
-  },
-};
+export { default, default as PluginCore } from './plugin-core.js'
+export { generateBootstrapData } from './bootstrap-data.js'
+export type {
+  BootstrapData,
+  AdminUserData,
+  RoleData,
+  PermissionData,
+  RolePermissionData,
+  UserRoleData,
+  SystemTenantData,
+  MenuData,
+} from './bootstrap-data.js'
+export { isBootstrapComplete } from './bootstrap-check.js'
+export { PluginCoreErrorCode } from './plugin-core.js'
+export type { PluginCoreErrorCodeValue } from './plugin-core.js'
+export type { DatabaseProvider } from './types.js'

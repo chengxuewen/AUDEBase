@@ -1,18 +1,8 @@
-// === Types ===
-export type { AuditEvent, AuditQuery, PurgeResult } from "./types";
+/**
+ * @audebase/audit - Public API
+ */
 
-// === Service ===
-export {
-  AuditService,
-  mapMethodToAction,
-  sanitizeValues,
-  extractResourceType,
-  extractResourceId,
-  buildAuditEvent,
-  DEFAULT_SENSITIVE_FIELDS,
-} from "./service";
-export type { AuditDatabase, AuditRequestContext } from "./service";
-
-// === Middleware ===
-export { auditCapture } from "./middleware";
-export type { AuditCaptureOptions, AuditLogFn } from "./middleware";
+export { AuditService } from './audit-service.js'
+export { createAuditMiddleware } from './audit-middleware.js'
+export type { AuditLogInput, AuditLogQueryParams } from './audit-input.js'
+export type { DatabaseProvider } from './types.js'

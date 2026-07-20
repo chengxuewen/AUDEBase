@@ -1,77 +1,72 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import { ErrorBoundary } from "react-error-boundary";
-import { Button, Result } from "antd";
-import { AuthProvider, AclProvider } from "./auth/AuthContext";
-import AdminLayout from "./layout/AdminLayout";
-import LoginPage from "./pages/LoginPage";
-import DashboardPage from "./pages/DashboardPage";
-import PluginManagementPage from "./pages/PluginManagementPage";
-import RoleManagementPage from "./pages/RoleManagementPage";
-import SchemaPage from "./pages/SchemaPage";
+import { useState, useEffect } from 'react'
+import type { ReactNode } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Button, message } from 'antd'
+import { useTranslation } from 'react-i18next'
+import { getToken, clearTokens } from './api/client.js'
+import { LoginPage } from './pages/LoginPage.js'
+import { AdminLayout } from './layout/AdminLayout.js'
+import { PluginListPage } from './pages/plugins/PluginListPage.js'
+import { UserListPage } from './pages/users/UserListPage.js'
+import { RoleListPage } from './pages/roles/RoleListPage.js'
+import { AuditLogPage } from './pages/audit/AuditLogPage.js'
+import { ExtensionListPage } from './pages/extensions/ExtensionListPage.js'
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const token = localStorage.getItem("aude_access_token");
-  if (token === null || token.length === 0) {
-    return <Navigate to="/login" replace />;
+
+const queryClient = new QueryClient()
+
+function AdminApp(): ReactNode {
+  const { t } = useTranslation('client')
+  const [activePage, setActivePage] = useState('plugins')
+
+  const handleLogout = (): void => {
+    clearTokens()
+    queryClient.clear()
+    window.location.reload()
   }
-  return <>{children}</>;
+
+  const pages: Record<string, ReactNode> = {
+    plugins: <PluginListPage />,
+    users: <UserListPage />,
+    roles: <RoleListPage />,
+    audit: <AuditLogPage />,
+    extensions: <ExtensionListPage />,
+  }
+
+  return (
+    <AdminLayout activeKey={activePage} onMenuClick={setActivePage}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+        <Button onClick={handleLogout}>{t('common.logout')}</Button>
+      </div>
+      {pages[activePage] ?? <PluginListPage />}
+    </AdminLayout>
+  )
 }
 
-function TopLevelErrorFallback({
-  error,
-  resetErrorBoundary,
-}: {
-  error: Error;
-  resetErrorBoundary: () => void;
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "100vh",
-      }}
-    >
-      <Result
-        status="error"
-        title="应用错误"
-        subTitle={error.message}
-        extra={
-          <Button type="primary" onClick={resetErrorBoundary}>
-            重试
-          </Button>
-        }
-      />
-    </div>
-  );
-}
+export function App(): ReactNode {
+  const { t } = useTranslation('client')
+  const [isAuthed, setIsAuthed] = useState<boolean>(() => getToken() !== null)
 
-export default function App() {
+  useEffect(() => {
+    const handler = (): void => {
+      setIsAuthed(false)
+      void message.error(t('login.expired'))
+    }
+    window.addEventListener('aude:unauthorized', handler)
+    return () => window.removeEventListener('aude:unauthorized', handler)
+  }, [t])
+
+  const handleLogin = (): void => {
+    setIsAuthed(true)
+  }
+
+  if (!isAuthed) {
+    return <LoginPage onLogin={handleLogin} />
+  }
+
   return (
-    <ErrorBoundary FallbackComponent={TopLevelErrorFallback}>
-      <AuthProvider>
-        <AclProvider>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route
-              path="/admin/*"
-              element={
-                <ProtectedRoute>
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<DashboardPage />} />
-              <Route path="users" element={<div>用户管理（待实现）</div>} />
-              <Route path="plugins" element={<PluginManagementPage />} />
-              <Route path="roles" element={<RoleManagementPage />} />
-              <Route path="schema/:collectionName" element={<SchemaPage />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/admin" replace />} />
-          </Routes>
-        </AclProvider>
-      </AuthProvider>
-    </ErrorBoundary>
-  );
+    <QueryClientProvider client={queryClient}>
+      <AdminApp />
+    </QueryClientProvider>
+  )
 }
