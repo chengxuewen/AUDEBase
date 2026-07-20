@@ -92,6 +92,7 @@ export default function PluginManagementPage() {
   return (
     <div>
       <ProTable<PluginDescriptor>
+        data-testid="plugins-table"
         headerTitle="插件管理"
         columns={columns}
         request={async (params) => {
@@ -113,7 +114,7 @@ export default function PluginManagementPage() {
       />
 
       <Modal
-        title="插件详情"
+        data-testid="plugins-detail-panel"
         open={selectedPlugin !== null}
         onCancel={() => setSelectedPlugin(null)}
         footer={null}

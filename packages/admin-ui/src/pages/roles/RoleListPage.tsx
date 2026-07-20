@@ -109,10 +109,10 @@ export function RoleListPage(): ReactNode {
       key: 'action',
       render: (_: unknown, record: RoleItem) => (
         <Space>
-          <Button size="small" autoInsertSpace={false} onClick={() => openEdit(record)}>
+          <Button data-testid={`roles-edit-btn-${record.id}`} size="small" autoInsertSpace={false} onClick={() => openEdit(record)}>
             {t('common.edit')}
           </Button>
-          <Button size="small" autoInsertSpace={false} onClick={() => handleDelete(record)}>
+          <Button data-testid={`roles-delete-btn-${record.id}`} size="small" autoInsertSpace={false} onClick={() => handleDelete(record)}>
             {t('common.delete')}
           </Button>
         </Space>
@@ -123,14 +123,14 @@ export function RoleListPage(): ReactNode {
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <Button type="primary" autoInsertSpace={false} onClick={openCreate}>
+        <Button data-testid="roles-create-btn" type="primary" autoInsertSpace={false} onClick={openCreate}>
           {t('common.createRole')}
         </Button>
       </div>
       {list.length === 0 ? (
         <Empty description={t('roles.noData')} />
       ) : (
-        <Table<RoleItem> rowKey="id" columns={columns} dataSource={list} pagination={false} />
+        <Table<RoleItem> data-testid="roles-table" rowKey="id" columns={columns} dataSource={list} pagination={false} />
       )}
       <Modal
         title={editingRole ? t('common.edit') : t('common.createRole')}
@@ -138,10 +138,11 @@ export function RoleListPage(): ReactNode {
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
         destroyOnClose
+        okButtonProps={{ "data-testid": "roles-form-submit" } as any}
       >
         <Form form={form} layout="vertical">
           <Form.Item name="name" label={t('roles.name')} rules={[{ required: true }]}>
-            <Input />
+            <Input data-testid="roles-form-name" />
           </Form.Item>
           <Form.Item name="slug" label={t('roles.slug')} rules={[{ required: true }]}>
             <Input />

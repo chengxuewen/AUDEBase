@@ -82,10 +82,10 @@ export function PluginListPage(): ReactNode {
       key: 'action',
       render: (_: unknown, record: PluginItem) => (
         <Space>
-          <Button size="small" autoInsertSpace={false} onClick={() => handleEnable(record)}>
+          <Button size="small" autoInsertSpace={false} data-testid={`plugins-enable-btn-${record.name}`} onClick={() => handleEnable(record)}>
             {t('common.enable')}
           </Button>
-          <Button size="small" autoInsertSpace={false} onClick={() => handleDisable(record)}>
+          <Button size="small" autoInsertSpace={false} data-testid={`plugins-disable-btn-${record.name}`} onClick={() => handleDisable(record)}>
             {t('common.disable')}
           </Button>
         </Space>
@@ -93,5 +93,5 @@ export function PluginListPage(): ReactNode {
     },
   ]
 
-  return <Table<PluginItem> rowKey="id" columns={columns} dataSource={list} pagination={false} />
+  return <Table<PluginItem> data-testid="plugins-table" rowKey="id" columns={columns} dataSource={list} pagination={false} />
 }

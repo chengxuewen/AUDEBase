@@ -52,7 +52,7 @@ export default function RoleManagementPage() {
             okText="确定"
             cancelText="取消"
           >
-            <a style={{ color: "#ff4d4f" }}>删除</a>
+            <a data-testid={`roles-delete-btn-${record.id}`} style={{ color: "#ff4d4f" }}>删除</a>
           </Popconfirm>
         ),
     },
@@ -91,6 +91,7 @@ export default function RoleManagementPage() {
   return (
     <>
       <ProTable<Role>
+        data-testid="roles-table"
         actionRef={actionRef}
         columns={columns}
         rowKey="id"
@@ -110,6 +111,7 @@ export default function RoleManagementPage() {
         headerTitle="角色管理"
         toolBarRender={() => [
           <Button
+            data-testid="roles-create-btn"
             key="create"
             type="primary"
             icon={<PlusOutlined />}
@@ -128,8 +130,10 @@ export default function RoleManagementPage() {
         onOpenChange={setCreateOpen}
         onFinish={handleCreate}
         modalProps={{ destroyOnClose: true }}
+        submitter={{ submitButtonProps: { "data-testid": "roles-form-submit" } }}
       >
         <ProFormText
+          data-testid="roles-form-name"
           name="name"
           label="角色名称"
           rules={[{ required: true, message: "请输入角色名称" }]}
