@@ -87,7 +87,7 @@ export interface MockDatabaseProvider {
 }
 
 export function createMockDb(): MockDatabaseProvider {
-  const modules = [...seedModules]
+  const modules = seedModules.map((m) => ({ ...m }))
 
   return {
     execute: async (_sql: string) => undefined,
