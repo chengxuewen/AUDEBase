@@ -19,6 +19,7 @@ import { registerTenantMiddleware } from "./tenant";
 import { registerVersionedRoutes } from "./api/versioning";
 import cronPlugin from "./plugins/cron";
 import wsPlugin from "./plugins/ws";
+import { registerGraphQLRoute } from "./api/graphql";
 
 /**
  * 内核应用实例
@@ -213,6 +214,17 @@ export async function createKernelApp(options: KernelOptions = {}): Promise<Kern
       logger.error({ err }, "plugin routes registration failed");
     }
   }
+
+  // 7.10 注册 GraphQL 端点（测试可跳过）
+  if (!options.skipPlugins) {
+    try {
+      registerGraphQLRoute(server, db.db, config.AUDE_JWT_SECRET, logger);
+      logger.info("graphql route registered");
+    } catch (err: unknown) {
+      logger.error({ err }, "graphql route registration failed");
+    }
+  }
+
   const shutdown = async (): Promise<void> => {
     logger.info("shutting down kernel");
     await server.close();
