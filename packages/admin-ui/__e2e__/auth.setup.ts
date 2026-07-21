@@ -17,12 +17,12 @@ setup('authenticate', async ({ page }) => {
   // Wait for the login form to be visible
   await page.waitForSelector('button[type="submit"]', { timeout: 10_000 })
 
-  // Fill credentials
-  await page.fill('input[placeholder="用户名"]', ADMIN_USERNAME)
-  await page.fill('input[type="password"]', ADMIN_PASSWORD)
+  // Fill credentials using data-testid
+  await page.getByTestId('login-username-input').fill(ADMIN_USERNAME)
+  await page.getByTestId('login-password-input').fill(ADMIN_PASSWORD)
 
   // Submit
-  await page.click('button[type="submit"]')
+  await page.getByTestId('login-submit-btn').click()
 
   // Wait for redirect to admin dashboard
   await page.waitForURL('**/admin/**', { timeout: 15_000 })
