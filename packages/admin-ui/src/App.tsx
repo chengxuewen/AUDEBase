@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Button, message } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { getToken, clearTokens, apiGet } from './api/client.js'
+import { LoginPage } from './pages/LoginPage.js'
 import { AdminLayout } from './layout/AdminLayout.js'
 import { PluginListPage } from './pages/plugins/PluginListPage.js'
 import { UserListPage } from './pages/users/UserListPage.js'
@@ -48,10 +49,6 @@ function AdminApp(): ReactNode {
     extensions: <ExtensionListPage />,
   }
 
-  // Guard: don't render AdminApp if token was cleared (e.g., stale token during auth check)
-  if (!getToken()) {
-    return <LoginPage onLogin={handleLogin} />
-  }
 
   return (
     <AdminLayout activeKey={activePage} onMenuClick={setActivePage}>
@@ -65,7 +62,10 @@ function AdminApp(): ReactNode {
 
 export function App(): ReactNode {
   const { t } = useTranslation('client')
-  const [isAuthed, setIsAuthed] = useState<boolean>(() => getToken() !== null)
+  const [isAuthed, setIsAuthed] = useState<boolean>(() => {
+    const token = getToken()
+    return token !== null && !isTokenExpired(token)
+  })
   useEffect(() => {
     const handler = (): void => {
       setIsAuthed(false)
