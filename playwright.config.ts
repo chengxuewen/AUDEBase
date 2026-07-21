@@ -22,7 +22,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'AUDE_PORT=5110 npx aude dev',
+      command: 'PORT=5110 npx tsx packages/core/src/main.ts',
       port: 5110,
       timeout: 30_000,
       reuseExistingServer: !process.env.CI,
