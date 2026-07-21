@@ -60,14 +60,13 @@ function TenantSwitcher(): ReactNode {
 
 export function AdminLayout({ canRoute, activeKey, onMenuClick, children }: AdminLayoutProps): ReactNode {
   const { t } = useTranslation('client')
-  const items = canRoute
-    ? defaultMenuItems.filter((item) => canRoute(item.snippet))
-    : defaultMenuItems
+  // Guard: defaultMenuItems is always an array, but belt-and-suspenders in case canRoute throws or returns unexpected values
+  const items = (canRoute ? defaultMenuItems.filter((item) => canRoute(item.snippet)) : defaultMenuItems) ?? defaultMenuItems
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider>
-        <Menu theme="dark" mode="inline" selectedKeys={activeKey !== undefined ? [activeKey] : []} onClick={({ key }: { key: string }) => onMenuClick?.(key)} items={items.map((i: MenuItem) => ({ key: i.key, label: t(i.labelKey) }))} />
+        <Menu theme="dark" mode="inline" selectedKeys={activeKey !== undefined ? [activeKey] : []} onClick={({ key }: { key: string }) => onMenuClick?.(key)} items={(items ?? []).map((i: MenuItem) => ({ key: i.key, label: t(i.labelKey) }))} />
       </Sider>
       <Layout>
         <Header style={{ background: '#fff', padding: '0 16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
