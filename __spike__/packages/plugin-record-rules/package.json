@@ -1,0 +1,45 @@
+{
+  "name": "@audebase/plugin-record-rules",
+  "version": "0.1.0",
+  "description": "NocoBase plugin — Odoo-style Record Rules (D10) with Poland-notation domain filters injected into Sequelize queries via ACL middleware",
+  "license": "Apache-2.0",
+  "main": "dist/server/index.js",
+  "types": "dist/server/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "@nocobase/actions": "^1.0.0-alpha",
+    "@nocobase/server": "^1.0.0-alpha"
+  },
+  "dependencies": {
+    "sequelize": "^6.37.0"
+  },
+  "devDependencies": {
+    "@nocobase/actions": "^1.0.0-alpha",
+    "@nocobase/server": "^1.0.0-alpha",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "keywords": [
+    "audebase",
+    "nocobase",
+    "plugin",
+    "record-rules",
+    "domain-filter",
+    "acl",
+    "row-level-security"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://gitee.com/chengxuewen/AUDEBase.git",
+    "directory": "__spike__/packages/plugin-record-rules"
+  }
+}
