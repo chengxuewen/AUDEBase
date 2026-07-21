@@ -544,6 +544,35 @@ AUDEBase 采用 Odoo 式 Poland notation（前缀表达式）数组语法：
 | 自定义 Schema→UI 映射器丢失 | ProTable/ProForm 映射器作为 AUDEBase 插件独立维护，不依赖 NocoBase 内置 |
 | NocoBase 许可证变化（v2.0 商业条款） | 锁定开源版本，评估商业许可成本（一次性买断 vs AUDEBase 企业订阅） |
 
+#### D25.4: 迁移阶段
+
+| 阶段 | 状态 | 范围 | 目标 |
+|------|------|------|------|
+| Phase 1 — 架构对齐 | 🔲 规划中 | 插件生命周期、manifest 规范、PluginManager API | 插件加载/卸载/启用/禁用 API 与 NocoBase PluginManager 对齐 |
+| Phase 2 — 数据模型对齐 | 🔲 规划中 | Collection/Schema 引擎、字段类型、数据源 | 迁移现有 Schema Engine 为 NocoBase Collection 兼容模式 |
+| Phase 3 — 生态兼容 | 🔲 规划中 | 插件市场、ACL 体系、客户端 SDK | 实现 NocoBase 插件兼容层，支持 NocoBase 生态插件加载 |
+
+#### D25.5: 风险与缓解
+
+| 风险 | 缓解措施 |
+|------|---------|
+| NocoBase v2.0 API 稳定性 | 锁定 NocoBase 版本，独立测试套件验证 API 兼容性 |
+| 插件迁移成本 | 保留 AUDEBase 包作为兼容层，渐进迁移（Phase 1 先迁核心包，Phase 3 全量） |
+| 自定义 Schema→UI 映射器丢失 | ProTable/ProForm 映射器作为 AUDEBase 插件独立维护，不依赖 NocoBase 内置 |
+| NocoBase 许可证变化（v2.0 商业条款） | 锁定开源版本，评估商业许可成本（一次性买断 vs AUDEBase 企业订阅） |
+
+### D25 子决策 — Phase 0 Spike 校准 (2026-07-21)
+
+**Hyperplan 4 角色审查发现**:
+- **架构不可行项**: 四层信任分组需 fork NocoBase 核心 PluginManager（无进程隔离架构），搁置
+- **ORM 鸿沟**: Drizzle→Sequelize 重写 SQL 生成层，Phase 0 已验证 Poland-notation → Sequelize WhereOptions 映射
+- **范围低估 5x**: 原计划 3 插件，实际需保留 15 包；校准后 Phase 0 spike → Phase 1 4-6 周 → Phase 2 6-8 周
+- **acl.use() 可行性确认**: Record Rules 可通过 `ctx.permission.can.params.filter` 注入，零侵入 NocoBase 核心
+
+**Phase 0 Spike 产出**:
+- NocoBase v2.1.29 环境分析：PluginManager 12 生命周期钩子、ACL `can/allow/use/addFixedParams` API
+- `@audebase/plugin-record-rules` 实现（575 行）：Poland-notation 解析器 + Sequelize WhereOptions 生成器 + ACL 中间件
+- 校准计划：`docs/superpowers/specs/2026-07-21-nocobase-migration-calibrated-plan.md`
 ## 已废弃决策（旧 MODACS 架构 + 旧前端方案）
 
 以下决策原为 MODACS 工业控制平台制定，或因前端架构重新评估后废弃。
