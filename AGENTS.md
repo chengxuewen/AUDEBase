@@ -1,12 +1,13 @@
 # AGENTS.md — AUDEBase Project Knowledge Base
 
-**Generated:** 2026-07-19
-**Commit:** `57627ce`
+**Generated:** 2026-07-21
+**Commit:** `67caf84`
 **Branch:** `main`
+**Strategy:** 基于 NocoBase 重构 — Phase 3 战略转型
 
 ## OVERVIEW
 
-AUDEBase — 企业应用开发平台。微内核 + 插件热插拔架构，对标 Odoo、NocoBase、云表。Phase 2 完成 + 工作流引擎 (Phase 4) 完成 — 28 packages，102 test files。
+AUDEBase — 企业应用开发平台。原为微内核 + 插件热插拔架构（28 packages, 42K 行代码），对标 Odoo、NocoBase。2026-07-21 决策转型：以 NocoBase 为基础平台，将自研创新点（四层信任分组、增强 manifest.yaml、Record Rules）作为 NocoBase 插件实现，降低开发成本加速产品化。
 
 ## STRUCTURE
 
@@ -172,8 +173,22 @@ _28 包全部实现，102 测试文件，tsc 全包 clean。Phase 1b 6 包 + Pha
 | Core 内核骨架 | ✅ Phase 1a | `packages/core/` - Fastify bootstrap + 中间件 + 配置（GO-021） | ✅ core-sdd.md | ✅ core-tdd.md |
 | CLI 工具 | ✅ Phase 1a | `packages/cli/` - aude dev/db:migrate/plugin:create（GO-023） | ✅ cli-sdd.md | ✅ cli-tdd.md |
 | JWT 认证 | ✅ Phase 1a | `packages/auth/` - JWT 签发/验证 + token_version（GO-022） | ✅ auth-sdd.md | ✅ auth-tdd.md |
-| 速率限制 | ✅ Phase 1a | `packages/rate-limit/` - 固定窗口计数器限流（GO-024） | ✅ rate-limit-sdd.md | ✅ rate-limit-tdd.md |
 | 插件示例 | ✅ Phase 1a | `packages/plugin-example/` - 开发参考模板 | 🔲 待生成 | 🔲 待生成 |
+
+## PHASE 3 — NocoBase 战略转型
+
+2026-07-21 决策：以 NocoBase 为核心，将 AUDEBase 自研创新作为 NocoBase 插件实现。
+
+| 创新点 | NocoBase 插件 | 现有代码 | 状态 |
+|--------|-------------|---------|------|
+| 四层信任分组 | `@audebase/plugin-trust-grouping` | `packages/plugin-framework/` | 🔲 待迁移 |
+| 增强 manifest.yaml | `@audebase/plugin-manifest-enhancer` | `packages/manifest-engine/` | 🔲 待迁移 |
+| Record Rules | `@audebase/plugin-record-rules` | `packages/rbac/` (108 tests) | 🔲 待迁移 |
+| Token Version | 增强 NocoBase JWT 插件 | `packages/auth/` | 🔲 待迁移 |
+| 审计增强 | `@audebase/plugin-audit-enhanced` | `packages/audit/` | 🔲 待迁移 |
+
+**NocoBase 原生替代**：Schema Engine、工作流引擎、插件市场、管理 UI、多租户。
+迁移详情见 `docs/superpowers/specs/2026-07-21-nocobase-migration-design.md`。
 
 ## CONVENTIONS
 
@@ -217,8 +232,10 @@ _28 包全部实现，102 测试文件，tsc 全包 clean。Phase 1b 6 包 + Pha
 ## NOTES
 
 - **Phase 2 完成** — 28 包全部实现, 102 测试文件, tsc 全包 clean。工作流引擎 (Phase 4) 完成
+- **Phase 3 战略转型** — 2026-07-21 决策基于 NocoBase 重构，详见 `docs/superpowers/specs/2026-07-21-nocobase-migration-design.md`
 - **从 MODACS 分离** - 2026-07-08 首次提交。无 MODACS 代码共享
 - **.sisyphus/** 被 gitignore 排除 - 计划文件、审计报告暂存于此
 - **双 package.json** - 根目录用 pnpm workspace，`.opencode/` 用独立 npm 包（插件系统）
 - **test 基础设施** - vitest 3.0.5 + @testing-library/react 16.2.0 + @playwright/test 1.50.1 已安装。102 测试文件
 - **Docker Compose** - docker-compose.yml 已创建（PostgreSQL 16 + Valkey 8）
+- **认证修复** — GET /api/auth/me 端点 + 3 状态阻塞式认证 + verifyAccessToken 按 sub 过滤

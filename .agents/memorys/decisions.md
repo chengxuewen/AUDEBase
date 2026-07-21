@@ -1,8 +1,8 @@
 # AUDEBase 架构决策记录
 
-**更新日期**: 2026-07-19
+**更新日期**: 2026-07-21
 
-## 架构决策 (D1-D14, D15-D24)
+## 架构决策 (D1-D14, D15-D24, D25)
 
 ### D1: 微内核 + 插件热插拔架构
 
@@ -438,6 +438,112 @@ AUDEBase 采用 Odoo 式 Poland notation（前缀表达式）数组语法：
 - **参考**: decisions.md D1.7（CI 覆盖率闸门）、docs/modules/dev-workflow.md、AGENTS.md §AI-DRIVEN SDD/TDD 工作流
 - **状态**: ✅ Phase 1a 已实现
 
+
+### D25: 基于 NocoBase 重构
+
+- **决策**: 采用 NocoBase v2.0 作为 AUDEBase 的核心运行时，替代从零构建的 `@audebase/core` 服务。AUDEBase 保留微内核 + 插件热插拔理念，将底层框架、数据层、ACL 系统等基础能力交由 NocoBase 承担，AUDEBase 专注上层差异化创新。
+- **背景**: AUDEBase 在 2026-07 已完成 28 个 packages 的独立实现（含 PluginManager、ACL、Schema Engine、生命周期管理、RBAC 等），架构理念与 NocoBase 高度一致（微内核、插件化、Collection+Field 数据模型）。继续独立维护底层框架的边际成本远超收益，而 NocoBase 作为生产验证的平台（GitHub 28K+ stars，2026-02 v2.0 正式发布）提供了更稳定的基础设施。
+- **理由**:
+  - **避免重复造轮子**: NocoBase 已解决 PluginManager、ACL、迁移三阶段、Schema→UI 映射等通用问题，AUDEBase 已独立实现相同功能，独立维护两份相同逻辑维护成本双倍。
+  - **供应链安全**: NocoBase v2.0 经生产验证（多家企业客户），CVE 响应机制完善（CVSS 9.8 的 JWT 漏洞已有修复）；AUDEBase 独立构建的底层安全边界未经大规模生产验证。
+  - **生态兼容**: 直接采用 NocoBase 可作为 NocoBase 生态的延伸，复用其插件市场、社区文档和开发者工具链，降低新用户的迁移门槛。
+  - **NocoBase 的不足**:
+    - ACL 模型基于角色权限（RBAC），缺乏数据级访问控制（Domain Filter / Record Rules）
+    - 缺乏四层信任分组模型（SYSTEM/Domain/Isolated/Container）
+    - 插件安全边界较弱（所有插件共享同一进程空间，无容器隔离层）
+    - 无原生 Saga 跨插件事务支持
+    - 前端表单引擎（Formily）社区维护不稳定，AUDEBase 已验证 ProTable/ProForm 路径
+- **状态**: 🔲 Phase 3 执行中
+
+#### D25.1: NocoBase 覆盖范围
+
+以下能力直接采用 NocoBase 原生实现，AUDEBase 不再独立维护：
+
+| 能力 | NocoBase 对应模块 | 说明 |
+|------|------------------|------|
+| 微内核 + 插件架构 | `@nocobase/server` + PluginManager | 插件生命周期、加载/卸载/启用/禁用 |
+| 插件生命周期 | PluginManager `staticImport()→afterAdd()→beforeLoad()→load()→install()→afterEnable()/afterDisable()` | 7 钩子 + 3 阶段迁移 |
+| 数据模型 + CRUD API | Collection System + ResourceManager | Collection 定义自动注册 Resource + 标准 CRUD Action |
+| 权限系统 (ACL) | `@nocobase/acl` | 菜单级 / 操作级 / 字段级三级权限控制 |
+| Schema Engine | Collection+Field 体系 | 运行时动态定义数据模型，无需代码生成 |
+| 国际化 (i18n) | `@nocobase/i18n` | 命名空间隔离 + react-i18next 集成 |
+| 多租户 | `@nocobase/plugin-multi-tenant` | PostgreSQL Schema-per-tenant 隔离 |
+| 健康检查 | `@nocobase/plugin-healthcheck` | GET /health 端点 |
+| 实时通信 | `@nocobase/plugin-notification` + WebSocket | 推送 + 实时事件订阅 |
+| 前端 UI 框架 | Ant Design 5 + ProLayout + SchemaComponent | 标准前端组件体系 |
+
+#### D25.2: AUDEBase 在上层的创新
+
+以下能力在 NocoBase 基础上扩展，构成 AUDEBase 相对于 NocoBase 的差异化优势：
+
+| 创新点 | AUDEBase 实现 | 与 NocoBase 差异 |
+|--------|--------------|-----------------|
+| 四层信任分组 | SYSTEM/Domain/Isolated/Container | NocoBase 无信任层级概念，所有插件同权 |
+| 增强 manifest.yaml | 显式 runtime.mode + runtime.partition + 访问控制矩阵 + 资源预算 | NocoBase manifest 为 package.json 内嵌，字段有限 |
+| Record Rules (数据级权限) | Odoo 式 domain filter 表达式，自动生成 WHERE 条件 | NocoBase 仅有角色级 RBAC，无数据级过滤 |
+| Core API 代理 | 所有 DB 操作必须通过 Core API 代理（D12） | NocoBase 插件可直接操作数据库，存在安全隐患 |
+| Saga 跨插件事务 | Saga 补偿模式 + 幂等性 + saga_log 追踪 | NocoBase 无原生跨资源事务编排 |
+| ProTable/ProForm 路径 | antd ProComponents 数据密集型页面 | NocoBase 生产环境使用 Formily 表单引擎 |
+| 技术栈差异 | Fastify（JSON Schema 验证）+ Drizzle ORM（类型安全）+ pino（结构化日志） | NocoBase 使用 Koa + Sequelize + 自建日志 |
+
+#### D25.3: 现有代码的保留与替换
+
+**保留并转化为 NocoBase 插件**（核心差异化能力，需适配 NocoBase 插件接口）：
+
+| 现有包 | 保留内容 | NocoBase 对应 |
+|--------|---------|--------------|
+| `@audebase/rbac` | Record Rules 引擎（parseDomainFilter + evaluateCondition + generateWhereClause），108 测试 | 扩展 ACL 为数据级权限 |
+| `@audebase/workflow-*` | Saga 工作流引擎（workflow-core/engine/tasks），补偿模式 + 幂等性 | 替代 NocoBase 基础工作流 |
+| `@audebase/schema-engine` | Schema→Ant Design ProTable/ProForm 映射器（D7 自研路径） | 替代 NocoBase SchemaComponent/Formily |
+| `@audebase/plugin-communication` | 组间 JSON-RPC + Redis Pub/Sub（信任边界感知的通信层） | 适配 NocoBase EventBus |
+| `@audebase/cron` | BullMQ repeatable jobs + cron 声明解析 | 替换 NocoBase 基础定时任务 |
+| `@audebase/file-upload` | FileUploadService + AttachmentRepository | 替代 NocoBase 基础文件插件 |
+| `@audebase/data-extends` | 插件间数据模型扩展（extends 声明解析 + 字段合并） | 扩展 NocoBase Collection 体系 |
+| `@audebase/notification` | NotificationProvider 抽象 + 多种渠道（Email/InApp/Webhook） | 替换 NocoBase 基础通知 |
+| `@audebase/audit` | 审计日志（写操作自动记录 + 审计表索引策略） | 替换 NocoBase 基础审计 |
+| `@audebase/health-check` | GET /health + /health/ready（含 DB/Redis/插件健康状态） | 替换 NocoBase 基础健康检查 |
+| `@audebase/api-versioning` | URL 路径版本化 `/api/v{major}/{resource}` | 适配 NocoBase API 层 |
+
+**替换为 NocoBase 原生实现**（通用基础设施，无需自定义）：
+
+| 现有包 | 替换为 | 理由 |
+|--------|--------|------|
+| `@audebase/core` | NocoBase Server (`@nocobase/server`) | Core 是 NocoBase 已成熟的部分，独立维护成本高 |
+| `@audebase/plugin-framework` | NocoBase PluginManager + PluginHost | 核心架构已与 NocoBase 对齐，直接复用 |
+| `@audebase/plugin-core` | NocoBase 内置基础插件（`@nocobase/plugin-users`/`@nocobase/plugin-acl`） | 内核插件功能已包含在 NocoBase 中 |
+| `@audebase/manifest-engine` | NocoBase package.json 插件声明体系 | manifest.yaml 保留作为增强层，基础声明用 NocoBase 格式 |
+| `@audebase/migration` | NocoBase 3 阶段迁移（beforeLoad→afterSync→afterLoad） | 迁移框架已对齐，直接复用 |
+| `@audebase/auth` | NocoBase 内置认证（JWT + 用户管理） | 认证是平台基础设施，无需独立实现 |
+| `@audebase/i18n` | NocoBase `@nocobase/i18n` | 国际化引擎已成熟 |
+| `@audebase/logging-infra` | NocoBase 日志系统 | 结构化日志已内置 |
+| `@audebase/rate-limit` | NocoBase 内置限速 + 外部中间件 | 限速可配置，无需独立包 |
+| `@audebase/shared-types` | 与 NocoBase 类型体系对齐，保留核心自定义类型 | 共享类型部分复用，部分替换 |
+| `@audebase/cli` | NocoBase CLI 命令 + AUDEBase 插件创建命令 | 保留 plugin:create 等差异化命令 |
+
+**完全保留（AUDEBase 独有，NocoBase 无对应）**：
+
+| 现有包 | 说明 |
+|--------|------|
+| `@audebase/admin-ui` | 基于 React 19 + Ant Design 5 + ProLayout/ProTable/ProForm 的管理后台，Schema→UI 映射器与 NocoBase SchemaComponent 不同路径 |
+| `@audebase/websocket` | 实时通信（Collection 变更订阅），基于 Drizzle 事件而非 Sequelize |
+
+#### D25.4: 迁移阶段
+
+| 阶段 | 范围 | 目标 |
+|------|------|------|
+| Phase 1 — 架构对齐 | PluginManager API、manifest 规范、PluginHost 接口 | AUDEBase 插件代码零改动迁移到 NocoBase 插件格式 |
+| Phase 2 — 数据模型对齐 | Schema Engine → NocoBase Collection 体系、字段类型映射 | 数据模型声明改为 NocoBase Collection 格式 |
+| Phase 3 — 生态兼容 | 插件市场接入、ACL 体系对齐、NocoBase 原生插件兼容层 | AUDEBase 作为 NocoBase 生态的差异化插件套件运行 |
+
+#### D25.5: 风险与缓解
+
+| 风险 | 缓解措施 |
+|------|---------|
+| NocoBase v2.0 API 稳定性 | 锁定 NocoBase 版本，独立测试套件验证 API 兼容性 |
+| 插件迁移成本 | 保留 AUDEBase 包作为兼容层，渐进迁移（Phase 1 先迁核心包，Phase 3 全量） |
+| 自定义 Schema→UI 映射器丢失 | ProTable/ProForm 映射器作为 AUDEBase 插件独立维护，不依赖 NocoBase 内置 |
+| NocoBase 许可证变化（v2.0 商业条款） | 锁定开源版本，评估商业许可成本（一次性买断 vs AUDEBase 企业订阅） |
+
 ## 已废弃决策（旧 MODACS 架构 + 旧前端方案）
 
 以下决策原为 MODACS 工业控制平台制定，或因前端架构重新评估后废弃。
@@ -450,3 +556,4 @@ AUDEBase 采用 Odoo 式 Poland notation（前缀表达式）数组语法：
 | D7 (旧)   | 三层 UI 隔离架构                            | 架构变更，不再需要 UIAdapter 抽象层                                                          |
 | D6 (旧)   | shadcn/ui + Tailwind v4 + Ant Design 5 混合 | 2026-07-10 废弃：双库混用增加主题冲突和包体积，NocoBase 证明纯 antd 即可覆盖全部企业 UI 需求 |
 | D6.1 (旧) | shadcn/ui registry fork 策略                | 随 D6 废弃（shadcn/ui copy-model 不再适用）                                                  |
+

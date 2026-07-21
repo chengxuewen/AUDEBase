@@ -1,6 +1,9 @@
 # AUDEBase 架构文档
 
-> **版本**: 2.0 | **更新日期**: 2026-07-20 | **状态**: Phase 2 完成 — 28 packages, 95 测试文件
+> **版本**: 3.0 | **更新日期**: 2026-07-21 | **状态**: Phase 3 战略转型 — 基于 NocoBase 重构
+
+> ⚠️ **Phase 3 架构变更声明** (2026-07-21)
+> AUDEBase 决定以 NocoBase 为基础平台，将自研创新点（四层信任分组、增强 manifest.yaml、Record Rules）作为 NocoBase 插件实现。本架构文档保留 Phase 1a-2 的自建架构设计作为参考。迁移详情见 `docs/superpowers/specs/2026-07-21-nocobase-migration-design.md`。
 
 ---
 
