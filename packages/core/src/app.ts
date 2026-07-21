@@ -72,16 +72,20 @@ function createAuthDbAdapter(db: DrizzleDB): Record<string, unknown> {
 
   const queryDb = db as unknown as {
     query: {
-      users: { findFirst: () => Promise<{ id: string; tenant_id: string | null } | undefined> }
-      refresh_tokens: { findFirst: () => Promise<{ id: string } | undefined> }
+      users: { findFirst: (args?: unknown) => Promise<{ id: string; tenant_id: string | null } | undefined> }
+      refresh_tokens: { findFirst: (args?: unknown) => Promise<{ id: string } | undefined> }
     }
   }
 
   return {
     query: {
       users: {
-        findFirst: async () => {
-          const row = await queryDb.query.users.findFirst()
+        // ponytail: pass args through; { sub } translates to where eq(id, sub)
+        findFirst: async (args?: unknown) => {
+          const filter = (args as Record<string, unknown> | undefined)?.sub as string | undefined
+          const row = filter
+            ? await queryDb.query.users.findFirst({ where: (u: { id: string }, { eq: e }: { eq: typeof eq }) => e(u.id, filter) } as never)
+            : await queryDb.query.users.findFirst()
           if (row) {
             lastUserId = row.id
             lastTenantId = row.tenant_id
@@ -90,8 +94,8 @@ function createAuthDbAdapter(db: DrizzleDB): Record<string, unknown> {
         },
       },
       refresh_tokens: {
-        findFirst: async () => {
-          const row = await queryDb.query.refresh_tokens.findFirst()
+        findFirst: async (args?: unknown) => {
+          const row = await queryDb.query.refresh_tokens.findFirst(args as never)
           if (row) lastTokenId = row.id
           return row
         },
@@ -662,6 +666,26 @@ export class CoreApp {
         return this.handleError(err, reply as ReplyLike)
       }
     })
+
+    // GET /api/auth/me — lightweight token validation, returns current user info
+    app.get('/api/auth/me', {
+      onRequest: [authHook],
+    }, async (request, reply) => {
+      const user = (request as unknown as { user?: { sub?: string; username?: string; tenant_id?: string; roles?: string[] } }).user
+      if (!user) {
+        return reply.code(401).send({ error: { code: 'UNAUTHORIZED', message: 'Invalid token' } })
+      }
+      return reply.send({
+        user: {
+          id: user.sub,
+          username: user.username,
+          tenant_id: user.tenant_id,
+          roles: user.roles ?? [],
+        },
+      })
+    })
+
+    // --- Protected routes (require auth) ---
 
     // --- Protected routes (require auth) ---
     app.post('/api/auth/change-password', {

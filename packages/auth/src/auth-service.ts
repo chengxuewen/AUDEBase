@@ -206,7 +206,7 @@ export class AuthService {
     }
 
     const decodedWithVersion = decoded as JwtPayload & { iat: number; exp: number; token_version: number }
-    const user = (await this.db.query.users.findFirst()) as UserRecord | undefined
+    const user = (await this.db.query.users.findFirst({ sub: decodedWithVersion.sub })) as UserRecord | undefined
     if (user && decodedWithVersion.token_version !== user.token_version) {
       throw new UserError(
         ErrorCode.AUTH_TOKEN_VERSION_MISMATCH,

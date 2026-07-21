@@ -15,6 +15,7 @@ export default defineConfig({
     { name: 'setup', testMatch: /auth\.setup\.ts/ },
     {
       name: 'chromium',
+      testMatch: /.*\.e2e\.ts/,
       use: {
         storageState: 'packages/admin-ui/__e2e__/.auth/admin.json',
       },

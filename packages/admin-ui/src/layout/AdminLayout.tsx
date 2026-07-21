@@ -66,7 +66,7 @@ export function AdminLayout({ canRoute, activeKey, onMenuClick, children }: Admi
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider>
-        <Menu theme="dark" mode="inline" selectedKeys={activeKey !== undefined ? [activeKey] : []} onClick={({ key }: { key: string }) => onMenuClick?.(key)} items={(items ?? []).map((i: MenuItem) => ({ key: i.key, label: t(i.labelKey) }))} />
+        <Menu theme="dark" mode="inline" selectedKeys={activeKey !== undefined ? [activeKey] : []} onClick={({ key }: { key: string }) => onMenuClick?.(key)} items={(items ?? []).filter(Boolean).map((i: MenuItem) => ({ key: i.key, label: t(i.labelKey) }))} />
       </Sider>
       <Layout>
         <Header style={{ background: '#fff', padding: '0 16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
