@@ -1,6 +1,6 @@
 # AUDEBase 编码约定
 
-**更新日期**: 2026-07-17
+**更新日期**: 2026-07-22
 
 ## 命名约定
 
@@ -145,7 +145,7 @@ expect(mockCreate).toHaveBeenCalledWith({ username: 'test', email: 'test@test.co
 ### SDD 文档命名与结构
 
 - **命名**: `{module-name}-sdd.md`（如 `plugin-framework-sdd.md`）
-- **存储**: `docs/modules/{module-name}-sdd.md`
+- **存储**: `docs/archive/{module-name}-sdd.md`（已实现模块归档）；新模块 SDD 放置在 `docs/modules/`
 - **标准结构**:
   1. **概要**: 模块定位、职责边界、设计目标
   2. **接口定义**: 所有导出 API 的类型签名、参数描述、返回值

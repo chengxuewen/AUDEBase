@@ -344,30 +344,40 @@
 - **`base` 内核模块**：零依赖、auto_install、预置基础模型（用户/角色/菜单/视图）
 - **安装管线**：拓扑排序 → 导入模块 → 建表 → 加载安全规则 → 加载视图 → 加载数据
 - **Record Rules**：domain filter 表达式，自动注入 WHERE 条件
+- **Record Rules**：domain filter 表达式，自动注入 WHERE 条件
 
+> **落地**: D1.6 (内核插件 Bootstrap)、D1.4 (生命周期)、D1.7 (迁移管理)、D10 (Record Rules)
 ### 9.2 从 NocoBase 学习
 
 - **插件管理器生命周期**：afterAdd→beforeLoad→load→install→afterEnable 钩子链
 - **数据模型驱动 UI**：Collection→Field→Block 三层抽象
 - **插件市场生态**：插件即功能 + 一次性买断 + 100+ 内置插件
 - **AI 员工模式**：角色化 AI（翻译员/分析员/调研员），集成到业务流程和界面
+- **AI 员工模式**：角色化 AI（翻译员/分析员/调研员），集成到业务流程和界面
 
+> **落地**: D1.4 (插件生命周期)、D3/D7 (Schema→UI 映射)、D25 (NocoBase 迁移)
 ### 9.3 从 Axelor/Corteza 学习
 
 - **BPMN 2.0 与 ERP 深度集成**（Axelor）：工作流直接操作业务对象
 - **低代码 Studio + 代码逃生舱**（Axelor）：80% 拖拽 + 20% Java/Groovy
 - **Federation 联邦架构**（Corteza）：跨实例数据共享 + RBAC 控制
+- **Federation 联邦架构**（Corteza）：跨实例数据共享 + RBAC 控制
 
+> **落地**: D13 (Saga 跨插件事务)、D10 (Record Rules)
 ### 9.4 从 AuraBoot 学习
 
 - **DSL 引擎设计**：JSON 声明→DB Schema + REST API + UI 一体化
 - **五层权限模型**：RBAC + ReBAC + 组织范围 + ABAC + 字段级
 - **AI Agent 安全调用**：声明操作的风险等级和幂等性
+- **AI Agent 安全调用**：声明操作的风险等级和幂等性
 
+> **落地**: D10+D19 (RBAC)、D11 (字段级权限)；ReBAC/ABAC 超出 MVP 范围
 ### 9.5 从国内平台学习
 
 - **生态集成深度**：钉钉/企微/飞书的组织架构同步、审批流程、消息推送
 - **实施门槛**：简道云 3 天上手 → 业务人员可自主搭建
+
+> **落地**: D6 (Ant Design 5)、D16 (ProLayout)、D24 (多租户 UI)
 - **定价模式**：按人头/年计费为主，一次性买断为辅
 
 ---

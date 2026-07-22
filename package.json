@@ -2,7 +2,7 @@
   "name": "audebase",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.32.1",
+  "packageManager_tmp": "pnpm@10.32.1",
   "scripts": {
     "build": "turbo build",
     "test": "turbo test",

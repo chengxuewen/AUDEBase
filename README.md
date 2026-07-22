@@ -203,7 +203,7 @@ audebase/
 | Phase 3 | 🔲 | OpenTelemetry + 插件市场 + Database-per-tenant + 混合模式 |
 | Phase 4 | ✅ | 工作流引擎（workflow-core/engine/tasks — Saga 补偿模式） |
 
-详细规划见 [phase-planning.md](docs/roadmap/phase-planning.md)。
+实施计划见 [2026-07-22-phase1a-execution-plan.md](docs/superpowers/specs/2026-07-22-phase1a-execution-plan.md)。架构决策见 [decisions.md](.agents/memorys/decisions.md) D25（基于 NocoBase 重构）。
 ## 许可证
 
 Apache 2.0

@@ -1,6 +1,6 @@
 # AUDEBase 架构决策记录
 
-**更新日期**: 2026-07-21
+**更新日期**: 2026-07-22
 
 ## 架构决策 (D1-D14, D15-D24, D25)
 
@@ -23,7 +23,7 @@
 - **信任边界**: 组间通信受访问控制矩阵约束（SYSTEM→全部、Domain→同域直调+RPC、Isolated→白名单、Container→全禁），详见 docs/analysis/plugin-architecture-analysis.md §4.2 信任边界表
 - **参考**: VS Code Extension Host 组内共享模型、Chrome site isolation 信任分级、Erlang OTP 应用组
 - **详情**: 见 docs/analysis/plugin-architecture-analysis.md
-- **状态**: ✅ Phase 2 已实现
+- **状态**: ⚠️ 搁置（需 fork NocoBase PluginManager 核心，无进程隔离架构可承载）
 
 ### D1.2: PluginHost 接口抽象
 
@@ -124,7 +124,7 @@
 ### D1.13: 健康检查
 
 - **决策**: Fastify 应用骨架内置 `GET /health`（无 API 前缀，Kubernetes probe 用）和 `GET /api/health`（有 API 前缀，API 一致性用），均返回 JSON `{ status: 'ok', db: true, redis: true, uptime: N }`。另提供 `GET /health/ready`（Kubernetes readiness probe，DB 连接成功后返回 200）
-- **状态**: 已决策，Phase 1a 实现
+- **状态**: ✅ Phase 1a 已实现
 
 ### D1.14: 通知系统接口
 
@@ -278,7 +278,7 @@ AUDEBase 采用 Odoo 式 Poland notation（前缀表达式）数组语法：
 - **决策**: manifest.exports 中 visible_to 声明字段可见角色
 - **实现**: Core API 响应时自动过滤不可见字段；Schema UI 自动隐藏不可见输入框
 - **参考**: NocoBase field-level ACL
-- **状态**: 已决策，Phase 2 实现（与 Record Rules D10 完整版同期，详见 architecture.md §7 MVP 不包含）
+- **状态**: 已决策，Phase 3 实现（与 Record Rules D10 同期，作为 NocoBase 插件扩展 NocoBase ACL 字段级能力）
 
 ### D12: Core 数据 API 代理
 
@@ -520,35 +520,19 @@ AUDEBase 采用 Odoo 式 Poland notation（前缀表达式）数组语法：
 | `@audebase/shared-types` | 与 NocoBase 类型体系对齐，保留核心自定义类型 | 共享类型部分复用，部分替换 |
 | `@audebase/cli` | NocoBase CLI 命令 + AUDEBase 插件创建命令 | 保留 plugin:create 等差异化命令 |
 
-**完全保留（AUDEBase 独有，NocoBase 无对应）**：
+**过渡保留（Phase 1a 迁移到 NocoBase Client，Phase 2 逐步淘汰）**：
 
 | 现有包 | 说明 |
 |--------|------|
-| `@audebase/admin-ui` | 基于 React 19 + Ant Design 5 + ProLayout/ProTable/ProForm 的管理后台，Schema→UI 映射器与 NocoBase SchemaComponent 不同路径 |
+| `@audebase/admin-ui` | 过渡期保留 — Phase 1a 新插件 UI 使用 NocoBase Client（P3 决策），旧 AUDEBase admin-ui 作为兼容回退层，Phase 2 逐步淘汰 |
 | `@audebase/websocket` | 实时通信（Collection 变更订阅），基于 Drizzle 事件而非 Sequelize |
 
-#### D25.4: 迁移阶段
-
-| 阶段 | 范围 | 目标 |
-|------|------|------|
-| Phase 1 — 架构对齐 | PluginManager API、manifest 规范、PluginHost 接口 | AUDEBase 插件代码零改动迁移到 NocoBase 插件格式 |
-| Phase 2 — 数据模型对齐 | Schema Engine → NocoBase Collection 体系、字段类型映射 | 数据模型声明改为 NocoBase Collection 格式 |
-| Phase 3 — 生态兼容 | 插件市场接入、ACL 体系对齐、NocoBase 原生插件兼容层 | AUDEBase 作为 NocoBase 生态的差异化插件套件运行 |
-
-#### D25.5: 风险与缓解
-
-| 风险 | 缓解措施 |
-|------|---------|
-| NocoBase v2.0 API 稳定性 | 锁定 NocoBase 版本，独立测试套件验证 API 兼容性 |
-| 插件迁移成本 | 保留 AUDEBase 包作为兼容层，渐进迁移（Phase 1 先迁核心包，Phase 3 全量） |
-| 自定义 Schema→UI 映射器丢失 | ProTable/ProForm 映射器作为 AUDEBase 插件独立维护，不依赖 NocoBase 内置 |
-| NocoBase 许可证变化（v2.0 商业条款） | 锁定开源版本，评估商业许可成本（一次性买断 vs AUDEBase 企业订阅） |
 
 #### D25.4: 迁移阶段
 
 | 阶段 | 状态 | 范围 | 目标 |
 |------|------|------|------|
-| Phase 1 — 架构对齐 | 🔲 规划中 | 插件生命周期、manifest 规范、PluginManager API | 插件加载/卸载/启用/禁用 API 与 NocoBase PluginManager 对齐 |
+| Phase 1a — NocoBase 插件 MVP | 📋 计划定稿 | 业务插件开发（canonical-schema + migration-engine + plugin-3d-printer）+ Canonical Schema 数据解耦 | Phase 0 Spike 完成（2026-07-21），execution-plan 已审批（2026-07-22）
 | Phase 2 — 数据模型对齐 | 🔲 规划中 | Collection/Schema 引擎、字段类型、数据源 | 迁移现有 Schema Engine 为 NocoBase Collection 兼容模式 |
 | Phase 3 — 生态兼容 | 🔲 规划中 | 插件市场、ACL 体系、客户端 SDK | 实现 NocoBase 插件兼容层，支持 NocoBase 生态插件加载 |
 
@@ -572,7 +556,7 @@ AUDEBase 采用 Odoo 式 Poland notation（前缀表达式）数组语法：
 **Phase 0 Spike 产出**:
 - NocoBase v2.1.29 环境分析：PluginManager 12 生命周期钩子、ACL `can/allow/use/addFixedParams` API
 - `@audebase/plugin-record-rules` 实现（575 行）：Poland-notation 解析器 + Sequelize WhereOptions 生成器 + ACL 中间件
-- 校准计划：`docs/superpowers/specs/2026-07-21-nocobase-migration-calibrated-plan.md`
+- 校准计划：已合并到 `docs/superpowers/specs/2026-07-22-phase1a-execution-plan.md`
 ## 已废弃决策（旧 MODACS 架构 + 旧前端方案）
 
 以下决策原为 MODACS 工业控制平台制定，或因前端架构重新评估后废弃。
@@ -586,3 +570,20 @@ AUDEBase 采用 Odoo 式 Poland notation（前缀表达式）数组语法：
 | D6 (旧)   | shadcn/ui + Tailwind v4 + Ant Design 5 混合 | 2026-07-10 废弃：双库混用增加主题冲突和包体积，NocoBase 证明纯 antd 即可覆盖全部企业 UI 需求 |
 | D6.1 (旧) | shadcn/ui registry fork 策略                | 随 D6 废弃（shadcn/ui copy-model 不再适用）                                                  |
 
+### D25.6: Phase 1a 混合策略实施决策 (2026-07-22)
+
+**背景**: 双 Oracle + 4 角色团队审查后，确定以 NocoBase 插件模式直接开发 3D 打印机 MVP，Canonical Schema 作为解耦点。详见 `docs/superpowers/specs/2026-07-22-phase1a-execution-plan.md` §7。
+
+**决策**:
+- **D25.6.1 — Agent HTTP polling 替代 WebSocket**: 3D 打印机 IoT 场景无需亚秒级延迟，HTTP polling (5s interval) 零外部依赖。
+- **D25.6.2 — Canonical Schema 往返闸门**: Week 2 Go/No-Go：export→import→export→diff 必须 return 0 diffs。失败降级为接受 NocoBase 紧耦合。
+- **D25.6.3 — 3D 打印机 MVP 闸门**: Week 4 人工验收：打印任务 CRUD + 设备管理(30s 心跳超时检测) + 材料库 + Agent polling + 崩溃恢复。
+- **D25.6.4 — Multi-pass FK 导入**: 解决循环依赖：Pass 1 INSERT FK=NULL → Pass 2 UPDATE FK → PG transaction COMMIT/ROLLBACK。`SET CONSTRAINTS ALL DEFERRED`。
+- **D25.6.5 — 关联数据导出仅存 FK**: `belongsTo` 只存 FK ID（如 `{ deviceId: 'uuid' }`），`hasMany` 不内嵌子记录，防止数据倒灌。
+- **D25.6.6 — diff() 返回结构化 DiffReport**: `{ match: boolean, diffs: Array<{collection, recordId, field, expected, actual}> }`，闸门可诊断。
+- **D25.6.7 — 强制 PostgreSQL 16**: 非 SQLite。NocoBase 开发环境默认 SQLite，但计划使用 `SET CONSTRAINTS`、`REPEATABLE READ` 等 PG 专属特性。
+- **D25.6.8 — canonical-schema 保留 Zod**: 撤销团队审查削减，D8 要求在系统边界使用 Zod 验证（+0.5d 工时）。
+- **D25.6.9 — 削减范围**: Phase 1a 砍 StatsPage、costPerKg、WebSocket 实时推送、Import conflictStrategy，减少 3.3 天。
+- **D25.6.10 — 测试策略**: 4 级覆盖率闸门 — 单元 ≥80% / 集成 roundtrip / E2E 冒烟 9 场景 / 总体 ≥80%。6 份 SDD/TDD 文档编码前由 AI 代理生成。
+
+**状态**: 📋 计划定稿，待执行。

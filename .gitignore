@@ -90,3 +90,9 @@ audebase-*.tar.zst
 packages/admin-ui/__e2e__/.auth/
 playwright-report/
 test-results/
+
+# Package manager debug logs
+pnpm-debug.log*
+
+# Package tarballs (general)
+*.tgz

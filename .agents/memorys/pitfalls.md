@@ -1,6 +1,6 @@
 # AUDEBase 已知坑点与反模式
 
-**更新日期**: 2026-07-20
+**更新日期**: 2026-07-22
 
 ## MODACS 适配相关
 
@@ -205,7 +205,7 @@
 | 默认密码/密钥 | Strapi/Directus | - | 默认 admin:admin | D1.6: admin 默认密码强制首次修改 |
 | IDOR（不安全的直接对象引用） | Strapi | - | 缺乏行级权限检查 | D10: Record Rules 自动注入 WHERE 条件 |
 | CVE-2026-44442 | ERPNext | - | CWE-862 缺失授权检查 | D10: Record Rules + D19: ACLProvider/ACLGuard 声明式权限控制 |
-| CVE-2026-34156 | NocoBase | 9.9 | 工作流沙箱逃逸 | D1.1: Container 隔离
+| CVE-2026-34156 | NocoBase | 9.9 | 工作流沙箱逃逸 | NocoBase 迁移：依赖上游 CVE 修复 + Phase 2 评估 vm2/isolated-vm 沙箱（D25: NocoBase 战略转型）
 | CVE-2026-52887 | NocoBase | - | SQL 注入 → PG-superuser RCE | D9 + D12
 | GHSA-ghvf-qf6h-g8x5 | NocoBase | - | 文件上传 + LFI → RCE | D4.1 + D12
 | CVE-2026-22599 | Strapi | 9.3 | SQL 注入 | D9: Drizzle 参数化查询

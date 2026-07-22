@@ -1,429 +1,304 @@
-# Migration Engine SDD — Phase 1a
+# migration-engine — SDD
 
-> **创建日期**: 2026-07-13  
-> **目的**: 为 Phase 1a #5 模块（迁移管理）提供完整的引擎设计。  
-> **前置阅读**: D1.7, phase-planning.md §1a #5  
-> **责任人**: Person A（建议从 Person B 移交）
-
----
-
-## 1. Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  Migration Engine (packages/migration/src/)              │
-│                                                         │
-│  ┌──────────┐    ┌──────────┐    ┌──────────────────┐   │
-│  │ Scanner  │───▶│ Resolver │───▶│ Executor (3-stage)│   │
-│  └──────────┘    └──────────┘    └────────┬─────────┘   │
-│       │                │                  │              │
-│       ▼                ▼                  ▼              │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │              migration_history 表                  │   │
-│  │  (module_id, version, phase, status, error, ...)   │   │
-│  └──────────────────────────────────────────────────┘   │
-│                                                         │
-│  ┌──────────┐                                          │
-│  │ DryRun   │ (CI 预检模式，不执行 SQL)                  │
-│  └──────────┘                                          │
-└─────────────────────────────────────────────────────────┘
-```
+**状态**: ✅ SDD 完成
+**包**: `@audebase/migration-engine`
+**参考**: `docs/superpowers/specs/2026-07-22-phase1a-execution-plan.md` §3.2, D25.6.2–D25.6.7
+**依赖**: `@audebase/canonical-schema`
+**生成日期**: 2026-07-22
 
 ---
 
-## 2. Migration File Convention
+## 1. 概要
 
-### 2.1 目录结构
+**职责边界**: NocoBase ↔ Canonical Schema 数据迁移引擎。负责将 NocoBase 业务数据导出为平台无关的 CanonicalSnapshot 格式，以及将 CanonicalSnapshot 导入 NocoBase 数据库。
 
+**设计目标**:
+- Canonical Schema 往返闸门：export → import → export → diff，必须 return 0 diffs（D25.6.2）
+- Multi-pass FK 导入解决循环依赖（D25.6.4）
+- belongsTo 仅存 FK ID，hasMany 不内嵌子记录（D25.6.5）
+- diff() 返回结构化 DiffReport，闸门可诊断（D25.6.6）
+- 强制 PostgreSQL 16（D25.6.7），利用 SET CONSTRAINTS ALL DEFERRED + REPEATABLE READ
+
+**不在范围内**:
+- Odoo/Strapi 等非 NocoBase 源平台的导出（扩展点，Phase 3+）
+- Import conflictStrategy（ON CONFLICT UPSERT — Phase 1b）
+- 增量同步 / CDC 变更数据捕获
+- 数据签名 / 校验和（Phase 2+）
+
+## 2. 接口定义
+
+### 2.1 export.ts (`src/export.ts`)
+
+```typescript
+import type { Database } from '@nocobase/server';
+import type { CanonicalSnapshot } from '@audebase/canonical-schema';
+
+interface ExportOptions {
+  /** 限定导出的 collection 名称列表。省略则导出所有非系统表。 */
+  collections?: string[];
+  /** 是否排除 NocoBase 系统表。默认 true。 */
+  excludeSystemTables?: boolean;
+  /** 分批查询大小，默认 1000。 */
+  batchSize?: number;
+  /** 快照时间点 — 所有查询过滤 createdAt < exportStartTime。不传则 use Date.now()。 */
+  exportStartTime?: Date;
+}
+
+/**
+ * 从 NocoBase 数据库导出为 CanonicalSnapshot。
+ *
+ * 关联数据策略 (D25.6.5):
+ *   - belongsTo: 存储 `{ deviceId: "uuid" }`（仅 FK 值，不内嵌关联对象）
+ *   - hasMany: 不内嵌子记录。子记录作为独立 Collection 导出，FK 字段指向父记录 id
+ *   - manyToMany: 中间表作为独立 Collection 导出
+ *
+ * 分页策略: keyset pagination（`WHERE id > lastId ORDER BY id LIMIT batchSize`）
+ *           自增 ID 存在时使用 keyset，不存在时 fallback OFFSET。
+ */
+export async function exportToCanonical(
+  db: Database,
+  options?: ExportOptions
+): Promise<CanonicalSnapshot>;
 ```
-packages/plugin-core/migrations/
-├── 1.0.0/
-│   ├── preload.sql      # DDL: CREATE TABLE, ALTER TABLE
-│   ├── postsync.sql     # DML: INSERT, UPDATE, DELETE
-│   └── postload.sql     # 后处理: CREATE INDEX, ANALYZE
-├── 1.1.0/
-│   ├── preload.sql
-│   └── postsync.sql     # postload.sql 可选
-└── 1.2.0/
-    └── preload.sql      # postsync.sql 可选
+
+### 2.2 import.ts (`src/import.ts`)
+
+```typescript
+interface ImportResult {
+  /** 成功导入记录数 */
+  imported: number;
+  /** 跳过记录数（如重复 id） */
+  skipped: number;
+  /** 错误详情 */
+  errors: Array<{
+    collection: string;
+    recordId: string;
+    message: string;
+  }>;
+}
+
+interface ImportOptions {
+  /** 限定导入的 collection 名称列表。省略则导入 snapshot 中全部 collection。 */
+  collections?: string[];
+}
+
+/**
+ * 将 CanonicalSnapshot 导入 NocoBase 数据库。
+ *
+ * Multi-pass FK 策略 (D25.6.4):
+ *   1. topologicalSort 获取导入顺序
+ *   2. PG 事务: BEGIN → SET CONSTRAINTS ALL DEFERRED
+ *   3. 无循环依赖的 collection: 顺序 INSERT
+ *   4. 有循环/自引用依赖的 collection:
+ *      Pass 1: INSERT 所有记录（FK 字段 = NULL）
+ *      Pass 2: UPDATE FK 字段为实际值
+ *   5. COMMIT（失败 → ROLLBACK）
+ *
+ * 不在范围内: conflictStrategy（ON CONFLICT UPSERT）— Phase 1b
+ */
+export async function importFromCanonical(
+  db: Database,
+  snapshot: CanonicalSnapshot,
+  options?: ImportOptions
+): Promise<ImportResult>;
 ```
 
-### 2.2 文件规则
+### 2.3 diff.ts (`src/diff.ts`)
 
-| 规则 | 详情 |
+```typescript
+interface DiffReport {
+  match: boolean;
+  diffs: Array<{
+    collection: string;
+    recordId: string;
+    field: string;
+    expected: unknown;
+    actual: unknown;
+  }>;
+}
+
+/**
+ * 比较两个 CanonicalSnapshot，返回结构化差异报告。
+ *
+ * 对比策略:
+ *   1. 剥离元数据字段: exportedAt, source.version
+ *   2. 浮点数容差: Math.abs(a - b) < 1e-10 视为相等
+ *   3. NaN/Infinity: Number.isFinite guard，非有限直接标记为 diff
+ *   4. 逐 collection → 逐 record → 逐字段浅层对比
+ *   5. JSONB/嵌套对象: 浅层比较（深度对比 Phase 2）
+ *
+ * 闸门条件: match === true && diffs.length === 0
+ */
+export function diffSnapshots(
+  a: CanonicalSnapshot,
+  b: CanonicalSnapshot
+): DiffReport;
+```
+
+### 2.4 topological-sort.ts (`src/topological-sort.ts`)
+
+```typescript
+interface CollectionSchema {
+  name: string;
+  fields: Array<{
+    name: string;
+    type: string;
+    target?: string; // belongsTo target collection name
+  }>;
+}
+
+/**
+ * FK 依赖拓扑排序 (Kahn's algorithm)。
+ *
+ * 返回: string[][] — 外数组为执行批次（按依赖顺序），内数组为可并行执行的 collection 名称。
+ *
+ * 循环检测: 检测到循环 → 标记为 multi-pass 表 → 返回时将其从 DAG 中排除，
+ *           单独放在额外的 multiPass 批次中。
+ */
+export function topologicalSort(collections: CollectionSchema[]): {
+  batches: string[][];       // 无环依赖批次（外→内 = 先→后执行）
+  multiPass: string[];       // 循环依赖表（需 multi-pass FK 导入）
+};
+
+/**
+ * 检测循环依赖，返回参与循环的 collection 名称列表。
+ * 无循环返回 []。
+ */
+export function detectCycles(collections: CollectionSchema[]): string[];
+```
+
+### 2.5 noco-base-tables.ts (`src/noco-base-tables.ts`)
+
+```typescript
+/** NocoBase 系统表名称集合（白名单，硬编码 ~15 张表） */
+export const SYSTEM_TABLE_NAMES: ReadonlySet<string>;
+
+/** 检查表名是否属于 NocoBase 系统表（case-insensitive） */
+export function isSystemTable(tableName: string): boolean;
+```
+
+系统表白名单：
+
+| 表名 | 说明 |
 |------|------|
-| **命名** | 固定文件名：`preload.sql`、`postsync.sql`、`postload.sql` |
-| **版本目录** | SemVer（如 `1.0.0`），Core 按版本号升序排序执行 |
-| **可选文件** | 每阶段可缺省。无 SQL 变更的版本可以只有空目录或跳过的阶段 |
-| **编码** | UTF-8 |
-| **事务** | 单个迁移文件在一个事务中执行（失败自动回滚） |
-| **禁止** | DROP DATABASE, DROP SCHEMA, TRUNCATE (危险操作白名单拦截) |
+| `_schema_migrations` | Schema 迁移记录 |
+| `_schema_collections` | Collection 元数据 |
+| `_schema_fields` | Field 元数据 |
+| `_schema_views` | View 元数据 |
+| `roles` | RBAC 角色 |
+| `roles_resources` | 角色-资源关联 |
+| `roles_resources_actions` | 角色-资源-操作 |
+| `roles_resources_scopes` | 角色-资源-范围 |
+| `users` | 用户表 |
+| `actions` | 操作定义 |
+| `collections` | Collection 注册 |
+| `plugins` | 插件注册 |
+| `migrations` | 迁移历史 |
+| `audits` | 审计日志 |
+| `refresh_tokens` | JWT Refresh Token |
 
-### 2.3 与 manifest.yaml 版本的关系
-
-```yaml
-# manifest.yaml
-version: "1.1.0"     # ← 当前插件版本
-```
-
-Core 对比 `migration_history` 表，执行所有 `version > 已记录版本` 的迁移目录。
-
----
-
-## 3. Public API Surface
-
-### 3.1 MigrationEngine
+### 2.6 导出清单 (`src/index.ts`)
 
 ```typescript
-// packages/migration/src/engine.ts
-
-interface MigrationEngine {
-  /**
-   * 执行所有待运行迁移
-   * 
-   * 流程:
-   * 1. Scanner.discoverMigrations() — 扫描所有插件的 migrations/ 目录
-   * 2. Resolver.resolve() — 按 manifest version 排序待执行版本
-   * 3. 对每个插件 × 每个待执行版本:
-   *    a. preload: 在插件 beforeLoad() 前执行 (DDL)
-   *    b. postsync: Core DB 同步后执行 (DML)
-   *    c. postload: 插件 load() 后执行 (索引重建)
-   * 4. 每次成功写入 migration_history
-   * 
-   * @param options.mode — 'normal' | 'dry-run'
-   */
-  migrate(options?: MigrateOptions): Promise<MigrationResult>
-
-  /**
-   * 仅检查待运行迁移（不执行 SQL）
-   * 用于 CI: aude db:migrate --dry-run
-   */
-  dryRun(): Promise<MigrationReport>
-}
-
-interface MigrateOptions {
-  /** 执行模式 */
-  mode: 'normal' | 'dry-run'
-  /** 仅迁移指定插件（Phase 1b: aude plugin upgrade <name>） */
-  pluginName?: string
-  /** 目标版本（Phase 1b: 支持回滚到指定版本） */
-  targetVersion?: string
-}
+export { exportToCanonical } from './export';
+export type { ExportOptions } from './export';
+export { importFromCanonical } from './import';
+export type { ImportResult, ImportOptions } from './import';
+export { diffSnapshots } from './diff';
+export type { DiffReport } from './diff';
+export { topologicalSort, detectCycles } from './topological-sort';
+export { isSystemTable, SYSTEM_TABLE_NAMES } from './noco-base-tables';
 ```
 
-### 3.2 MigrationScanner
+## 3. 生命周期
 
-```typescript
-interface MigrationScanner {
-  /**
-   * 发现所有插件的迁移文件
-   * 
-   * 扫描路径: packages/*/migrations/{version}/*.sql
-   * 返回: Map<pluginName, MigrationDirectory[]>
-   */
-  discoverMigrations(): Promise<Map<string, MigrationVersion[]>>
-}
+**exportToCanonical**:
+1. 从 `db.collections` 获取 NocoBase Collection schemas
+2. 调用 `isSystemTable` 过滤系统表
+3. 记录 `exportStartTime`（快照时间点，用于 createdAt 过滤）
+4. 按 `topologicalSort` 排序后的 collection 顺序遍历
+5. 每个 collection：keyset pagination 分批查询（batchSize 默认 1000）
+6. 字段处理：belongsTo → FK id，hasMany → 独立 Collection，普通字段 → 原值
+7. 组装 CanonicalSnapshot 返回
 
-interface MigrationVersion {
-  /** 版本号 (SemVer) */
-  version: string
-  /** 迁移目录路径 */
-  path: string
-  /** 各阶段 SQL 文件 */
-  files: {
-    preload?: string    // 文件路径
-    postsync?: string
-    postload?: string
-  }
-}
-```
+**importFromCanonical**:
+1. `topologicalSort` 获取导入顺序
+2. PG 事务 `BEGIN`
+3. `SET CONSTRAINTS ALL DEFERRED`
+4. Regular collections: 顺序 INSERT
+5. Multi-pass collections: Pass 1 INSERT (FK=NULL) → Pass 2 UPDATE FK
+6. `COMMIT`（失败 → `ROLLBACK`）
+7. 返回 `ImportResult`
 
-### 3.3 MigrationResolver
+**diffSnapshots**: 纯函数，无事务边界。同步执行（无 I/O）。
 
-```typescript
-interface MigrationResolver {
-  /**
-   * 解析待执行的迁移版本
-   * 
-   * 逻辑:
-   * 1. 查询 migration_history 获取每个插件的已执行版本
-   * 2. 对比 manifest.yaml 的 version 字段
-   * 3. 返回待执行的迁移（按插件 + 版本排序）
-   * 
-   * version_gated: 仅执行 version > 已记录版本的迁移
-   */
-  resolve(migrations: Map<string, MigrationVersion[]>): Promise<MigrationTask[]>
-}
+**错误处理**: 所有数据库操作在 PG 事务中执行。export 查询错误 → throw（调用方决定重试/跳过）。import INSERT 失败 → ROLLBACK 整个事务，返回 `ImportResult.errors`。
 
-interface MigrationTask {
-  pluginName: string
-  version: string
-  phases: MigrationPhase[]
-}
+## 4. 依赖关系
 
-interface MigrationPhase {
-  phase: 'preload' | 'postsync' | 'postload'
-  sqlFile: string
-  sqlContent: string
-}
-```
+| 依赖 | 类型 | 版本 | 用途 |
+|------|:---:|------|------|
+| `@audebase/canonical-schema` | runtime | workspace:* | CanonicalSnapshot 类型 + Zod 验证 |
+| `@nocobase/server` | runtime | ^2.1.29 | Database 实例（Collection API + Sequelize query） |
+| `typescript` | devDep | ^5.x | 编译期类型检查 |
+| `vitest` | devDep | ^3.x | 单元测试 |
+| `pg` (via nocobase) | transitive | — | PostgreSQL 驱动 |
+| `sequelize` (via nocobase) | transitive | — | NocoBase ORM |
 
-### 3.4 MigrationExecutor
+**被依赖方**: 独立工具包，不被其他 AUDEBase 包依赖。由人工或 CI 脚本直接调用。
 
-```typescript
-interface MigrationExecutor {
-  /**
-   * 执行单个迁移任务
-   * 
-   * 错误处理（发现 #16）:
-   * - 迁移失败 → 回滚当前事务
-   * - 标记 migration_history.status = 'failed'
-   * - 当前插件标记为 'migration_failed'
-   * - 跳过该插件继续加载其他插件
-   * - 不阻塞系统启动
-   */
-  execute(task: MigrationTask): Promise<MigrationResult>
-  
-  /**
-   * Dry-run 模式: 读取 SQL 但不执行
-   * 返回: 将要执行的 SQL 列表 + 预计影响
-   */
-  dryRun(task: MigrationTask): Promise<DryRunReport>
-}
-```
+## 5. 错误码与错误处理
 
----
+| 错误码 | 触发条件 | 恢复策略 |
+|--------|---------|---------|
+| `SYSTEM_TABLE_FILTERED` | export 尝试导出系统表 | warn → 跳过该表（不阻断） |
+| `UNKNOWN_TABLE_WARN` | 表名不在白名单也非系统表 | warn → 操作员确认 → 补入白名单 |
+| `EXPORT_TIMEOUT` | 单表查询超时 30s | throw → 调用方减小 batchSize 重试 |
+| `EXPORT_OOM` | 内存超过 512MB 阈值 | throw → 调用方减小 batchSize |
+| `IMPORT_FK_FAILURE` | FK UPDATE 失败（目标记录不存在） | ROLLBACK → 返回 ImportResult.errors |
+| `IMPORT_DUPLICATE_ID` | INSERT 冲突（id 已存在） | 跳过该记录，记录到 errors |
+| `IMPORT_CONSTRAINT_VIOLATION` | NOT NULL / UNIQUE 约束违反 | ROLLBACK → 返回 ImportResult.errors |
+| `CYCLE_DETECTED` | FK 循环依赖 | 自动降级为 multi-pass 导入 |
+| `DIFF_MISMATCH` | 往返闸门失败 | 返回 DiffReport.diffs（每条差异含 collection/recordId/field） |
+| `INVALID_SNAPSHOT` | Zod 验证失败 | throw → `CanonicalSnapshotSchema.parse()` 报 ZodError |
+| `TRANSACTION_FAILED` | PG 事务 COMMIT 失败 | ROLLBACK 自动执行 |
 
-## 4. migration_history 表操作
+**日志级别**:
+- `warn`: SYSTEM_TABLE_FILTERED, UNKNOWN_TABLE_WARN, DIFF_MISMATCH
+- `error`: EXPORT_TIMEOUT, IMPORT_FK_FAILURE, TRANSACTION_FAILED
+- `info`: export 开始/完成（含 record count），import 开始/完成（含 imported/skipped）
 
-### 4.1 DDL（规范来源）
+## 6. 安全考虑
 
-> 本表 DDL 以 [database-schema.md](database-schema.md) §10 为规范。以下描述迁移引擎的运行时行为。
+| 安全点 | 措施 |
+|--------|------|
+| SQL 注入防护 | 所有查询通过 NocoBase Database API（Sequelize 参数化查询），不拼接 SQL 字符串 |
+| 系统表隔离 | `SYSTEM_TABLE_NAMES` 硬编码白名单 + `isSystemTable` 过滤，防止导出 NocoBase 内部表 |
+| 快照隔离 | `exportStartTime` + `createdAt < exportStartTime` 过滤，配合 PG REPEATABLE READ |
+| 数据签名 | Phase 1a 不做签名。Phase 2+ 可加 `signature: string` 字段防止篡改 |
+| 事务原子性 | import 全程在 PG 事务中，失败自动 ROLLBACK，不产生部分导入 |
+| 输入验证 | importFromCanonical 入口处 `CanonicalSnapshotSchema.parse(snapshot)` (D8) |
+| SET CONSTRAINTS | 仅用于 DEFERRED，不执行 DDL（不 GRANT/REVOKE/ALTER） |
 
-```sql
-CREATE TABLE migration_history (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    module_id UUID NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
-    
-    -- 迁移信息
-    version VARCHAR(50) NOT NULL,  -- 已执行的版本号
-    phase VARCHAR(20) NOT NULL,    -- preload | postsync | postload
-    filename VARCHAR(500),         -- 迁移文件路径
-    
-    -- 执行结果
-    status VARCHAR(20) NOT NULL DEFAULT 'pending',
-    -- 状态枚举: pending | running | success | failed | skipped
-    CHECK (status IN ('pending', 'running', 'success', 'failed', 'skipped')),
-    error_message TEXT,            -- 失败时记录错误详情
-    execution_time_ms INTEGER,     -- 执行耗时
-    
-    -- 审计
-    executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
-    -- 约束
-    CONSTRAINT uq_migration_version UNIQUE (module_id, version, phase)
-);
+## 7. Mock 约束
 
-CREATE INDEX idx_migration_module ON migration_history(module_id);
-CREATE INDEX idx_migration_status ON migration_history(module_id, status);
-```
+**NocoBase Database mock**（用于单元测试）:
+- 必须实现 `db.collections` 属性（返回 Collection schema 数组）
+- 必须实现 `db.getCollection(name).repository.find()` — 返回 Promise<Record[]>
+- 必须实现 `db.getCollection(name).repository.create()` — 返回 Promise<Record>
+- 必须实现 `db.getCollection(name).repository.update()` — 返回 Promise<void>
+- `find()` 必须支持 `filter`, `limit`, `offset`, `order` 参数
+- 所有 repository 方法必须 async（返回 Promise）
+- 响应数据必须 JSON 序列化/反序列化（模拟真实 I/O）
+- 超时设置: 30s
 
-### 4.2 操作模式
+**PG 事务 mock**（用于 import 测试）:
+- `db.sequelize.transaction()` → 返回 mock transaction 对象
+- mock transaction 支持 `commit()` / `rollback()`
+- `SET CONSTRAINTS ALL DEFERRED` → mock 中 no-op
 
-```typescript
-// 查询已执行版本
-SELECT DISTINCT version FROM migration_history
-WHERE module_id = $1 AND status = 'completed'
-ORDER BY version DESC
+## 8. 变更记录
 
-// 记录迁移开始
-INSERT INTO migration_history (module_id, version, phase, status, started_at)
-VALUES ($1, $2, $3, 'running', NOW())
-
-// 记录迁移完成
-UPDATE migration_history
-SET status = 'completed', completed_at = NOW()
-WHERE module_id = $1 AND version = $2 AND phase = $3
-
-// 记录迁移失败（graceful skip）
-UPDATE migration_history
-SET status = 'failed', error = $4, completed_at = NOW()
-WHERE module_id = $1 AND version = $2 AND phase = $3
-```
-
----
-
-## 5. Error Handling
-
-### 5.1 Graceful Skip 策略（发现 #16）
-
-```
-Phase 1a 策略: 迁移失败 → 标记 failed + 跳过该插件 → 系统继续启动
-Phase 1b  策略: 支持手动回滚 + Admin UI 重试
-Phase 2   策略: 自动回滚 + 事件通知
-```
-
-### 5.2 错误类型
-
-```typescript
-import { ErrorCode } from '@audebase/shared-types'
-
-type MigrationError =
-  | { type: ErrorCode; plugin: string; version: string; phase: string; sqlError: string }  // 'SQL_EXECUTION_ERROR'
-  | { type: ErrorCode; plugin: string; currentVersion: string; targetVersion: string }    // 'MIGRATION_VERSION_CONFLICT'
-  | { type: ErrorCode; plugin: string; version: string; phase: string }                     // 'MIGRATION_DUPLICATE'
-  | { type: ErrorCode; plugin: string; sql: string }                                        // 'MIGRATION_DANGEROUS_OP'
-  | { type: ErrorCode; plugin: string; version: string; phase: string }                     // 'MIGRATION_MISSING_FILE'
-```
-
-### 5.3 错误传播
-
-- 单个迁移失败 → 记录 error → 继续下一个迁移
-- migration_history 中 status='failed' 的迁移在后续启动中跳过（已标记失败，不重试）
-- CI dry-run 发现错误 → 返回非 0 退出码 → 阻断 PR
-
----
-
-## 6. Dry-run 模式
-
-### CI 集成
-
-```bash
-# GitHub Actions 中的预检步骤
-aude db:migrate --dry-run
-# 输出示例:
-# [plugin-core] 1.1.0 preload: CREATE TABLE... (OK)
-# [plugin-core] 1.1.0 postsync: INSERT INTO... (OK)
-# [plugin-rbac] 1.0.0 preload: DROP TABLE users (BLOCKED: 危险操作)
-# 
-# Summary: 3 migrations to run, 1 BLOCKED
-# Exit code: 1
-```
-
-### 实现
-
-```typescript
-async function dryRun(task: MigrationTask): Promise<DryRunReport> {
-  const report: DryRunReport = { tasks: [], blocked: [] }
-
-  for (const phase of task.phases) {
-    // 1. 读取 SQL 文件
-    // 2. 语法检查：所有 SQL 可解析
-    // 3. 安全检查：无不安全操作（DROP TABLE, TRUNCATE, DROP DATABASE）
-    // 4. 不执行 SQL
-    // 5. 记录将要执行的操作
-
-    if (containsDangerousOperation(phase.sqlContent)) {
-      report.blocked.push({ plugin: task.pluginName, phase, reason: '危险操作' })
-    } else {
-      report.tasks.push({ plugin: task.pluginName, phase, sql: firstLine(phase.sqlContent) })
-    }
-  }
-
-  return report
-}
-```
-
----
-
-## 7. 三阶段执行上下文
-
-| 阶段 | 执行时机 | 可用上下文 | 典型用途 |
-|------|---------|----------|---------|
-| **preload** | 所有插件 beforeLoad() 前 | 仅 Core DB 连接 | CREATE TABLE, ALTER TABLE, ADD COLUMN |
-| **postsync** | Core DB 同步完成后 | Core DB + Drizzle schema 已同步 | INSERT, UPDATE, DELETE 数据迁移 |
-| **postload** | 所有插件 load() 完成后 | 全系统就绪 | CREATE INDEX, ANALYZE, 数据校验 |
-
-### 执行顺序示例（3 个插件，各 1 个新版本）
-
-```
-Phase 1: preload  (所有插件)
-  plugin-core 1.1.0 preload
-  plugin-rbac 1.0.0 preload
-  plugin-audit 1.0.0 preload
-
-Phase 2: Core DB 同步
-
-Phase 3: postsync  (所有插件)
-  plugin-core 1.1.0 postsync
-  plugin-rbac 1.0.0 postsync
-  plugin-audit 1.0.0 postsync
-
-Phase 4: 所有插件 load()
-
-Phase 5: postload  (所有插件)
-  plugin-core 1.1.0 postload
-  plugin-rbac 1.0.0 postload
-  plugin-audit 1.0.0 postload
-```
-
----
-
-## 8. 与 Core Bootstrap 的集成
-
-```
-Core 启动
-  │
-  ├─ 1. Fastify 启动（仅 health 路由）
-  │
-  ├─ 2. Drizzle DB 连接
-  │
-  ├─ 3. 检查 migration_history 表是否存在
-  │     └─ 不存在 → 创建核心表（modules, migration_history, tenants）
-  │
-  ├─ 4. 加载 plugin-core
-  │
-  ├─ 5. MigrationEngine.migrate() — 执行所有待运行迁移
-  │     └─ 单插件失败 → 跳过 → 标记 migration_failed
-  │
-  ├─ 6. 加载剩余插件（跳过 migration_failed 的插件）
-  │
-  └─ 7. Fastify 注册所有路由 → listen()
-```
----
-
-## 9. 与其他模块的交互
-
-| 消费方 | 接口 | 调用方式 |
-|--------|------|---------|
-| #1 内核骨架 (Core) | `MigrationEngine.migrate()` | Core bootstrap 在 plugin-core 安装后调用 |
-| #4 plugin-core Bootstrap | `MigrationEngine.migrate()` | plugin-core 安装完成后 Core 执行迁移 |
-| #6 插件框架 | `PluginHost` 无直接依赖 | migration_failed 状态通过 PluginManager 状态机制传播 |
-| #10 审计日志 | `migration_history` 表 | 每次迁移执行写入 migration_history |
-| #13 日志/调试 | `pino` logger | 迁移执行中记录 info/error 日志 |
-| CLI (`aude db:migrate`) | MigrationEngine 全部公共 API | `aude db:migrate` + `--dry-run` |
-
----
-
-## 10. Test Boundaries
-
-| 测试层级 | 范围 | 策略 | 文件位置 |
-|---------|------|------|---------|
-| 单元测试 | Scanner.discoverMigrations(), Resolver.resolve() | mock 文件系统和 DB | `src/__tests__/unit/` |
-| 集成测试 | 完整 3 阶段执行 | 真实 PG（事务回滚） | `src/__tests__/integration/` |
-| Dry-run | CI 预检 | 真实文件系统，不执行 SQL | CI 中 |
-
-### 最小测试用例集
-
-1. `discoverMigrations()`: 空目录、单插件、多插件、无效版本目录
-2. `resolve()`: 无待执行迁移、1 个新版本、3 个新版本（跨阶段排序）
-3. `migrate()`: 正常三阶段执行、preload 成功但 postsync 失败、postload 失败不阻塞后续插件
-4. `dryRun()`: 正常迁移、危险操作拦截、无效 SQL 检测
-5. migration_history 写入: 状态转换 pending→running→completed、失败时状态为 failed
-
----
-
-## 11. Open Questions (Phase 1a 期间解决)
-
-- [ ] 迁移文件是否支持参数化（`${tenant_id}` 等值替换）
-- [ ] 迁移文件是否支持 `.js` 格式（JavaScript 编程式迁移，Phase 1a 只支持 `.sql`）
-- [ ] 大表迁移超时处理策略（> 30s 的大型 ALTER TABLE）
-- [ ] pg_dump 快照存储路径与保留策略
-
----
-
-## 12. 变更记录
-
-| 版本 | 日期 | 变更内容 |
-|------|------|---------|
-| v0.1.0 | 2026-07-13 | 初始版本 |
+| 日期 | 版本 | 变更 | 作者 |
+|------|------|------|------|
+| 2026-07-22 | 1.0 | 初始 SDD：export/import/diff + topological-sort + noco-base-tables | AI Agent |

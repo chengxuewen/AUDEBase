@@ -1,3 +1,11 @@
+# AUDEBase 快速上手（自建架构参考）
+
+> ⚠️ **Phase 3 NocoBase 转型** (2026-07-22)
+> AUDEBase 已决策以 NocoBase 为基础平台，本指南描述的旧自建架构（`packages/plugin-*` + pnpm workspace + `manifest.yaml`）保留为设计参考。
+> 新架构采用 NocoBase 插件模式：业务代码直接 import `@nocobase/server`，解耦靠 Canonical Schema。详见 `docs/superpowers/specs/2026-07-22-phase1a-execution-plan.md`。
+
+---
+
 # AUDEBase 插件 5 分钟快速上手
 
 本指南帮助你在 5 分钟内创建第一个 AUDEBase 插件，启动开发服务器，并在管理后台看到它运行。
