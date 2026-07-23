@@ -9,20 +9,26 @@
 import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply } from 'fastify'
 import cors from '@fastify/cors'
 import { Redis } from 'ioredis'
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'; const { hash } = bcrypt
-import { mkdir } from 'node:fs/promises'
-import { EventBus } from '@audebase/event-bus'
+
+// ponytail: D26 Phase 2 — EventBus 砍至 Phase 2 恢复
+// ponytailext import { EventBus } from '@audebase/event-bus'
+// ponytail: D26 Phase 2 — Cron 保留评估（Phase 1a 暂留）
 import { CronManager } from '@audebase/cron'
-import { FileUploadService } from '@audebase/file-upload'
-import type { AttachmentRepository, AttachmentRecord, FileUpload, FileFilter, DownloadResult, ListResult } from '@audebase/file-upload'
-import { NotificationManager } from '@audebase/notification'
-import { ApiVersionRouter } from '@audebase/api-versioning'
-import { CollectionRegistry } from '@audebase/data-extends'
+// ponytail: D26 Phase 2 — FileUpload 砍至 Phase 2 恢复
+// ponytailext import { FileUploadService } from '@audebase/file-upload'
+// ponytailext import type { AttachmentRepository, AttachmentRecord, FileUpload, FileFilter, DownloadResult, ListResult } from '@audebase/file-upload'
+// ponytail: D26 Phase 2 — Notification 砍至 Phase 2 恢复
+// ponytailext import { NotificationManager } from '@audebase/notification'
+// ponytail: D26 Phase 2 — ApiVersioning 砍至 Phase 2 恢复
+// ponytailext import { ApiVersionRouter } from '@audebase/api-versioning'
+// ponytail: D26 Phase 2 — DataExtends 砍至 Phase 2 恢复
+// ponytailext import { CollectionRegistry } from '@audebase/data-extends'
 
 import type { AppConfig } from './config.js'
 import { createDatabase, type DrizzleDB } from './db/connection.js'
-import { tenants, modules, users, roles, permissions, role_permissions, user_roles, refresh_tokens, audit_log, attachments } from './db/schema.js'
+import { tenants, modules, users, roles, permissions, role_permissions, user_roles, refresh_tokens, audit_log } from './db/schema.js'
 import { createLogger, type Logger } from './logger.js'
 import { createRequestIdMiddleware } from './middleware/request-id.js'
 import { HealthCheckService, registerHealthRoutes } from '@audebase/health-check'
@@ -125,34 +131,10 @@ function createAuthDbAdapter(db: DrizzleDB): Record<string, unknown> {
   }
 }
 
-/** Convert a Drizzle DB row to AttachmentRecord. */
-function mapAttachmentRow(row: {
-  id: string
-  tenant_id: string
-  filename: string
-  content_type: string
-  size: number
-  sha256: string
-  storage_backend: string
-  storage_path: string
-  uploaded_by: string | null
-  created_at: Date
-  deleted_at: Date | null
-}): AttachmentRecord {
-  return {
-    id: row.id,
-    tenantId: row.tenant_id,
-    filename: row.filename,
-    contentType: row.content_type,
-    size: row.size,
-    sha256: row.sha256,
-    storageBackend: row.storage_backend as 'local',
-    storagePath: row.storage_path,
-    uploadedBy: row.uploaded_by ?? '',
-    createdAt: row.created_at,
-    deletedAt: row.deleted_at,
-  }
-}
+// ponytail: D26 Phase 2 — FileUpload 砍至 Phase 2 恢复
+// ponytailext /** Convert a Drizzle DB row to AttachmentRecord. */
+// ponytailext function mapAttachmentRow(row: { ... }): AttachmentRecord { ... }
+
 export class CoreApp {
   private readonly config: AppConfig
   readonly logger: Logger
@@ -162,12 +144,17 @@ export class CoreApp {
   private _redis: Redis | null = null
   private _authService: AuthService | null = null
   private _auditService: AuditService | null = null
-  private _eventBus: EventBus | null = null
+  // ponytail: D26 Phase 2 — EventBus 砍至 Phase 2 恢复
+  // private _eventBus: EventBus | null = null
   private _cronManager: CronManager | null = null
-  private _fileUploadService: FileUploadService | null = null
-  private _notificationManager: NotificationManager | null = null
-  private _apiVersionRouter: ApiVersionRouter | null = null
-  private _collectionRegistry: CollectionRegistry | null = null
+  // ponytail: D26 Phase 2 — FileUpload 砍至 Phase 2 恢复
+  // private _fileUploadService: FileUploadService | null = null
+  // ponytail: D26 Phase 2 — Notification 砍至 Phase 2 恢复
+  // private _notificationManager: NotificationManager | null = null
+  // ponytail: D26 Phase 2 — ApiVersioning 砍至 Phase 2 恢复
+  // private _apiVersionRouter: ApiVersionRouter | null = null
+  // ponytail: D26 Phase 2 — DataExtends 砍至 Phase 2 恢复
+  // private _collectionRegistry: CollectionRegistry | null = null
   private _tenantCache: Map<string, string> = new Map()
 
   constructor(config: AppConfig) {
@@ -185,12 +172,13 @@ export class CoreApp {
     return this._fastify
   }
 
-  get eventBus(): EventBus {
-    if (!this._eventBus) {
-      throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
-    }
-    return this._eventBus
-  }
+  // ponytail: D26 Phase 2 — EventBus 砍至 Phase 2 恢复
+  // get eventBus(): EventBus {
+  //   if (!this._eventBus) {
+  //     throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
+  //   }
+  //   return this._eventBus
+  // }
 
   get cronManager(): CronManager {
     if (!this._cronManager) {
@@ -199,33 +187,37 @@ export class CoreApp {
     return this._cronManager
   }
 
-  get fileUploadService(): FileUploadService {
-    if (!this._fileUploadService) {
-      throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
-    }
-    return this._fileUploadService
-  }
+  // ponytail: D26 Phase 2 — FileUpload 砍至 Phase 2 恢复
+  // get fileUploadService(): FileUploadService {
+  //   if (!this._fileUploadService) {
+  //     throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
+  //   }
+  //   return this._fileUploadService
+  // }
 
-  get notificationManager(): NotificationManager {
-    if (!this._notificationManager) {
-      throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
-    }
-    return this._notificationManager
-  }
+  // ponytail: D26 Phase 2 — Notification 砍至 Phase 2 恢复
+  // get notificationManager(): NotificationManager {
+  //   if (!this._notificationManager) {
+  //     throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
+  //   }
+  //   return this._notificationManager
+  // }
 
-  get apiVersionRouter(): ApiVersionRouter {
-    if (!this._apiVersionRouter) {
-      throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
-    }
-    return this._apiVersionRouter
-  }
+  // ponytail: D26 Phase 2 — ApiVersioning 砍至 Phase 2 恢复
+  // get apiVersionRouter(): ApiVersionRouter {
+  //   if (!this._apiVersionRouter) {
+  //     throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
+  //   }
+  //   return this._apiVersionRouter
+  // }
 
-  get collectionRegistry(): CollectionRegistry {
-    if (!this._collectionRegistry) {
-      throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
-    }
-    return this._collectionRegistry
-  }
+  // ponytail: D26 Phase 2 — DataExtends 砍至 Phase 2 恢复
+  // get collectionRegistry(): CollectionRegistry {
+  //   if (!this._collectionRegistry) {
+  //     throw new Error('CoreApp not bootstrapped. Call bootstrap() first.')
+  //   }
+  //   return this._collectionRegistry
+  // }
 
   async bootstrap(): Promise<void> {
     if (this._fastify) return
@@ -246,11 +238,12 @@ export class CoreApp {
     this._authService = new AuthService(authDb as never, this.config.AUDE_JWT_SECRET)
     this._auditService = new AuditService(db as never)
     // RBACService wired on-demand in routes via requireAuth
-    // --- Phase 1b Services ---
-    this._eventBus = new EventBus({
-      partition: 'SYSTEM',
-      logger: { error: (msg: string, err?: unknown) => this.logger.error({ err }, msg) },
-    })
+
+    // ponytail: D26 Phase 2 — EventBus 砍至 Phase 2 恢复
+    // this._eventBus = new EventBus({
+    //   partition: 'SYSTEM',
+    //   logger: { error: (msg: string, err?: unknown) => this.logger.error({ err }, msg) },
+    // })
 
     this._cronManager = new CronManager({
       connection: this.config.REDIS_URL ?? 'redis://localhost:6379',
@@ -261,47 +254,19 @@ export class CoreApp {
       },
     })
 
-    this._notificationManager = new NotificationManager()
-    this._apiVersionRouter = new ApiVersionRouter()
-    this._apiVersionRouter.registerVersion(1)
-    this._collectionRegistry = new CollectionRegistry()
+    // ponytail: D26 Phase 2 — Notification/ApiVersioning/DataExtends 砍至 Phase 2 恢复
+    // this._notificationManager = new NotificationManager()
+    // this._apiVersionRouter = new ApiVersionRouter()
+    // this._apiVersionRouter.registerVersion(1)
+    // this._collectionRegistry = new CollectionRegistry()
 
-    // FileUpload - DB-backed repository
-    const dbRepo: AttachmentRepository = {
-      async insert(record: AttachmentRecord): Promise<void> {
-        await db.insert(attachments).values({
-          id: record.id,
-          tenant_id: record.tenantId,
-          filename: record.filename,
-          content_type: record.contentType,
-          size: record.size,
-          sha256: record.sha256,
-          storage_backend: record.storageBackend,
-          storage_path: record.storagePath,
-          uploaded_by: record.uploadedBy,
-          created_at: record.createdAt,
-          deleted_at: record.deletedAt,
-        })
-      },
-      async findById(id: string, tenantId: string): Promise<AttachmentRecord | null> {
-        const rows = await db.select().from(attachments).where(and(eq(attachments.id, id), eq(attachments.tenant_id, tenantId))).limit(1)
-        if (rows.length === 0) return null
-        return mapAttachmentRow(rows[0]!)
-      },
-      async list(tenantId: string, _filter?: FileFilter): Promise<{ records: AttachmentRecord[]; total: number }> {
-        const rows = await db.select().from(attachments).where(eq(attachments.tenant_id, tenantId)).limit(100)
-        return { records: rows.map(mapAttachmentRow), total: rows.length }
-      },
-      async softDelete(id: string, tenantId: string): Promise<boolean> {
-        const result = await db.update(attachments).set({ deleted_at: new Date() }).where(and(eq(attachments.id, id), eq(attachments.tenant_id, tenantId)))
-        return (result as unknown as { rowCount: number }).rowCount > 0
-      },
-    }
+    // ponytail: D26 Phase 2 — FileUpload 砍至 Phase 2 恢复
+    // const dbRepo: AttachmentRepository = { ... } — see D26 archive
+    // await mkdir('/tmp/audebase-uploads', { recursive: true })
+    // this._fileUploadService = new FileUploadService(dbRepo, {
+    //   storageDir: '/tmp/audebase-uploads',
+    // })
 
-    await mkdir('/tmp/audebase-uploads', { recursive: true })
-    this._fileUploadService = new FileUploadService(dbRepo, {
-      storageDir: '/tmp/audebase-uploads',
-    })
     // --- Fastify ---
     const app = Fastify({
       logger: false,
@@ -687,7 +652,6 @@ export class CoreApp {
 
     // --- Protected routes (require auth) ---
 
-    // --- Protected routes (require auth) ---
     app.post('/api/auth/change-password', {
       onRequest: [authHook],
     }, async (request, reply) => {
@@ -1027,78 +991,11 @@ export class CoreApp {
     // --- GraphQL endpoint ---
     registerGraphQLRoute(app, this._db!, this.logger, { authHook })
 
-    // --- File upload routes ---
-    app.post('/api/files/upload', {
-      onRequest: [authHook],
-    }, async (request, reply) => {
-      const body = request.body as { filename?: string; mimeType?: string; data?: string }
-      if (!body?.filename || !body?.data || !body?.mimeType) {
-        return reply.code(400).send({
-          error: { code: 'VALIDATION_ERROR', message: 'filename, mimeType, and data (base64) required' },
-        })
-      }
-      const tenantId = (request as unknown as { tenantId: string | null }).tenantId ?? 'system'
-      const userId = (request as unknown as { user?: { sub?: string } }).user?.sub ?? 'unknown'
-
-      try {
-        const buffer = Buffer.from(body.data, 'base64')
-        const file: FileUpload = {
-          filename: body.filename,
-          mimeType: body.mimeType,
-          data: buffer,
-          size: buffer.length,
-        }
-        const record = await this._fileUploadService!.upload(file, tenantId, userId)
-        return reply.code(201).send({ data: record })
-      } catch (err) {
-        return this.handleError(err, reply as ReplyLike)
-      }
-    })
-
-    app.get('/api/files/:id', {
-      onRequest: [authHook],
-    }, async (request, reply) => {
-      const { id } = request.params as { id: string }
-      const tenantId = (request as unknown as { tenantId: string | null }).tenantId ?? 'system'
-      try {
-        const result: DownloadResult | null = await this._fileUploadService!.download(id, tenantId)
-        if (result === null) {
-          return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'File not found' } })
-        }
-        return reply.send({ data: { record: result.record, name: result.name, mimeType: result.mimeType, size: result.data.length } })
-      } catch (err) {
-        return this.handleError(err, reply as ReplyLike)
-      }
-    })
-
-    app.get('/api/files', {
-      onRequest: [authHook],
-    }, async (request, reply) => {
-      const tenantId = (request as unknown as { tenantId: string | null }).tenantId ?? 'system'
-      const query = request.query as { page?: string; pageSize?: string }
-      const filter: FileFilter = {}
-      if (query.page) { filter.page = parseInt(query.page, 10) }
-      if (query.pageSize) { filter.pageSize = parseInt(query.pageSize, 10) }
-      try {
-        const result: ListResult = await this._fileUploadService!.list(tenantId, filter)
-        return reply.send({ data: result.data, total: result.total, page: result.page, pageSize: result.pageSize })
-      } catch (err) {
-        return this.handleError(err, reply as ReplyLike)
-      }
-    })
-
-    app.delete('/api/files/:id', {
-      onRequest: [authHook],
-    }, async (request, reply) => {
-      const { id } = request.params as { id: string }
-      const tenantId = (request as unknown as { tenantId: string | null }).tenantId ?? 'system'
-      try {
-        await this._fileUploadService!.delete(id, tenantId)
-        return reply.code(204).send()
-      } catch (err) {
-        return this.handleError(err, reply as ReplyLike)
-      }
-    })
+    // ponytail: D26 Phase 2 — FileUpload routes 砍至 Phase 2 恢复
+    // app.post('/api/files/upload', ...) { ... }
+    // app.get('/api/files/:id', ...) { ... }
+    // app.get('/api/files', ...) { ... }
+    // app.delete('/api/files/:id', ...) { ... }
   }
 
   private handleError(err: unknown, reply: ReplyLike): void {
