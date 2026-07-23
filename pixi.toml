@@ -10,6 +10,7 @@ nodejs = ">=22.22.0,<23"
 python = "3.12.*"
 pip = ">=24.0"
 pnpm = "10.32.*"
+yarn = ">=4.17.1,<5"
 
 # --- Features (composable dependency groups) ---
 
