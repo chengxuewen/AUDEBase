@@ -453,7 +453,7 @@ AUDEBase 采用 Odoo 式 Poland notation（前缀表达式）数组语法：
     - 插件安全边界较弱（所有插件共享同一进程空间，无容器隔离层）
     - 无原生 Saga 跨插件事务支持
     - 前端表单引擎（Formily）社区维护不稳定，AUDEBase 已验证 ProTable/ProForm 路径
-- **状态**: 🔲 Phase 3 执行中
+- **状态**: 📋 Phase 3 执行中 — Phase 0 Spike 完成（2026-07-21），Phase 1a 执行计划已定稿（2026-07-22）
 
 #### D25.1: NocoBase 覆盖范围
 
@@ -585,5 +585,6 @@ AUDEBase 采用 Odoo 式 Poland notation（前缀表达式）数组语法：
 - **D25.6.8 — canonical-schema 保留 Zod**: 撤销团队审查削减，D8 要求在系统边界使用 Zod 验证（+0.5d 工时）。
 - **D25.6.9 — 削减范围**: Phase 1a 砍 StatsPage、costPerKg、WebSocket 实时推送、Import conflictStrategy，减少 3.3 天。
 - **D25.6.10 — 测试策略**: 4 级覆盖率闸门 — 单元 ≥80% / 集成 roundtrip / E2E 冒烟 9 场景 / 总体 ≥80%。6 份 SDD/TDD 文档编码前由 AI 代理生成。
+- **D25.6.11 — 抽象层边界**: Phase 1a 3D 打印机为探索期例外，可直接 import NocoBase。Phase 1b+ 起 OA/ERP/MES 等正式业务强制通过 IPlatform/usePlatform() 调用平台能力。Phase 1a→1b 过渡闸门完成 IPlatformClient 最小可行接口提取。
 
 **状态**: 📋 计划定稿，待执行。

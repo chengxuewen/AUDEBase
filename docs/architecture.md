@@ -1,6 +1,6 @@
 # AUDEBase 架构文档
 
-> **版本**: 3.0 | **更新日期**: 2026-07-21 | **状态**: Phase 3 战略转型 — 基于 NocoBase 重构
+> **版本**: 3.0 | **更新日期**: 2026-07-22 | **状态**: Phase 3 战略转型 — 基于 NocoBase 重构
 
 > ⚠️ **Phase 3 架构变更声明** (2026-07-21)
 > AUDEBase 决定以 NocoBase 为基础平台，将自研创新点（四层信任分组、增强 manifest.yaml、Record Rules）作为 NocoBase 插件实现。本架构文档保留 Phase 1a-2 的自建架构设计作为参考。实施计划见 `docs/superpowers/specs/2026-07-22-phase1a-execution-plan.md`。
@@ -130,21 +130,21 @@ AUDEBase 采用三层概念模型组织业务功能：
 
 | 层级     | 选型                                                    | 详情                                |
 | -------- | ------------------------------------------------------- | ----------------------------------- |
-| 语言     | TypeScript                                              | [技术栈选型](modules/tech-stack.md) |
-| 后端     | Node.js + Fastify                                       | [技术栈选型](modules/tech-stack.md) |
-| ORM      | Drizzle ORM                                             | [技术栈选型](modules/tech-stack.md) |
-| 前端     | React 19 + Ant Design 5（ProLayout + ProTable/ProForm） | [技术栈选型](modules/tech-stack.md) |
-| 数据库   | PostgreSQL 16+                                          | [技术栈选型](modules/tech-stack.md) |
-| 任务队列 | BullMQ + Redis                                          | [技术栈选型](modules/tech-stack.md) |
-| 测试     | Vitest + Playwright                                     | [技术栈选型](modules/tech-stack.md) |
-| 构建     | Turborepo + tsup + Vite                                 | [技术栈选型](modules/tech-stack.md) |
+| 语言     | TypeScript                                              | TypeScript 全栈统一 |
+| 后端     | Node.js + Fastify                                       | 原生插件系统，JSON Schema 验证 |
+| ORM      | Drizzle ORM                                             | 类型安全 + 自动参数化防注入 |
+| 前端     | React 19 + Ant Design 5（ProLayout + ProTable/ProForm） | 单一组件库，ConfigProvider 统一主题 |
+| 数据库   | PostgreSQL 16+                                          | Phase 1a 强制 PG（SET CONSTRAINTS, REPEATABLE READ） |
+| 任务队列 | BullMQ + Redis                                          | 定时任务 + 异步任务处理 |
+| 测试     | Vitest + Playwright                                     | 单元 + E2E |
+| 构建     | Turborepo + tsup + Vite                                 | Monorepo + 增量编译 |
 
 **关键安全决策**：
 
 - JWT 密钥通过环境变量注入，启动校验 ≥32 字符（参考 NocoBase CVE-2025-13877）
 - antd 精确版本锁定 + npm audit + Renovate（参考 decisions.md D6.1）
 
-**详细选型理由、替代方案分析、配置参数见 [技术栈选型](modules/tech-stack.md)**
+**详细选型理由、替代方案分析、配置参数见 [decisions.md](../.agents/memorys/decisions.md) D5-D9**
 ---
 
 ## 四、核心模块设计
@@ -169,7 +169,7 @@ AUDEBase 由 28 个独立 npm 包组成，按职责分为五层：**内核** →
 
 定义插件接口契约：PluginHost 抽象（Phase 1 `InlinePluginHost` 实现，接口预留跨进程语义）→ 7 个生命周期钩子（`afterAdd → beforeLoad → load → install → afterEnable → afterDisable → pre_uninstall`）→ PluginManager 负责插件注册、依赖解析、加载管线编排。
 
-详见 [插件框架设计](modules/plugin-framework.md) 和 [插件架构分析](analysis/plugin-architecture-analysis.md)。
+详见 [插件框架设计](archive/plugin-framework.md) 和 [插件架构分析](analysis/plugin-architecture-analysis.md)。
 
 #### 4.2.2 内核插件 (plugin-core)
 
@@ -189,7 +189,7 @@ Odoo 式按版本排序 + NocoBase 三阶段迁移。Scanner→Resolver→Execut
 
 组内直接函数调用（~0ms），组间 JSON-RPC over stdin/stdout（同步 RPC）+ Redis Pub/Sub（异步事件）。启动握手 token + nonce 防重放 + Content-Length 帧协议（1MB 上限）。
 
-详见 [插件通信与权限](modules/plugin-communication.md)。
+详见 [插件通信与权限](archive/plugin-communication.md)。
 
 #### 4.3.2 事件总线 (event-bus)
 
@@ -279,7 +279,7 @@ BullMQ repeatable jobs。插件通过 `this.app.cron.add(schedule, handler)` API
 
 ## 五、多租户架构
 
-> 详细设计见 [多租户架构](modules/multi-tenant.md)
+> 详细设计见 [多租户架构](archive/multi-tenant.md)
 
 四阶段演进：tenant_id 字段隔离 → PostgreSQL Schema-per-tenant → Database-per-tenant → 混合模式。
 文件存储：Phase 1 本地路径前缀 → Phase 2 DB 元数据 + MinIO（Odoo ir.attachment 模式）。

@@ -50,15 +50,23 @@ AUDEBase standalone packages (canonical-schema, migration-engine) remain in the 
 ### 1.2 混合策略
 
 ```
-Phase 1a (3.5 周双人) — 核心突围
-  业务代码 = NocoBase 插件（直接 import @nocobase/server）
+Phase 1a (~4 周双人) — 探索期
+  3D 打印机 MVP：可直接 import @nocobase/server
   解耦靠 Canonical Schema export/import
   Admin = NocoBase Client（零新增）
   Agent = HTTP polling（非 WebSocket）
+  目的：快速交付，探索 NocoBase API 形态，为抽象层设计提供实战输入
 
-Phase 1b (3-4 周) — 验证后渐进抽象
-  基于真实使用反馈，提取 IPlatformClient
-  仅在 NocoBase Client 真不够用时建 admin-shell
+Phase 1a→1b 过渡闸门 (1-2 周)
+  🔒 强制完成 IPlatformClient 最小可行接口
+  🔒 基于 3D 打印机真实调用提取：IDataClient / IAuthClient / ITenantClient
+  🔒 实现 adapter-nocobase/client
+  🔒 验证闸门：plugin-3d-printer 用例通过 usePlatform() 重放通过
+
+Phase 1b+ (3-4 周) — 正式期
+  🚫 禁止新业务插件（OA/ERP/MES）直接 import @nocobase/*
+  ✅ 必须通过 IPlatform/usePlatform() 调用平台能力
+  旧 plugin-3d-printer 可选迁移（非强制）
 
 Phase 2+ — 持续抽象
   第二个业务应用 → 提取共性 → 接口稳定 v1.0
@@ -1143,6 +1151,7 @@ npx playwright test tests/e2e/3d-printer-smoke.e2e.ts   # 9/9 passed
 | P11 | 强制 PostgreSQL（非 SQLite） | 团队审查：SET CONSTRAINTS / REPEATABLE READ 为 PG 专属 |
 | P12 | No-Go 回退：1 周攻关 → 二次闸门 → 降级 | 团队审查：无回退路径为计划盲点 |
 
+| P13 | Phase 1a→1b 过渡闸门：抽象层强制 | 3D 打印机为探索期例外（可直 import NocoBase）。Phase 1b+ OA/ERP/MES 必须通过 IPlatform。过渡期提取 IPlatformClient，验证闸门通过后方可进入正式业务开发。|
 ## 8. Phase 1b+ 后续包路线图
 
 D25.3 标记保留并转化为 NocoBase 插件的 11 个包中，Phase 1a 覆盖 3 个（record-rules / canonical-schema / migration-engine）。剩余 8 个按依赖关系分批：

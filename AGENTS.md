@@ -133,7 +133,7 @@ _自建架构设计文档已归档至 `docs/archive/`。以下为仍活跃的通
 | 插件通信 | `docs/archive/plugin-communication.md` | 设计 |
 | 多租户 | `docs/archive/multi-tenant.md` | 设计 |
 | Admin UI | `docs/archive/frontend-spec.md` | 设计 |
-| 文件存储 | `docs/archive/file-storage-sdd.md` | 设计 |
+| 文件存储 | `docs/archive/file-upload-sdd.md` | 设计 |
 | plugin-development | `docs/archive/plugin-development.md` | 指南 |
 | 28 包 SDD/TDD | `docs/archive/*-sdd.md` / `*-tdd.md` (51 文件) | 参考 |
 
@@ -169,6 +169,7 @@ _28 包全部实现（插件市场除外），102 测试文件，tsc 全包 clea
 | Core 内核骨架 | ✅ Phase 1a | `packages/core/` - Fastify bootstrap + 中间件 + 配置（GO-021） | ✅ core-sdd.md | ✅ core-tdd.md |
 | CLI 工具 | ✅ Phase 1a | `packages/cli/` - aude dev/db:migrate/plugin:create（GO-023） | ✅ cli-sdd.md | ✅ cli-tdd.md |
 | JWT 认证 | ✅ Phase 1a | `packages/auth/` - JWT 签发/验证 + token_version（GO-022） | ✅ auth-sdd.md | ✅ auth-tdd.md |
+| 速率限制 | ✅ Phase 1a | `packages/rate-limit/` - 固定窗口计数器限流 | ✅ rate-limit-sdd.md | ✅ rate-limit-tdd.md |
 | 插件示例 | ✅ Phase 1a | `packages/plugin-example/` - 开发参考模板 | 🔲 待生成 | 🔲 待生成 |
 
 ### Phase 3 NocoBase 迁移包（执行计划新增）
@@ -203,7 +204,7 @@ _28 包全部实现（插件市场除外），102 测试文件，tsc 全包 clea
 
 - **去 MODACS 化**: 保持零 MODACS 残留，每次修改后运行 `grep -ri modacs . --exclude-dir=.git --exclude-dir=.sisyphus`
 - **精确编辑**: 不全局 MODACS→AUDEBase 替换，使用手术式编辑
-- **架构骨架**: `docs/architecture.md` 14 章 1003 行，全部章节已展开，无 TODO 占位
+- **架构骨架**: `docs/architecture.md` 14 章 1039 行，全部章节已展开，无 TODO 占位
 - _*@modacs/* 移除_*: 移除所有 `@modacs/*` 引用，不自动替换为 `@AUDEBase/*`
 
 ### TypeScript

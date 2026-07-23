@@ -195,12 +195,12 @@ audebase/
 
 ## Phase 路线图
 
-**Phase 2 完成** — 28 包全部实现，工作流引擎 (Phase 4) 完成
+**Phase 2 完成** — 28 包全部实现，工作流引擎 (Phase 4) 完成。**Phase 3 NocoBase 战略转型** — Phase 0 Spike 完成，Phase 1a 执行计划定稿。
 | Phase 0 | ✅ | 架构定义、8 轮团队审核、3 轮文档审计 |
-| Phase 1a | ✅ | 14 包实现：插件框架、RBAC、审计、日志、i18n、健康检查、管理 UI 等 |
+| Phase 1a (自建) | ✅ | 14 包实现：插件框架、RBAC、审计、日志、i18n、健康检查、管理 UI 等 |
 | Phase 1b | ✅ | 6 包实现：EventBus、Cron、文件上传、通知、API 版本化、数据扩展 |
 | Phase 2 | ✅ | Schema Engine + WebSocket（动态模型定义、实时事件订阅） |
-| Phase 3 | 🔲 | OpenTelemetry + 插件市场 + Database-per-tenant + 混合模式 |
+| Phase 3 (NocoBase) | 📋 Phase 1a 就绪 | 以 NocoBase 为基础平台，自研创新作为 NocoBase 插件。P1a: 3D 打印机 MVP + Canonical Schema 解耦 |
 | Phase 4 | ✅ | 工作流引擎（workflow-core/engine/tasks — Saga 补偿模式） |
 
 实施计划见 [2026-07-22-phase1a-execution-plan.md](docs/superpowers/specs/2026-07-22-phase1a-execution-plan.md)。架构决策见 [decisions.md](.agents/memorys/decisions.md) D25（基于 NocoBase 重构）。
