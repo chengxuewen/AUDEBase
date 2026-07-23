@@ -951,7 +951,7 @@ print_jobs:
 ```
 
 ## 5. 阶段性验收检查点
-
+每个检查点面向人工 QA — 打开浏览器，按步骤操作，眼见为实。**详细验收清单见** `docs/superpowers/specs/2026-07-22-phase1a-acceptance-checklist.md`。
 每个检查点面向人工 QA — 打开浏览器，按步骤操作，眼见为实。
 
 ### M1 — Week 1 验收（Day 5）：平台就绪 + 类型验证
