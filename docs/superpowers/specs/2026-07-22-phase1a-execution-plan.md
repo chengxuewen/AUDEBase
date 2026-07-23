@@ -116,7 +116,7 @@ Person B:
 
 Gate checkpoint (Day 10): A completes migration-engine + B verifies Canonical Schema alignment -> integration test (1d)
 SDD/TDD gate: Day 1 (canonical-schema), Day 2 (migration-engine), Day 10 (plugin-3d-printer) — each must have -sdd.md + -tdd.md completed before coding starts.
-Total: ~17 workdays = ~4 weeks
+Total: ~17 workdays = ~4 weeks (dual parallel). ~23d sequentially (A then B then B).
 ## 3. 包设计
 
 ### 3.1 `@audebase/canonical-schema`
@@ -1199,7 +1199,7 @@ SDD 结构（8 节）：概要 → 接口定义 → 生命周期 → 依赖 → 
 |----|---------|:---:|:---:|
 | canonical-schema | `docs/modules/canonical-schema-tdd.md` | 5 (3 type assertions + 2 Zod validation) | 类型 + 边界验证（编译期 + 运行时）|
 | migration-engine | `docs/modules/migration-engine-tdd.md` | 32 (export 8 + diff 6 + import 8 + noco-base 4 + topo 6) + 3 roundtrip | ≥80% |
-| plugin-3d-printer | `docs/modules/plugin-3d-printer-tdd.md` | 18 (agent-handler 6 + 3 页面各约 4) | ≥80% |
+| plugin-3d-printer | `docs/modules/plugin-3d-printer-tdd.md` | 24 (agent-handler 6 + pages 14 + collections 3 + agent main 1) | ≥80% |
 | Agent | 合并入 `plugin-3d-printer-tdd.md` §Agent | 验证心跳/命令/进度/认证 | ≥80% |
 
 **TDD 文档必备内容：**

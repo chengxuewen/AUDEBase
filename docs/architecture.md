@@ -636,7 +636,7 @@ Phase 1a 引入 **Canonical Schema** — 平台无关的 JSON 数据格式，用
 
 ## 十一、安全架构
 
-> 安全决策引用：D1.1（信任分组）· D8.1（JWT 密钥）· D12（Core API 代理）· D19（ACLProvider）· D1.12（审计日志）· D6.1（供应链安全）
+> 安全决策引用：D1.1（信任分组, ⚠️ 搁置）· D8.1（JWT 密钥）· D12（Core API 代理）· D19（ACLProvider）· D1.12（审计日志）· D6.1（供应链安全）
 
 ### 11.1 安全设计原则
 
