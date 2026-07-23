@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BrowserRouter } from 'react-router-dom'
 import { Button, Spin, message } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { getToken, clearTokens, apiGet } from './api/client.js'
@@ -11,8 +12,8 @@ import { UserListPage } from './pages/users/UserListPage.js'
 import { RoleListPage } from './pages/roles/RoleListPage.js'
 import { AuditLogPage } from './pages/audit/AuditLogPage.js'
 import { ExtensionListPage } from './pages/extensions/ExtensionListPage.js'
-
-interface JwtPayload {
+import { RefineProvider } from './providers/refine.js'
+  interface JwtPayload {
   exp?: number
 }
 
@@ -118,8 +119,12 @@ export function App(): ReactNode {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AdminApp />
-    </QueryClientProvider>
+    <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <RefineProvider>
+          <AdminApp />
+        </RefineProvider>
+      </QueryClientProvider>
+    </BrowserRouter>
   )
 }
