@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { getToken, clearTokens, apiGet } from './api/client.js'
 import { LoginPage } from './pages/LoginPage.js'
 import { AdminLayout } from './layout/AdminLayout.js'
+// ponytail: old hand-written CRUD pages kept for Phase 1a compat.
 import { PluginListPage } from './pages/plugins/PluginListPage.js'
 import { UserListPage } from './pages/users/UserListPage.js'
 import { RoleListPage } from './pages/roles/RoleListPage.js'

@@ -138,7 +138,7 @@ _自建架构设计文档已归档至 `docs/archive/`。以下为仍活跃的通
 | 28 包 SDD/TDD | `docs/archive/*-sdd.md` / `*-tdd.md` (51 文件) | 参考 |
 
 ## CODE MAP
-_28 包全部实现（插件市场除外），102 测试文件，tsc 全包 clean。D26 重构中——管理 UI 迁移至 Refine，后端裁剪至 15 包底座。_
+_28 包全部实现（插件市场除外），102 测试文件，tsc 全包 clean。D26 完成——Refine + ProLayout + Schema→UI Mapper 混合架构。
 
 | 模块 | 状态 | 规划路径 | SDD | TDD |
 |------|------|----------|-----|-----|
@@ -163,7 +163,7 @@ _28 包全部实现（插件市场除外），102 测试文件，tsc 全包 clea
 | 工作流任务 | ✅ Phase 4 | `packages/workflow-tasks/` - D13 | 🔲 待生成 | 🔲 待生成 |
 | shared-types | ✅ Phase 1a | `packages/shared-types/` - 公共类型定义 | ✅ shared-types-sdd.md | ✅ shared-types-tdd.md |
 | 国际化 (i18n) | ✅ Phase 1a | `packages/i18n/` - D14 | ✅ i18n-sdd.md | ✅ i18n-tdd.md |
-│ 管理 UI | 🔄 D26 重构中 | `packages/admin-ui/` - Refine + ProLayout + Schema→UI Mapper（D26） | ✅ admin-ui-sdd.md | ✅ admin-ui-tdd.md
+│ 管理 UI | ✅ D26 完成 | `packages/admin-ui/` - Refine + ProLayout + Schema→UI Mapper（D26） | ✅ admin-ui-sdd.md | ✅ admin-ui-tdd.md
 | 健康检查 | ✅ Phase 1a | `packages/health-check/` - D1.13 | ✅ health-check-sdd.md | ✅ health-check-tdd.md |
 | 日志/调试基础设施 | ✅ Phase 1a | `packages/logging-infra/` - 结构化日志 + Core 聚合 | ✅ logging-infra-sdd.md | ✅ logging-infra-tdd.md |
 | Core 内核骨架 | ✅ Phase 1a | `packages/core/` - Fastify bootstrap + 中间件 + 配置（GO-021） | ✅ core-sdd.md | ✅ core-tdd.md |
