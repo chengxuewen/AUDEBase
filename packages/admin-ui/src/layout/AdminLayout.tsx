@@ -25,6 +25,8 @@ const defaultMenuItems: MenuItem[] = [
   { key: 'roles', labelKey: 'menu.roles', snippet: 'role' },
   { key: 'audit', labelKey: 'menu.audit', snippet: 'audit_log' },
   { key: 'extensions', labelKey: 'menu.extensions', snippet: 'extension' },
+  { key: 'print_jobs', labelKey: 'menu.printJobs', snippet: 'print_job' },
+  { key: 'devices', labelKey: 'menu.devices', snippet: 'device' },
 ]
 
 

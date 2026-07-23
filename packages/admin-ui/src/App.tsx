@@ -12,6 +12,8 @@ import { UserListPage } from './pages/users/UserListPage.js'
 import { RoleListPage } from './pages/roles/RoleListPage.js'
 import { AuditLogPage } from './pages/audit/AuditLogPage.js'
 import { ExtensionListPage } from './pages/extensions/ExtensionListPage.js'
+import { PrintJobsPage } from './pages/workspace/PrintJobsPage.js'
+import { DeviceManagement } from './pages/workspace/DeviceManagement.js'
 import { RefineProvider } from './providers/refine.js'
   interface JwtPayload {
   exp?: number
@@ -48,6 +50,8 @@ function AdminApp(): ReactNode {
     roles: <RoleListPage />,
     audit: <AuditLogPage />,
     extensions: <ExtensionListPage />,
+    print_jobs: <PrintJobsPage />,
+    devices: <DeviceManagement />,
   }
 
 
