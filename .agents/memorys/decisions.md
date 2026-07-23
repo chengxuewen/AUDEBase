@@ -1,8 +1,8 @@
 # AUDEBase 架构决策记录
 
-**更新日期**: 2026-07-22
+**更新日期**: 2026-07-23
 
-## 架构决策 (D1-D14, D15-D24, D25)
+## 架构决策 (D1-D14, D15-D24, D25, D26)
 
 ### D1: 微内核 + 插件热插拔架构
 
@@ -439,7 +439,9 @@ AUDEBase 采用 Odoo 式 Poland notation（前缀表达式）数组语法：
 - **状态**: ✅ Phase 1a 已实现
 
 
-### D25: 基于 NocoBase 重构
+### D25: 基于 NocoBase 重构 ⚠️ 已废弃（D26 替代，2026-07-23）
+
+- **状态**: ⚠️ 已废弃 — D26（Refine+ProLayout+自建15包后端）全面替代此方案。保留 D25.6.1（Agent HTTP polling）、D25.6.2（Canonical Schema 往返闸门，改为 Drizzle 实现）、D25.6.7（PostgreSQL 16）、D25.6.9（削减范围）。NocoBase 特定组件（Sequelize/Koa/Formily/NocoBase Database API）全部废弃。详见 `docs/superpowers/specs/2026-07-23-refine-hybrid-architecture-design.md`。
 
 - **决策**: 采用 NocoBase v2.0 作为 AUDEBase 的核心运行时，替代从零构建的 `@audebase/core` 服务。AUDEBase 保留微内核 + 插件热插拔理念，将底层框架、数据层、ACL 系统等基础能力交由 NocoBase 承担，AUDEBase 专注上层差异化创新。
 - **背景**: AUDEBase 在 2026-07 已完成 28 个 packages 的独立实现（含 PluginManager、ACL、Schema Engine、生命周期管理、RBAC 等），架构理念与 NocoBase 高度一致（微内核、插件化、Collection+Field 数据模型）。继续独立维护底层框架的边际成本远超收益，而 NocoBase 作为生产验证的平台（GitHub 28K+ stars，2026-02 v2.0 正式发布）提供了更稳定的基础设施。
@@ -587,4 +589,16 @@ AUDEBase 采用 Odoo 式 Poland notation（前缀表达式）数组语法：
 - **D25.6.10 — 测试策略**: 4 级覆盖率闸门 — 单元 ≥80% / 集成 roundtrip / E2E 冒烟 9 场景 / 总体 ≥80%。6 份 SDD/TDD 文档编码前由 AI 代理生成。
 - **D25.6.11 — 抽象层边界**: Phase 1a 3D 打印机为探索期例外，可直接 import NocoBase。Phase 1b+ 起 OA/ERP/MES 等正式业务强制通过 IPlatform/usePlatform() 调用平台能力。Phase 1a→1b 过渡闸门完成 IPlatformClient 最小可行接口提取。
 
-**状态**: 📋 计划定稿，待执行。
+**状态**: ⚠️ 已废弃（D26 替代）
+
+---
+
+### D26: Refine + ProLayout 混合前端架构 (2026-07-23)
+
+- **决策**: 前端采用 Refine 数据层 + ProLayout 外壳 + 自建 Schema→UI 映射器。后端 15 包底座（Fastify + Drizzle + PostgreSQL）。
+- **理由**: Refine 是唯一同时满足 antd 一等公民 + Headless + 官方 antd 集成的框架。
+- **映射器**: 移植 NocoBase SchemaComponent 设计——Collection 定义 → 自动生成 ProTable 页面。
+- **权限**: ProLayout 菜单过滤 + CanAccess 按钮守卫 + D10 Record Rules WHERE 注入。
+- **保留 D25 子决策**: Agent polling (D25.6.1)、Canonical Schema 闸门 (D25.6.2, Drizzle)、PostgreSQL (D25.6.7)、削减范围 (D25.6.9)。
+- **参考**: `docs/superpowers/specs/2026-07-23-refine-hybrid-architecture-design.md`
+- **状态**: ✅ 设计定稿，审计完成（4路，7C+9H+10M+8L，全部修复）
