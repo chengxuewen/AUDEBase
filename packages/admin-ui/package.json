@@ -11,6 +11,11 @@
     "check": "tsc --noEmit"
   },
   "dependencies": {
-    "@audebase/shared-types": "workspace:*"
+    "@ant-design/pro-layout": "^7.22.7",
+    "@audebase/shared-types": "workspace:*",
+    "@refinedev/antd": "^6.0.3",
+    "@refinedev/core": "^5.0.12",
+    "@refinedev/react-router": "^2.0.4",
+    "@refinedev/simple-rest": "^6.0.1"
   }
 }
