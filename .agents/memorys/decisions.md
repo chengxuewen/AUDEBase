@@ -601,4 +601,18 @@ AUDEBase 采用 Odoo 式 Poland notation（前缀表达式）数组语法：
 - **权限**: ProLayout 菜单过滤 + CanAccess 按钮守卫 + D10 Record Rules WHERE 注入。
 - **保留 D25 子决策**: Agent polling (D25.6.1)、Canonical Schema 闸门 (D25.6.2, Drizzle)、PostgreSQL (D25.6.7)、削减范围 (D25.6.9)。
 - **参考**: `docs/superpowers/specs/2026-07-23-refine-hybrid-architecture-design.md`
-- **状态**: ✅ 设计定稿，审计完成（4路，7C+9H+10M+8L，全部修复）
+- **状态**: ✅ 设计定稿 + 实施完成（2026-07-23）。10 Task 全部完成：管理 UI 迁移至 Refine + ProLayout + Schema→UI Mapper，后端裁剪至 15 包底座，前端重写为 RefineProvider + collection-driven pages，旧页面清理归档。
+
+- **实施详情**:
+  - Phase 1: 后端 28→15 包底座裁剪 + Refine 依赖安装
+  - Phase 2: Refine dataProvider/authProvider 创建 + 测试
+  - Phase 3: RefineProvider wrapper + BrowserRouter 集成
+  - Phase 4: Schema→UI 映射器（field-mapping + schema-to-refine）+ 测试
+  - Phase 5: MES + Admin Collection 定义（print_jobs/devices/materials/model_library + users/roles/plugins/audit）
+  - Phase 6: 生成管理中心 + MES CRUD 页面（6页, 100%映射器自动生成）
+  - Phase 7: MES 双栏监控页面（打印任务+设备管理）+ polling 生命周期
+  - Phase 8: MES 仪表盘 + useAgentPolling hook（IoT 总览 + 通用 polling）
+  - Phase 9: CanAccess + useACL 桥接 + 验收清单 + 全量测试 + 旧页面清理归档
+
+- **测试状态**: ~913 tests passing, 所有失败均为预存问题
+- **Git**: 12 commits from `3cd0d1a` to `a6fd832`
