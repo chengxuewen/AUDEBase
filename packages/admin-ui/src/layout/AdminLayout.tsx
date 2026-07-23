@@ -20,6 +20,7 @@ interface MenuItem {
 }
 
 const defaultMenuItems: MenuItem[] = [
+  { key: 'dashboard', labelKey: 'menu.dashboard', snippet: 'dashboard' },
   { key: 'plugins', labelKey: 'menu.plugins', snippet: 'plugin' },
   { key: 'users', labelKey: 'menu.users', snippet: 'user' },
   { key: 'roles', labelKey: 'menu.roles', snippet: 'role' },

@@ -30,11 +30,14 @@
     "expired": "登录已过期，请重新登录"
   },
   "menu": {
+    "dashboard": "仪表盘",
     "plugins": "插件管理",
     "users": "用户管理",
     "roles": "角色管理",
     "audit": "审计日志",
-    "extensions": "扩展管理"
+    "extensions": "扩展管理",
+    "printJobs": "打印任务",
+    "devices": "设备管理"
   },
   "plugins": {
     "title": "插件管理",

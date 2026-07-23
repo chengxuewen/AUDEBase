@@ -14,6 +14,7 @@ import { AuditLogPage } from './pages/audit/AuditLogPage.js'
 import { ExtensionListPage } from './pages/extensions/ExtensionListPage.js'
 import { PrintJobsPage } from './pages/workspace/PrintJobsPage.js'
 import { DeviceManagement } from './pages/workspace/DeviceManagement.js'
+import { Dashboard } from './pages/workspace/Dashboard.js'
 import { RefineProvider } from './providers/refine.js'
   interface JwtPayload {
   exp?: number
@@ -36,7 +37,7 @@ const queryClient = new QueryClient()
 
 function AdminApp(): ReactNode {
   const { t } = useTranslation('client')
-  const [activePage, setActivePage] = useState('plugins')
+  const [activePage, setActivePage] = useState('dashboard')
 
   const handleLogout = (): void => {
     clearTokens()
@@ -45,6 +46,7 @@ function AdminApp(): ReactNode {
   }
 
   const pages: Record<string, ReactNode> = {
+    dashboard: <Dashboard />,
     plugins: <PluginListPage />,
     users: <UserListPage />,
     roles: <RoleListPage />,
