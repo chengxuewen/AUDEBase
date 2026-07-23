@@ -12,6 +12,7 @@
 **为什么不是 NocoBase**：AGPL 许可证 + Koa/Sequelize 技术栈不兼容 + 上游社区风险。
 **为什么不是 React Admin**：antd 支持靠社区补丁，ProTable/ProForm 不支持。
 **为什么不是纯自建前端**：Refine 的 dataProvider/authProvider/useList 省去手写 CRUD 重复代码。
+**Canonical Schema 往返闸门**（D25.6.2 保留）：`@audebase/schema-engine` 提供 `CollectionDef`/`FieldDef` 类型——mapper 消费此类型生成页面。往返闸门（export→import→export→diff）作为 schema-engine 集成测试独立验证，不耦合 Refine 前端。
 
 ## 二、架构总览
 
@@ -431,7 +432,7 @@ packages/
 │                        #   @refinedev/simple-rest, @ant-design/pro-layout (显式锁定)
 │
 └── backend/ (15包底座)
-    ├── ✅ 保留 (12包)
+    ├── ✅ 保留 (14包)
     │   ├── core/                   # Fastify + 中间件
     │   ├── auth/                   # JWT 认证
     │   ├── rbac/                   # RBAC + D10 Record Rules
