@@ -560,8 +560,6 @@ export function toProTableColumn(field: FieldDef): ProColumns {
   switch (field.type) {
     case 'string':
       return { ...base, copyable: true }
-    case 'text':
-      return { ...base, copyable: true }
     case 'number':
       return { ...base, align: 'right' }
     case 'boolean':
@@ -582,8 +580,6 @@ export function toProFormField(field: FieldDef): React.ReactNode {
   switch (field.type) {
     case 'string':
       return <Input key={field.name} />
-    case 'text':
-      return <Input.TextArea key={field.name} rows={4} />
     case 'number':
       return <InputNumber key={field.name} style={{ width: '100%' }} />
     case 'boolean':
@@ -660,7 +656,7 @@ export function mapCollectionToRefine(collection: CollectionDef): PageComponents
 
   function Create() {
     const form = ProForm.useForm()[0]
-    const { onFinish } = useCreateForm({ resource: collection.name })
+    const { onFinish } = useForm({ resource: collection.name, action: "create" });
     const navigate = useNavigate()
 
     return (
@@ -680,7 +676,7 @@ export function mapCollectionToRefine(collection: CollectionDef): PageComponents
   }
 
   function Edit() {
-    const { onFinish, formLoading } = useEditForm({ resource: collection.name })
+    const { onFinish, formLoading } = useForm({ resource: collection.name, action: "edit" });
     const form = ProForm.useForm()[0]
 
     return (
@@ -757,16 +753,8 @@ git commit -m "feat: 创建 Schema→UI 映射器核心 + 7 种字段类型映�
 在 `field-mapping.ts` 中补充 `text`、`json` 类型的完整处理和 `hasMany` 展示：
 
 ```typescript
-// 补充 json 类型
-case 'json':
-  return {
-    ...base,
-    render: (v: any) => {
-      try { return JSON.stringify(v).slice(0, 50) + (JSON.stringify(v).length > 50 ? '…' : '') }
-      catch { return String(v) }
-    }
-  }
-```
+// ponytail: 复杂字段类型 (json, text, file) 由 default renderer 处理
+// FieldType 扩展时在此添加新 case
 
 - [ ] **Step 2: 补充测试**
 
@@ -1472,7 +1460,7 @@ git commit -m "feat: 创建 useAgentPolling hook (D25.6.1 — 通用 HTTP pollin
 
 ```typescript
 // packages/admin-ui/src/providers/CanAccessBridge.tsx
-import { useACL } from '../hooks/useACL'
+import { useACL } from '@audebase/admin-ui'
 
 interface CanAccessBridgeProps {
   resource: string
@@ -1482,7 +1470,7 @@ interface CanAccessBridgeProps {
 
 export function CanAccessBridge({ resource, action, children }: CanAccessBridgeProps) {
   const { can } = useACL()
-  return can(`${resource}:${action}`) ? <>{children}</> : null
+  return can(action, resource) ? <>{children}</> : null
 }
 ```
 

@@ -195,15 +195,15 @@ audebase/
 
 ## Phase 路线图
 
-**Phase 2 完成** — 28 包全部实现，工作流引擎 (Phase 4) 完成。**Phase 3 NocoBase 战略转型** — Phase 0 Spike 完成，Phase 1a 执行计划定稿。
+**Phase 2 完成** — 28 包全部实现，工作流引擎 (Phase 4) 完成。**D26** — Refine+ProLayout+自建15包底座。D25 NocoBase 方案已废弃。
 | Phase 0 | ✅ | 架构定义、8 轮团队审核、3 轮文档审计 |
 | Phase 1a (自建) | ✅ | 14 包实现：插件框架、RBAC、审计、日志、i18n、健康检查、管理 UI 等 |
 | Phase 1b | ✅ | 6 包实现：EventBus、Cron、文件上传、通知、API 版本化、数据扩展 |
 | Phase 2 | ✅ | Schema Engine + WebSocket（动态模型定义、实时事件订阅） |
-| Phase 3 (NocoBase) | 📋 Phase 1a 就绪 | 以 NocoBase 为基础平台，自研创新作为 NocoBase 插件。P1a: 3D 打印机 MVP + Canonical Schema 解耦 |
+| Phase 4 (NocoBase 探索) | ⚠️ 已废弃（D26） | D25 基于 NocoBase 重构方案，被 D26 Refine+ProLayout+自建15包底座替代 |
 | Phase 4 | ✅ | 工作流引擎（workflow-core/engine/tasks — Saga 补偿模式） |
 
-实施计划见 [2026-07-22-phase1a-execution-plan.md](docs/superpowers/specs/2026-07-22-phase1a-execution-plan.md)。架构决策见 [decisions.md](.agents/memorys/decisions.md) D25（基于 NocoBase 重构）。
+实施计划见 [D26 实施计划](docs/superpowers/plans/2026-07-23-refine-hybrid-implementation-plan.md)。设计见 [D26 架构设计](docs/superpowers/specs/2026-07-23-refine-hybrid-architecture-design.md)。架构决策见 [decisions.md](.agents/memorys/decisions.md) D26。D25 已废弃。
 ## 许可证
 
 Apache 2.0
